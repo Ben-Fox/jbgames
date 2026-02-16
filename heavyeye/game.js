@@ -491,6 +491,7 @@
         setTimeout(() => startRound(), 300);
     });
     $('home-btn').addEventListener('click', () => showScreen('start'));
+    $('exit-btn').addEventListener('click', () => showScreen('start'));
 
     // ─── Init ───
     initScales();
