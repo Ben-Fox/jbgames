@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BREAKPOINT</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="start-screen">
+  <h1 class="title">BREAK<span>POINT</span></h1>
+  <div class="subtitle">Tactical Card Duel</div>
+  <div class="difficulty-select">
+    <button class="diff-btn" data-diff="easy">EASY</button>
+    <button class="diff-btn selected" data-diff="medium">MEDIUM</button>
+    <button class="diff-btn" data-diff="hard">HARD</button>
+  </div>
+  <div class="rules-summary">
+    <p>♠ <b>Spades</b> = Attack &nbsp; ♥ <b>Hearts</b> = Guard &nbsp; ♦ <b>Diamonds</b> = Charge &nbsp; ♣ <b>Clubs</b> = Counter</p>
+    <p>Play consecutive values across turns to trigger <b>BREAKPOINT</b> combos!</p>
+    <p>Don't turtle — <b>Pressure</b> punishes passivity. Store charge but beware <b>Overcharge</b>!</p>
+  </div>
+  <button id="deal-btn">DEAL</button>
+</div>
+
+<div id="game-screen" class="hidden">
+  <div id="screen-flash"></div>
+  <div id="floating-texts"></div>
+
+  <div id="top-bar">
+    <div class="player-info opponent-info">
+      <div class="player-name">OPPONENT</div>
+      <div class="hp-bar-container">
+        <div class="hp-bar" id="opp-hp-bar"><span id="opp-hp-text">30</span></div>
+      </div>
+      <div class="status-icons">
+        <div class="status-item" id="opp-pressure" title="Pressure">🔥 <span>0</span></div>
+        <div class="status-item" id="opp-momentum" title="Momentum">⚡ <span>off</span></div>
+        <div class="status-item" id="opp-charge-total" title="Total Charge">♦ <span>0</span></div>
+      </div>
+    </div>
+    <div class="deck-info">
+      <div id="deck-count">🂠 <span>42</span></div>
+    </div>
+    <div class="player-info player-info-right">
+      <div class="player-name">YOU</div>
+      <div class="hp-bar-container">
+        <div class="hp-bar player-hp" id="player-hp-bar"><span id="player-hp-text">30</span></div>
+      </div>
+      <div class="status-icons">
+        <div class="status-item" id="player-pressure" title="Pressure">🔥 <span>0</span></div>
+        <div class="status-item" id="player-momentum" title="Momentum">⚡ <span>off</span></div>
+        <div class="status-item" id="player-charge-total" title="Total Charge">♦ <span>0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="opponent-hand"></div>
+
+  <div id="middle-area">
+    <div id="opp-charge-pile" class="charge-pile">
+      <div class="charge-label">OPP CHARGE</div>
+    </div>
+    <div id="play-area">
+      <div id="opp-played" class="played-slot"></div>
+      <div id="draw-pile" class="card card-back">🂠</div>
+      <div id="player-played" class="played-slot"></div>
+    </div>
+    <div id="player-charge-pile" class="charge-pile">
+      <div class="charge-label">YOUR CHARGE</div>
+    </div>
+  </div>
+
+  <div id="combo-tracker">
+    <span id="combo-label">COMBO:</span> <span id="combo-values"></span>
+  </div>
+
+  <div id="player-hand"></div>
+
+  <div id="action-bar">
+    <button id="play-btn" class="action-btn hidden">PLAY CARD</button>
+    <button id="pass-btn" class="action-btn hidden">PASS</button>
+    <button id="use-charge-btn" class="action-btn hidden">USE CHARGE</button>
+  </div>
+
+  <div id="action-log"></div>
+
+  <!-- Breakpoint choice modal -->
+  <div id="breakpoint-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>⚡ BREAKPOINT! ⚡</h2>
+      <p>Choose your bonus:</p>
+      <button class="bp-choice" data-choice="damage">+5 Damage on next attack</button>
+      <button class="bp-choice" data-choice="draw">Draw 2 cards</button>
+      <button class="bp-choice" data-choice="steal">Steal 1 charge from opponent</button>
+    </div>
+  </div>
+
+  <!-- Guard/Counter response modal -->
+  <div id="response-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="response-title">You're being attacked!</h2>
+      <p id="response-desc"></p>
+      <div id="response-cards"></div>
+      <button id="response-skip" class="action-btn">Take the hit</button>
+    </div>
+  </div>
+
+  <!-- Game over modal -->
+  <div id="gameover-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="gameover-title"></h2>
+      <div id="gameover-stats"></div>
+      <button id="play-again-btn" class="action-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
