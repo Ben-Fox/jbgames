@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Circle — Draw the Perfect Circle</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="frame">
+  <div id="chalk-tray"><div class="chalk-piece"></div><div class="chalk-piece short"></div><div class="eraser-piece"></div></div>
+  <canvas id="board"></canvas>
+  <div id="ui-overlay">
+    <div id="start-screen" class="screen active">
+      <h1 class="chalk-title">Circle</h1>
+      <p class="chalk-sub">Draw the perfect circle</p>
+      <button id="btn-start" class="chalk-btn">Draw!</button>
+      <p class="chalk-hint">Hold &amp; draw a circle. Release to score.</p>
+    </div>
+    <div id="result-screen" class="screen">
+      <div id="score-display">
+        <span id="score-num">0</span><span class="percent">%</span>
+      </div>
+      <div id="rating-text"></div>
+      <div id="best-score-text"></div>
+      <div class="result-buttons">
+        <button id="btn-retry" class="chalk-btn">Try Again</button>
+        <button id="btn-share" class="chalk-btn">Share</button>
+      </div>
+    </div>
+  </div>
+  <div id="game-hud" class="hidden">
+    <span class="hud-text">Draw your circle!</span>
+    <button id="btn-erase" class="chalk-btn small">✖</button>
+  </div>
+</div>
+<div id="copy-toast" class="hidden">Copied to clipboard!</div>
+<script src="game.js"></script>
+</body>
+</html>

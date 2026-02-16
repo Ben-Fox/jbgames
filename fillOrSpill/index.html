@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fill Or Spill</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen active">
+    <canvas id="bg-canvas"></canvas>
+    <div class="start-content">
+      <h1 class="title">Fill <span class="or">Or</span> Spill</h1>
+      <p class="subtitle">Hold to fill. Don't spill. 💧</p>
+      <div class="name-inputs">
+        <input type="text" id="p1-name" placeholder="Player 1" maxlength="12">
+        <span class="vs">VS</span>
+        <input type="text" id="p2-name" placeholder="Player 2" maxlength="12">
+      </div>
+      <button id="start-btn">Start Game</button>
+    </div>
+  </div>
+
+  <!-- Countdown -->
+  <div id="countdown-screen" class="screen">
+    <div id="countdown-num">3</div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <div id="danger-overlay"></div>
+    <div id="spill-flash"></div>
+    <div class="game-header">
+      <div class="turn-counter">Turn <span id="turn-num">1</span></div>
+    </div>
+    <div class="game-area">
+      <div id="player-left" class="player-indicator">
+        <div class="player-name" id="left-name">Player 1</div>
+        <div class="your-turn-flash">YOUR TURN</div>
+      </div>
+      <div class="glass-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="fill-prompt">HOLD TO FILL</div>
+        <div id="water-pct">0%</div>
+      </div>
+      <div id="player-right" class="player-indicator">
+        <div class="player-name" id="right-name">Player 2</div>
+        <div class="your-turn-flash">YOUR TURN</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Screen -->
+  <div id="end-screen" class="screen">
+    <canvas id="end-canvas"></canvas>
+    <div class="end-content">
+      <h2 id="end-title">SPILL!</h2>
+      <p id="end-loser"></p>
+      <p id="end-winner"></p>
+      <div id="end-stats"></div>
+      <div id="share-text"></div>
+      <div class="end-buttons">
+        <button id="play-again-btn">Play Again</button>
+        <button id="switch-btn">Switch Sides</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

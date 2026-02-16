@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZoomOut 🔍</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen active">
+        <div class="start-content">
+            <h1 class="title">🔍 ZoomOut</h1>
+            <p class="subtitle">Guess what's in the picture.<br>5 guesses. It zooms out each time.</p>
+            <div class="start-buttons">
+                <button id="btn-daily" class="btn btn-primary">Play Today's Puzzle</button>
+                <button id="btn-random" class="btn btn-secondary">Random Puzzle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <div class="game-header">
+            <h2 class="game-title">🔍 ZoomOut</h2>
+            <div class="guess-counter">
+                <span id="guess-text">Guess 1 of 5</span>
+                <div class="guess-dots" id="guess-dots"></div>
+            </div>
+        </div>
+
+        <div class="image-frame">
+            <div class="image-container" id="image-container">
+                <img id="puzzle-image" src="" alt="Puzzle" draggable="false">
+            </div>
+        </div>
+
+        <div id="category-hint" class="category-hint hidden"></div>
+
+        <div class="input-area">
+            <div class="input-row">
+                <input type="text" id="guess-input" placeholder="What is this?" autocomplete="off" autofocus>
+                <button id="btn-submit" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
+
+        <div class="guesses-list" id="guesses-list"></div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen">
+        <div class="result-content">
+            <div class="image-frame result-frame">
+                <div class="image-container" id="result-image-container">
+                    <img id="result-image" src="" alt="Answer" draggable="false">
+                </div>
+            </div>
+            <div id="result-message" class="result-message"></div>
+            <div id="result-info" class="result-info"></div>
+            <div class="result-buttons">
+                <button id="btn-share" class="btn btn-primary">📋 Share Result</button>
+                <button id="btn-random-again" class="btn btn-secondary">Random Puzzle</button>
+            </div>
+            <div id="share-toast" class="share-toast hidden">Copied to clipboard!</div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

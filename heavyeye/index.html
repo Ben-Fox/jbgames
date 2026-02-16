@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HeavyEye ⚖️</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="confetti-canvas"></canvas>
+    <div id="app">
+        <!-- START SCREEN -->
+        <div id="screen-start" class="screen active">
+            <div class="start-content">
+                <h1 class="title">Heavy<span class="title-eye">Eye</span></h1>
+                <p class="subtitle">Which one weighs more?</p>
+                <div id="idle-scale-wrap" class="idle-scale-wrap">
+                    <svg id="idle-scale" viewBox="0 0 400 320" class="scale-svg"></svg>
+                </div>
+                <div class="mode-buttons">
+                    <button class="mode-btn" data-mode="campaign">
+                        <span class="mode-emoji">🏔️</span>
+                        <span class="mode-label">Campaign</span>
+                        <span class="mode-desc">5 rounds, easy → nightmare</span>
+                    </button>
+                    <button class="mode-btn" data-mode="wildcard">
+                        <span class="mode-emoji">🎲</span>
+                        <span class="mode-label">Wildcard</span>
+                        <span class="mode-desc">3 random rounds</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="screen-game" class="screen">
+            <div class="game-hud">
+                <div class="round-indicator" id="round-indicator"></div>
+                <div class="score-display" id="score-display">0</div>
+            </div>
+            <div class="game-prompt">Which is heavier?</div>
+            <div class="game-area">
+                <div class="card-zone card-zone-left">
+                    <button class="object-card" id="card-left" disabled>
+                        <div class="card-emoji" id="emoji-left"></div>
+                        <div class="card-name" id="name-left"></div>
+                        <div class="card-detail" id="detail-left"></div>
+                        <div class="card-weight" id="weight-left"></div>
+                    </button>
+                </div>
+                <div class="scale-zone">
+                    <svg id="game-scale" viewBox="0 0 400 320" class="scale-svg"></svg>
+                </div>
+                <div class="card-zone card-zone-right">
+                    <button class="object-card" id="card-right" disabled>
+                        <div class="card-emoji" id="emoji-right"></div>
+                        <div class="card-name" id="name-right"></div>
+                        <div class="card-detail" id="detail-right"></div>
+                        <div class="card-weight" id="weight-right"></div>
+                    </button>
+                </div>
+            </div>
+            <div class="result-area" id="result-area">
+                <div class="result-emoji" id="result-emoji"></div>
+                <div class="result-text" id="result-text"></div>
+                <div class="fun-fact" id="fun-fact"></div>
+                <button class="next-btn" id="next-btn">Next Round →</button>
+            </div>
+        </div>
+
+        <!-- END SCREEN -->
+        <div id="screen-end" class="screen">
+            <div class="end-content">
+                <h2 class="end-title">Results</h2>
+                <div class="end-score" id="end-score"></div>
+                <div class="end-recap" id="end-recap"></div>
+                <div class="end-buttons">
+                    <button class="mode-btn share-btn" id="share-btn">
+                        <span class="mode-emoji">📋</span>
+                        <span class="mode-label">Share</span>
+                    </button>
+                    <button class="mode-btn" id="play-again-btn">
+                        <span class="mode-emoji">🔄</span>
+                        <span class="mode-label">Play Again</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flash-overlay" id="flash-overlay"></div>
+
+    <script src="data.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
