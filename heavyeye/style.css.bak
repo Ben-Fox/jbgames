@@ -188,7 +188,7 @@ html, body {
     50% { transform: scale(1.08); }
 }
 
-.card-emoji { font-size: 3rem; line-height: 1; pointer-events: none; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.card-emoji { font-size: 3rem; line-height: 1; pointer-events: none; }
 .card-name { font-weight: 600; font-size: 1rem; text-align: center; pointer-events: none; }
 .card-detail { font-size: 0.75rem; color: var(--text-dim); text-align: center; pointer-events: none; }
 .card-weight {

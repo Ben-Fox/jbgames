@@ -1,28 +1,5 @@
 // HeavyEye Game Engine
 (() => {
-    // ─── Emoji to OpenMoji ───
-    function emojiToCodePoints(emoji) {
-        const codePoints = [];
-        for (const ch of emoji) {
-            const cp = ch.codePointAt(0);
-            // Skip variation selectors (FE0F, FE0E) and low codepoints
-            if (cp > 0xFF && cp !== 0xFE0F && cp !== 0xFE0E) {
-                codePoints.push(cp.toString(16).toUpperCase().padStart(4, '0'));
-            }
-        }
-        return codePoints.join('-');
-    }
-    
-    function emojiToOpenMojiUrl(emoji) {
-        const code = emojiToCodePoints(emoji);
-        return `https://openmoji.org/data/color/svg/${code}.svg`;
-    }
-    
-    function setEmojiImage(element, emoji) {
-        const url = emojiToOpenMojiUrl(emoji);
-        element.innerHTML = `<img src="${url}" alt="${emoji}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.textContent='${emoji}'">`;
-    }
-    
     // ─── State ───
     let mode = null;        // 'campaign' | 'wildcard'
     let rounds = [];        // array of matchup objects
@@ -281,12 +258,12 @@
             c.querySelector('.card-weight').classList.remove('visible');
         });
 
-        setEmojiImage($('emoji-left'), leftObj.emoji);
+        $('emoji-left').textContent = leftObj.emoji;
         $('name-left').textContent = leftObj.name;
         $('detail-left').textContent = leftObj.detail;
         $('weight-left').textContent = '';
 
-        setEmojiImage($('emoji-right'), rightObj.emoji);
+        $('emoji-right').textContent = rightObj.emoji;
         $('name-right').textContent = rightObj.name;
         $('detail-right').textContent = rightObj.detail;
         $('weight-right').textContent = '';
