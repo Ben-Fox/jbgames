@@ -485,8 +485,8 @@
         }
     });
 
-    $('share-btn').addEventListener('click', shareResults);
-    $('play-again-btn').addEventListener('click', () => showScreen('start'));
+    $('play-again-btn').addEventListener('click', () => startGame(mode));
+    $('home-btn').addEventListener('click', () => showScreen('start'));
 
     // ─── Init ───
     initScales();
