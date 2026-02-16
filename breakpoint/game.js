@@ -59,6 +59,8 @@ document.querySelectorAll('.diff-btn').forEach(b => {
 });
 $('deal-btn').addEventListener('click', startGame);
 $('play-again-btn').addEventListener('click', () => { $('gameover-modal').classList.add('hidden'); startGame(); });
+$('rules-toggle').addEventListener('click', () => { $('rules-modal').classList.remove('hidden'); });
+$('close-rules').addEventListener('click', () => { $('rules-modal').classList.add('hidden'); });
 
 function startGame() {
   startScreen.classList.add('hidden');

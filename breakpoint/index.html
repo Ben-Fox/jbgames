@@ -15,10 +15,36 @@
     <button class="diff-btn selected" data-diff="medium">MEDIUM</button>
     <button class="diff-btn" data-diff="hard">HARD</button>
   </div>
-  <div class="rules-summary">
-    <p>♠ <b>Spades</b> = Attack &nbsp; ♥ <b>Hearts</b> = Guard &nbsp; ♦ <b>Diamonds</b> = Charge &nbsp; ♣ <b>Clubs</b> = Counter</p>
-    <p>Play consecutive values across turns to trigger <b>BREAKPOINT</b> combos!</p>
-    <p>Don't turtle — <b>Pressure</b> punishes passivity. Store charge but beware <b>Overcharge</b>!</p>
+  <div class="rules-box">
+    <h2>How to Play</h2>
+    <div class="rules-grid">
+      <div class="rule-card">
+        <div class="rule-icon">♠</div>
+        <div class="rule-title">Spades — Attack</div>
+        <div class="rule-desc">Deal damage equal to card value. Face cards = 10, Ace = 11. Add stored charge for burst damage.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon hearts">♥</div>
+        <div class="rule-title">Hearts — Guard</div>
+        <div class="rule-desc">Block damage equal to card value. Excess block heals you (max 5). Play on your turn or when attacked.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon diamonds">♦</div>
+        <div class="rule-title">Diamonds — Charge</div>
+        <div class="rule-desc">Store power. Unleash all stored charge on your next attack. But if charge exceeds 12 — risk explosion!</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon clubs">♣</div>
+        <div class="rule-title">Clubs — Counter</div>
+        <div class="rule-desc">Play when attacked. If your club beats their attack value: negate it and reflect damage back.</div>
+      </div>
+    </div>
+    <div class="rules-extras">
+      <p>⚡ <b>Breakpoint:</b> Play consecutive values across turns (e.g. 6→7→8) for a powerful bonus</p>
+      <p>🔥 <b>Pressure:</b> Don't attack for 2 turns = +1 pressure. At 3 pressure = lose your hand + 5 HP</p>
+      <p>💎 <b>Overcharge:</b> Stored charge > 12? Flip a card — black = 10 damage + lose all charge</p>
+      <p>💥 <b>Momentum:</b> Deal 10+ damage in one hit = play 2 cards next turn</p>
+    </div>
   </div>
   <button id="deal-btn">DEAL</button>
 </div>
@@ -84,6 +110,26 @@
   </div>
 
   <div id="action-log"></div>
+  <button id="rules-toggle" title="Rules">❓</button>
+
+  <!-- In-game rules modal -->
+  <div id="rules-modal" class="modal hidden">
+    <div class="modal-content rules-modal-content">
+      <h2>Rules Reference</h2>
+      <div class="rules-ref">
+        <p><b>♠ Spades — Attack:</b> Damage = card value. Face = 10, Ace = 11. Use stored charge for burst.</p>
+        <p><b>♥ Hearts — Guard:</b> Block damage = card value. Excess heals (max 5). One guard per attack.</p>
+        <p><b>♦ Diamonds — Charge:</b> Store power. Unleash all on next attack. Charge > 12 = overcharge risk.</p>
+        <p><b>♣ Clubs — Counter:</b> Play when attacked. Beat attack value → negate + reflect damage back.</p>
+        <hr>
+        <p><b>⚡ Breakpoint:</b> Play consecutive values over turns (6→7→8) → choose +5 dmg, draw 2, or steal charge.</p>
+        <p><b>🔥 Pressure:</b> No attacks for 2 turns = +1 pressure. At 3 = discard hand + lose 5 HP.</p>
+        <p><b>💎 Overcharge:</b> Charge > 12 at turn start → flip card. Black = 10 dmg + lose all charge.</p>
+        <p><b>💥 Momentum:</b> 10+ damage in one hit → play 2 cards next turn.</p>
+      </div>
+      <button id="close-rules" class="action-btn">GOT IT</button>
+    </div>
+  </div>
 
   <!-- Breakpoint choice modal -->
   <div id="breakpoint-modal" class="modal hidden">
