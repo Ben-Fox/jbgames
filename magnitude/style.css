@@ -76,6 +76,7 @@ body { background: #0f0f23; overflow: hidden; font-family: 'Courier New', monosp
 #budget-info span { color: #ffd700; font-weight: bold; }
 #height-info { color: #ccc; }
 #height-info span { color: #ff8866; font-weight: bold; }
+#hint-text { color: #668; font-size: 12px; font-style: italic; }
 
 /* ── Side Panel ── */
 #side-panel {
