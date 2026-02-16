@@ -1,0 +1,84 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f0f23; overflow: hidden; font-family: 'Courier New', monospace; color: #e0e0e0; }
+#app { position: relative; width: 100vw; height: 100vh; }
+#gameCanvas { display: block; width: 100%; height: 100%; }
+#ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 20px; background: rgba(26,26,46,0.9);
+  border-bottom: 1px solid #00ffff44; pointer-events: auto;
+  font-size: 14px; flex-wrap: wrap; gap: 8px;
+}
+#top-bar > div { white-space: nowrap; }
+#level-info { color: #00ffff; font-weight: bold; font-size: 16px; }
+#budget-info span { color: #ffd700; }
+#height-info span { color: #ff6b6b; }
+#side-panel {
+  position: absolute; right: 10px; top: 60px;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: auto; width: 110px;
+}
+#material-selector { display: flex; flex-direction: column; gap: 4px; }
+.mat-btn {
+  background: rgba(26,26,46,0.9); border: 1px solid #00ffff44;
+  color: #ccc; padding: 8px 6px; text-align: center; cursor: pointer;
+  font-size: 12px; border-radius: 4px; font-family: inherit;
+  transition: all 0.15s;
+}
+.mat-btn:hover { border-color: #00ffff; }
+.mat-btn.selected { border-color: #00ffff; color: #fff; background: rgba(0,255,255,0.1); }
+.tool-btn {
+  background: rgba(26,26,46,0.9); border: 1px solid #555;
+  color: #ccc; padding: 6px 8px; cursor: pointer; font-size: 12px;
+  border-radius: 4px; font-family: inherit;
+}
+.tool-btn:hover { border-color: #fff; color: #fff; }
+.big-btn {
+  background: linear-gradient(135deg, #ff4444, #cc0000); border: 2px solid #ff6666;
+  color: #fff; padding: 12px 8px; cursor: pointer; font-size: 14px;
+  border-radius: 6px; font-family: inherit; font-weight: bold;
+  text-transform: uppercase; letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.big-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+#btn-next { background: linear-gradient(135deg, #44ff44, #00aa00); border-color: #66ff66; }
+#btn-retry { background: linear-gradient(135deg, #ffaa00, #cc7700); border-color: #ffcc44; }
+.hidden { display: none !important; }
+
+#result-screen {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85); display: flex; align-items: center;
+  justify-content: center; z-index: 100;
+}
+#result-content {
+  text-align: center; padding: 40px; border: 2px solid #00ffff44;
+  background: rgba(26,26,46,0.95); border-radius: 12px; max-width: 500px;
+}
+#result-title { font-size: 36px; margin-bottom: 16px; }
+#result-magnitude { font-size: 48px; margin: 16px 0; }
+#result-details { font-size: 14px; color: #aaa; margin: 16px 0; line-height: 1.8; }
+#result-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+#result-buttons button {
+  padding: 10px 24px; font-size: 16px; border-radius: 6px;
+  cursor: pointer; font-family: inherit; border: 2px solid;
+}
+.result-btn-retry { background: #cc7700; border-color: #ffaa00 !important; color: #fff; }
+.result-btn-next { background: #00aa00; border-color: #44ff44 !important; color: #fff; }
+
+#level-select {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(26,26,46,0.98); border: 2px solid #00ffff44;
+  padding: 24px; border-radius: 12px; z-index: 100; min-width: 300px;
+  pointer-events: auto;
+}
+#level-select h2 { color: #00ffff; margin-bottom: 16px; text-align: center; }
+#level-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; max-height: 400px; overflow-y: auto; }
+.level-item {
+  padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid #333;
+  border-radius: 4px; cursor: pointer; font-size: 13px; display: flex;
+  justify-content: space-between; align-items: center;
+}
+.level-item:hover { border-color: #00ffff; }
+.level-item.locked { opacity: 0.4; cursor: not-allowed; }
+.level-item .best { color: #ffd700; font-size: 11px; }
+#btn-close-levels { width: 100%; }

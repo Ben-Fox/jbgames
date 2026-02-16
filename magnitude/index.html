@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Magnitude — Earthquake Engineering Game</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui-overlay">
+    <div id="top-bar">
+      <div id="level-info">Level <span id="level-num">1</span>: <span id="level-name"></span></div>
+      <div id="budget-info">Budget: <span id="budget-val">0</span> / <span id="budget-max">0</span></div>
+      <div id="height-info">Min Height: <span id="height-val">0</span>px</div>
+    </div>
+    <div id="side-panel">
+      <div id="material-selector">
+        <div class="mat-btn selected" data-mat="wood">🪵 Wood<br><small>$1 Med/Low</small></div>
+        <div class="mat-btn" data-mat="steel">🔩 Steel<br><small>$3 Hi/Hi</small></div>
+        <div class="mat-btn" data-mat="cable">🔗 Cable<br><small>$2 Flex</small></div>
+      </div>
+      <div id="tools">
+        <button id="btn-delete" class="tool-btn">🗑️ Delete</button>
+        <button id="btn-undo" class="tool-btn">↩️ Undo</button>
+        <button id="btn-clear" class="tool-btn">🧹 Clear</button>
+      </div>
+      <button id="btn-shake" class="big-btn">🌍 SHAKE IT</button>
+      <button id="btn-next" class="big-btn hidden">Next Level →</button>
+      <button id="btn-retry" class="big-btn hidden">🔄 Retry</button>
+      <button id="btn-menu" class="tool-btn">📋 Levels</button>
+    </div>
+  </div>
+  <div id="result-screen" class="hidden">
+    <div id="result-content">
+      <h1 id="result-title"></h1>
+      <div id="result-magnitude"></div>
+      <div id="result-details"></div>
+      <div id="result-buttons"></div>
+    </div>
+  </div>
+  <div id="level-select" class="hidden">
+    <h2>Select Level</h2>
+    <div id="level-list"></div>
+    <button id="btn-close-levels" class="tool-btn">Close</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
