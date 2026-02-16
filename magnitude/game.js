@@ -833,6 +833,11 @@ function gameLoop(time) {
   requestAnimationFrame(gameLoop);
 }
 
-// ── Init ──
-loadLevel(0);
-requestAnimationFrame(gameLoop);
+// ── Splash Screen ──
+document.getElementById('btn-play').addEventListener('click', () => {
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  resize();
+  loadLevel(0);
+  requestAnimationFrame(gameLoop);
+});
