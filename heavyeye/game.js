@@ -485,7 +485,11 @@
         }
     });
 
-    $('play-again-btn').addEventListener('click', () => startGame(mode));
+    $('play-again-btn').addEventListener('click', () => {
+        pickRounds(mode);
+        showScreen('game');
+        setTimeout(() => startRound(), 300);
+    });
     $('home-btn').addEventListener('click', () => showScreen('start'));
 
     // ─── Init ───
