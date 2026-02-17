@@ -66,65 +66,81 @@
 
         svg.appendChild(defs);
 
+        // === GEOMETRY: pivot is the EXACT junction of pole top and beam center ===
+        const pivotX = 200, pivotY = 130;  // pivot point — where pole meets beam
+        const baseY = 290;
+        const beamW = 300, beamH = 12;
+        const panChainLen = 60;
+        const panY = pivotY + beamH/2 + panChainLen;
+        const panLeftX = pivotX - beamW/2 + 30;  // 80
+        const panRightX = pivotX + beamW/2 - 30; // 320
+
         // Base
         const base = document.createElementNS(ns, 'ellipse');
-        Object.entries({ cx: 200, cy: 290, rx: 60, ry: 14, fill: '#2a2a4a', stroke: '#d4a843', 'stroke-width': 1.5 }).forEach(([k,v]) => base.setAttribute(k,v));
+        Object.entries({ cx: pivotX, cy: baseY, rx: 60, ry: 14, fill: '#2a2a4a', stroke: '#d4a843', 'stroke-width': 1.5 }).forEach(([k,v]) => base.setAttribute(k,v));
         svg.appendChild(base);
 
-        // Pole (extends up to pivot center at y=105)
+        // Pole — from base up to pivot point exactly
         const pole = document.createElementNS(ns, 'rect');
-        Object.entries({ x: 194, y: 95, width: 12, height: 200, rx: 4, fill: `url(#${poleGrad.id})` }).forEach(([k,v]) => pole.setAttribute(k,v));
+        Object.entries({ x: pivotX - 6, y: pivotY, width: 12, height: baseY - pivotY, rx: 4, fill: `url(#${poleGrad.id})` }).forEach(([k,v]) => pole.setAttribute(k,v));
         svg.appendChild(pole);
 
-        // Beam group (rotates around pivot point)
+        // Pivot ornament — sits at junction, drawn UNDER beam group so beam overlaps it
+        // Then a second one on top to cap it
+        const pivotBg = document.createElementNS(ns, 'circle');
+        Object.entries({ cx: pivotX, cy: pivotY, r: 12, fill: '#b8922e' }).forEach(([k,v]) => pivotBg.setAttribute(k,v));
+        svg.appendChild(pivotBg);
+
+        // Beam group — rotates around pivotX, pivotY
         const beamG = document.createElementNS(ns, 'g');
         beamG.classList.add('scale-beam');
-        beamG.setAttribute('transform-origin', '200 105');
 
+        // Beam rod — centered vertically on pivot
         const beam = document.createElementNS(ns, 'rect');
-        Object.entries({ x: 50, y: 99, width: 300, height: 12, rx: 6, fill: `url(#${grad.id})` }).forEach(([k,v]) => beam.setAttribute(k,v));
+        Object.entries({ x: pivotX - beamW/2, y: pivotY - beamH/2, width: beamW, height: beamH, rx: 6, fill: `url(#${grad.id})` }).forEach(([k,v]) => beam.setAttribute(k,v));
         beamG.appendChild(beam);
 
-        // Chains & pans — each in its own group so we can counter-rotate to keep them hanging vertically
-        const panData = [{ cx: 80, label: 'left' }, { cx: 320, label: 'right' }];
+        // Chains & pans
+        const panData = [{ cx: panLeftX, label: 'left' }, { cx: panRightX, label: 'right' }];
         const panGroups = [];
         panData.forEach(p => {
-            // Anchor point on beam
-            const anchorY = 111;
-            
-            // Pan group — will be counter-rotated around its anchor point
+            const anchorY = pivotY + beamH/2; // bottom of beam
+
             const panG = document.createElementNS(ns, 'g');
             panG.classList.add('pan-group');
             panG.dataset.anchorX = p.cx;
             panG.dataset.anchorY = anchorY;
-            
+
             // Chain lines
             for (let dx = -15; dx <= 15; dx += 15) {
                 const line = document.createElementNS(ns, 'line');
-                Object.entries({ x1: p.cx + dx, y1: anchorY, x2: p.cx + dx, y2: 170, stroke: '#d4a843', 'stroke-width': 1.2 }).forEach(([k,v]) => line.setAttribute(k,v));
+                Object.entries({ x1: p.cx + dx, y1: anchorY, x2: p.cx + dx, y2: panY, stroke: '#d4a843', 'stroke-width': 1.2 }).forEach(([k,v]) => line.setAttribute(k,v));
                 panG.appendChild(line);
             }
             // Pan
             const pan = document.createElementNS(ns, 'ellipse');
-            Object.entries({ cx: p.cx, cy: 175, rx: 35, ry: 10, fill: '#2a2a4a', stroke: '#d4a843', 'stroke-width': 1.5 }).forEach(([k,v]) => pan.setAttribute(k,v));
+            Object.entries({ cx: p.cx, cy: panY, rx: 35, ry: 10, fill: '#2a2a4a', stroke: '#d4a843', 'stroke-width': 1.5 }).forEach(([k,v]) => pan.setAttribute(k,v));
             panG.appendChild(pan);
 
             // Emoji holder
             const txt = document.createElementNS(ns, 'text');
-            Object.entries({ x: p.cx, y: 168, 'text-anchor': 'middle', 'font-size': '28', class: 'pan-emoji pan-emoji-' + p.label, opacity: 0 }).forEach(([k,v]) => txt.setAttribute(k,v));
+            Object.entries({ x: p.cx, y: panY - 7, 'text-anchor': 'middle', 'font-size': '28', class: 'pan-emoji pan-emoji-' + p.label, opacity: 0 }).forEach(([k,v]) => txt.setAttribute(k,v));
             panG.appendChild(txt);
-            
+
             beamG.appendChild(panG);
             panGroups.push(panG);
         });
 
         svg.appendChild(beamG);
 
-        // Pivot ornament (drawn on top of beam so it always covers the connection point)
-        const pivot = document.createElementNS(ns, 'circle');
-        Object.entries({ cx: 200, cy: 105, r: 10, fill: '#d4a843', stroke: '#f0d078', 'stroke-width': 1.5 }).forEach(([k,v]) => pivot.setAttribute(k,v));
-        svg.appendChild(pivot);
+        // Pivot cap — drawn on TOP of everything so it always covers the junction
+        const pivotCap = document.createElementNS(ns, 'circle');
+        Object.entries({ cx: pivotX, cy: pivotY, r: 10, fill: '#d4a843', stroke: '#f0d078', 'stroke-width': 1.5 }).forEach(([k,v]) => pivotCap.setAttribute(k,v));
+        svg.appendChild(pivotCap);
 
+        // Store pivot coords for animation
+        svg._pivotX = pivotX;
+        svg._pivotY = pivotY;
         svg._panGroups = panGroups;
         return beamG;
     }
@@ -144,10 +160,10 @@
         idlePhase += 0.015;
         const idleAngle = Math.sin(idlePhase) * 4;
         if (idleScaleBeam) {
-            idleScaleBeam.setAttribute('transform', `rotate(${idleAngle} 200 105)`);
-            // Counter-rotate pans so chains hang vertically
             const idleSvg = idleScaleBeam.closest('svg');
-            if (idleSvg && idleSvg._panGroups) {
+            const px = idleSvg?._pivotX || 200, py = idleSvg?._pivotY || 130;
+            idleScaleBeam.setAttribute('transform', `rotate(${idleAngle} ${px} ${py})`);
+            if (idleSvg?._panGroups) {
                 idleSvg._panGroups.forEach(pg => {
                     const ax = pg.dataset.anchorX, ay = pg.dataset.anchorY;
                     pg.setAttribute('transform', `rotate(${-idleAngle} ${ax} ${ay})`);
@@ -159,14 +175,13 @@
         const diff = targetTilt - scaleTilt;
         scaleTilt += diff * 0.08;
         if (Math.abs(diff) > 0.01) {
-            // overshoot with damped spring
             scaleTilt += diff * 0.02;
         }
         if (gameScaleBeam) {
-            gameScaleBeam.setAttribute('transform', `rotate(${scaleTilt} 200 105)`);
-            // Counter-rotate pans so chains hang vertically
             const gameSvg = gameScaleBeam.closest('svg');
-            if (gameSvg && gameSvg._panGroups) {
+            const px = gameSvg?._pivotX || 200, py = gameSvg?._pivotY || 130;
+            gameScaleBeam.setAttribute('transform', `rotate(${scaleTilt} ${px} ${py})`);
+            if (gameSvg?._panGroups) {
                 gameSvg._panGroups.forEach(pg => {
                     const ax = pg.dataset.anchorX, ay = pg.dataset.anchorY;
                     pg.setAttribute('transform', `rotate(${-scaleTilt} ${ax} ${ay})`);
