@@ -74,61 +74,106 @@ footer p+p{margin-top:.3rem}
 
 <section class="hero">
   <div class="hero-logo">
-    <svg viewBox="0 0 600 280" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-svg">
-      <!-- Computer/Monitor -->
-      <rect x="180" y="90" width="240" height="160" rx="12" fill="#1a1a2e" stroke="#ff69b4" stroke-width="3"/>
-      <rect x="195" y="102" width="210" height="130" rx="6" fill="#0e0e18"/>
-      <!-- Screen glow -->
-      <rect x="195" y="102" width="210" height="130" rx="6" fill="url(#screenGlow)" opacity="0.3"/>
-      <!-- Monitor stand -->
-      <rect x="270" y="250" width="60" height="14" rx="3" fill="#ff69b4"/>
-      <rect x="250" y="260" width="100" height="10" rx="5" fill="#ff69b4" opacity="0.7"/>
-      <!-- Brain (left side, chomping on monitor) -->
-      <g transform="translate(120, 100)">
-        <!-- Brain body - pink, blobby -->
-        <path d="M60 10 C90 -5, 130 5, 135 35 C140 55, 130 70, 120 80 C115 90, 105 105, 85 110 C65 115, 40 110, 25 95 C10 80, -5 65, 5 45 C10 25, 30 8, 60 10Z" fill="#ff69b4" opacity="0.95"/>
-        <!-- Brain folds/wrinkles -->
-        <path d="M35 30 C50 25, 70 35, 65 50" stroke="#e0559e" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M40 55 C55 48, 80 55, 75 70" stroke="#e0559e" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M55 75 C70 68, 95 72, 90 85" stroke="#e0559e" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M75 20 C90 18, 110 28, 105 42" stroke="#e0559e" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M85 50 C100 45, 118 52, 112 65" stroke="#e0559e" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <!-- Center fold (brain split) -->
-        <path d="M70 12 C68 40, 72 70, 68 108" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <!-- Brain highlight -->
-        <ellipse cx="50" cy="40" rx="18" ry="12" fill="rgba(255,255,255,0.12)"/>
-        <!-- Eyes (mischievous) -->
-        <circle cx="45" cy="48" r="6" fill="#1a1a2e"/>
-        <circle cx="75" cy="45" r="6" fill="#1a1a2e"/>
-        <circle cx="47" cy="46" r="2.5" fill="#fff"/>
-        <circle cx="77" cy="43" r="2.5" fill="#fff"/>
-        <!-- Mouth chomping on monitor edge -->
-        <path d="M110 65 C120 58, 135 58, 140 65 C135 72, 120 72, 110 65Z" fill="#1a1a2e"/>
-        <!-- Teeth -->
-        <path d="M115 65 L118 60 L121 65 L124 60 L127 65 L130 60 L133 65" stroke="#fff" stroke-width="2" fill="none"/>
-        <path d="M115 65 L118 70 L121 65 L124 70 L127 65 L130 70 L133 65" stroke="#fff" stroke-width="2" fill="none"/>
-      </g>
-      <!-- Bite marks on monitor corner -->
-      <path d="M180 110 C175 100, 178 90, 185 88" stroke="#ff69b4" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
-      <path d="M185 130 C178 125, 176 118, 180 112" stroke="#ff69b4" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
-      <!-- Crunch particles -->
-      <g class="crunch-particles">
-        <rect x="168" y="95" width="6" height="4" rx="1" fill="#ff69b4" transform="rotate(-20 168 95)" opacity="0.8"/>
-        <rect x="160" y="115" width="5" height="3" rx="1" fill="#ff69b4" transform="rotate(15 160 115)" opacity="0.6"/>
-        <rect x="165" y="135" width="7" height="4" rx="1" fill="#ff69b4" transform="rotate(-35 165 135)" opacity="0.7"/>
-        <rect x="155" y="105" width="4" height="4" rx="1" fill="#e0559e" transform="rotate(25 155 105)" opacity="0.5"/>
-      </g>
-      <!-- "BrainSmacks" text overlaid across brain and screen -->
-      <text x="300" y="185" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="52" letter-spacing="-1">
-        <tspan fill="#ff69b4">Brain</tspan><tspan fill="#fff">Smacks</tspan>
-      </text>
-      <!-- Screen glow gradient -->
+    <svg viewBox="0 0 700 300" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-svg">
       <defs>
+        <radialGradient id="brainGrad" cx="35%" cy="40%">
+          <stop offset="0%" stop-color="#ff8ec8"/>
+          <stop offset="60%" stop-color="#ff69b4"/>
+          <stop offset="100%" stop-color="#d44a90"/>
+        </radialGradient>
         <radialGradient id="screenGlow" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#ff69b4" stop-opacity="0.4"/>
+          <stop offset="0%" stop-color="#ff69b4" stop-opacity="0.5"/>
           <stop offset="100%" stop-color="#ff69b4" stop-opacity="0"/>
         </radialGradient>
+        <!-- Mask to cut the logo out from behind the text -->
+        <mask id="textMask">
+          <rect width="700" height="300" fill="white"/>
+          <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1" fill="black">BrainSmacks</text>
+        </mask>
       </defs>
+
+      <!-- Everything behind the text gets masked -->
+      <g mask="url(#textMask)">
+        <!-- Abstract computer — tilted, being consumed -->
+        <g transform="translate(360, 70) rotate(8)">
+          <!-- Monitor shell -->
+          <rect x="0" y="0" width="200" height="140" rx="10" fill="#1e1e30" stroke="#555" stroke-width="2"/>
+          <!-- Screen -->
+          <rect x="10" y="10" width="180" height="110" rx="5" fill="#0e0e18"/>
+          <rect x="10" y="10" width="180" height="110" rx="5" fill="url(#screenGlow)" opacity="0.4"/>
+          <!-- Screen static lines -->
+          <line x1="20" y1="40" x2="80" y2="40" stroke="#ff69b4" stroke-width="1" opacity="0.3"/>
+          <line x1="30" y1="60" x2="120" y2="60" stroke="#ff69b4" stroke-width="1" opacity="0.2"/>
+          <line x1="15" y1="80" x2="90" y2="80" stroke="#ff69b4" stroke-width="1" opacity="0.25"/>
+          <line x1="40" y1="100" x2="150" y2="100" stroke="#ff69b4" stroke-width="1" opacity="0.15"/>
+          <!-- Bite taken out of left side -->
+          <circle cx="-5" cy="50" r="35" fill="#0e0e12"/>
+          <circle cx="-5" cy="100" r="25" fill="#0e0e12"/>
+          <!-- Stand -->
+          <rect x="75" y="140" width="50" height="10" rx="3" fill="#555"/>
+          <rect x="60" y="148" width="80" height="8" rx="4" fill="#444"/>
+        </g>
+
+        <!-- Abstract brain — big, blobby, overlapping the computer -->
+        <g>
+          <!-- Main brain mass — organic overlapping blobs -->
+          <ellipse cx="200" cy="140" rx="130" ry="100" fill="url(#brainGrad)"/>
+          <ellipse cx="160" cy="110" rx="70" ry="55" fill="#ff7abf" opacity="0.7"/>
+          <ellipse cx="250" cy="120" rx="60" ry="50" fill="#ff85c5" opacity="0.5"/>
+          <ellipse cx="180" cy="180" rx="65" ry="45" fill="#ff7abf" opacity="0.6"/>
+          <ellipse cx="230" cy="165" rx="55" ry="40" fill="#ff8ec8" opacity="0.4"/>
+          <!-- Top bumps -->
+          <ellipse cx="150" cy="65" rx="40" ry="30" fill="#ff69b4"/>
+          <ellipse cx="210" cy="55" rx="45" ry="28" fill="#ff7abf"/>
+          <ellipse cx="260" cy="70" rx="35" ry="25" fill="#ff69b4" opacity="0.8"/>
+
+          <!-- Brain folds — abstract wavy lines -->
+          <path d="M130 90 C155 80, 185 95, 175 115 C165 135, 195 140, 220 130" stroke="#d44a90" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M145 130 C170 120, 200 135, 190 155 C180 170, 210 172, 235 160" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M160 70 C180 62, 205 72, 200 88" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M120 150 C140 142, 165 155, 155 170" stroke="#d44a90" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Center split -->
+          <path d="M195 50 C190 90, 200 140, 195 210" stroke="#c93d85" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+
+          <!-- Highlight blobs -->
+          <ellipse cx="165" cy="95" rx="25" ry="15" fill="rgba(255,255,255,0.1)"/>
+          <ellipse cx="220" cy="80" rx="15" ry="10" fill="rgba(255,255,255,0.08)"/>
+
+          <!-- Fun cartoon eyes -->
+          <ellipse cx="175" cy="125" rx="14" ry="16" fill="#fff"/>
+          <ellipse cx="225" cy="120" rx="14" ry="16" fill="#fff"/>
+          <circle cx="180" cy="127" r="8" fill="#1a1a2e"/>
+          <circle cx="230" cy="122" r="8" fill="#1a1a2e"/>
+          <circle cx="182" cy="124" r="3" fill="#fff"/>
+          <circle cx="232" cy="119" r="3" fill="#fff"/>
+          <!-- Raised eyebrow -->
+          <path d="M162 108 C170 102, 185 102, 192 108" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M212 104 C220 98, 235 100, 240 108" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+          <!-- Big grin eating the computer -->
+          <path d="M260 150 C280 145, 320 148, 340 155 C320 168, 280 170, 260 160Z" fill="#1a1a2e"/>
+          <!-- Teeth -->
+          <path d="M268 153 L275 147 L282 153 L289 147 L296 153 L303 147 L310 153 L317 147 L324 153 L331 148 L338 155" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Tongue -->
+          <ellipse cx="300" cy="163" rx="12" ry="5" fill="#ff3385" opacity="0.7"/>
+        </g>
+
+        <!-- Crunch/chomp particles -->
+        <g class="crunch-particles">
+          <polygon points="330,120 338,115 335,125" fill="#ff69b4" opacity="0.8"/>
+          <polygon points="345,145 352,138 350,150" fill="#ff8ec8" opacity="0.6"/>
+          <polygon points="325,165 332,160 330,172" fill="#d44a90" opacity="0.7"/>
+          <rect x="340" y="130" width="8" height="5" rx="2" fill="#ff69b4" transform="rotate(-25 344 132)" opacity="0.6"/>
+          <rect x="350" y="155" width="6" height="4" rx="1" fill="#e0559e" transform="rotate(20 353 157)" opacity="0.5"/>
+          <circle cx="338" cy="108" r="3" fill="#ff69b4" opacity="0.5"/>
+          <circle cx="355" cy="170" r="2.5" fill="#ff8ec8" opacity="0.4"/>
+        </g>
+      </g>
+
+      <!-- Text on top — clean, no logo behind it -->
+      <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1">
+        <tspan fill="#ff69b4">Brain</tspan><tspan fill="#fff">Smacks</tspan>
+      </text>
     </svg>
   </div>
   <p class="tagline">Games that hit different</p>
