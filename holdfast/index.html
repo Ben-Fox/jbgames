@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🏠 Home</a>
 <div id="title-screen">
   <h1 id="title-text">HOLDFAST</h1>
   <p class="subtitle">Push back the darkness</p>
@@ -32,10 +33,16 @@
       <span>🪨 <span id="res-stone">0</span></span>
       <span>🔥 <span id="res-ember">0</span></span>
     </div>
+    <div id="bonfire-hp" style="font-size:13px;margin-top:4px;color:#ffaa44;">Bonfire: 500/500</div>
+    <div style="font-size:11px;color:#776644;margin-top:2px;">R near bonfire: repair (10W 5E)</div>
   </div>
   <div id="hud-top-center">
     <div id="wave-info">Wave <span id="wave-num">1</span></div>
     <div id="wave-timer"></div>
+    <div id="boss-hp-bar" style="display:none">
+      <div id="boss-name"></div>
+      <div id="boss-hp-track"><div id="boss-hp-fill"></div></div>
+    </div>
   </div>
   <div id="hud-top-right">
     <div>Score: <span id="score">0</span></div>
