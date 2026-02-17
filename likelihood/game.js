@@ -216,7 +216,7 @@ function showFinal() {
   document.getElementById('progress-fill').style.width = '100%';
   showScreen('final');
 
-  const ratings = ['Clueless 🤷', 'Clueless 🤷', 'Lucky Guess 🍀', 'Sharp 🧠', 'Statistician 📊', 'Oracle 🔮'];
+  const ratings = ['Just Getting Started! 💪', 'Not Bad! Keep Going 👍', 'Solid Instincts! 🎯', 'Sharp Mind! 🧠', 'Impressive! You Know Your Odds 📊', 'Perfect! You\'re an Oracle 🔮'];
   const simpleScore = Math.min(5, mode === 'timed' ? Math.round(score / 3 * 5 / ROUNDS) : score);
   const ratingIdx = Math.min(simpleScore, 5);
 
