@@ -254,6 +254,8 @@ const Enemies = (() => {
         Player.addResource(l.item, l.amount);
         Audio.pickup();
         Particles.lootGlow(l.x, l.y, l.color);
+        const displayName = l.item.replace(/_/g, ' ');
+        Particles.damageNumber(l.x, l.y - 12, '+' + l.amount + ' ' + displayName, l.color);
         loot.splice(i, 1);
       }
     }

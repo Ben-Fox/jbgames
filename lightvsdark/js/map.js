@@ -59,25 +59,25 @@ const GameMap = (() => {
         const r = rng();
         
         if (r < 0.02 && dc > 8) {
-          envObjects.push({ type: 'tree_large', tx: x, ty: y, variant: Math.floor(rng()*3), sway: rng()*Math.PI*2 });
+          envObjects.push({ type: 'tree_large', tx: x, ty: y, variant: Math.floor(rng()*3), sway: rng()*Math.PI*2, hp: 20, maxHp: 20 });
         } else if (r < 0.045 && dc > 7) {
-          envObjects.push({ type: 'tree_small', tx: x, ty: y, variant: Math.floor(rng()*2), sway: rng()*Math.PI*2 });
+          envObjects.push({ type: 'tree_small', tx: x, ty: y, variant: Math.floor(rng()*2), sway: rng()*Math.PI*2, hp: 12, maxHp: 12 });
         } else if (r < 0.06) {
-          envObjects.push({ type: 'bush', tx: x, ty: y, variant: Math.floor(rng()*3) });
+          envObjects.push({ type: 'bush', tx: x, ty: y, variant: Math.floor(rng()*3), hp: 5, maxHp: 5 });
         } else if (r < 0.07) {
-          envObjects.push({ type: 'rock', tx: x, ty: y, size: rng()*0.5+0.5 });
+          envObjects.push({ type: 'rock', tx: x, ty: y, size: rng()*0.5+0.5, hp: 15, maxHp: 15 });
         } else if (r < 0.075 && dc > 10) {
-          envObjects.push({ type: 'crystal_deposit', tx: x, ty: y, glow: rng()*Math.PI*2 });
+          envObjects.push({ type: 'crystal_deposit', tx: x, ty: y, glow: rng()*Math.PI*2, hp: 20, maxHp: 20 });
         } else if (r < 0.08) {
           envObjects.push({ type: 'mushroom', tx: x, ty: y, color: rng() < 0.5 ? '#e74c3c' : '#f39c12' });
         } else if (r < 0.085 && dc > 8) {
-          envObjects.push({ type: 'stump', tx: x, ty: y });
+          envObjects.push({ type: 'stump', tx: x, ty: y, hp: 6, maxHp: 6 });
         } else if (r < 0.09 && dc > 10) {
-          envObjects.push({ type: 'fallen_log', tx: x, ty: y, angle: rng()*Math.PI });
+          envObjects.push({ type: 'fallen_log', tx: x, ty: y, angle: rng()*Math.PI, hp: 8, maxHp: 8 });
         } else if (r < 0.1) {
           envObjects.push({ type: 'tall_grass', tx: x, ty: y, sway: rng()*Math.PI*2 });
         } else if (r < 0.105) {
-          envObjects.push({ type: 'boulder', tx: x, ty: y, size: rng()*0.4+0.8 });
+          envObjects.push({ type: 'boulder', tx: x, ty: y, size: rng()*0.4+0.8, hp: 25, maxHp: 25 });
         }
       }
     }
@@ -252,30 +252,66 @@ const GameMap = (() => {
     }
   }
   
-  // Gather resource from environment object at tile
-  function gatherAt(tx, ty, gatherType) {
+  // Damage a gatherable environment object. Returns resource drop when destroyed.
+  function gatherHit(tx, ty, gatherType, dmg) {
     const obj = envObjects.find(o => o.tx === tx && o.ty === ty);
-    if (!obj) return null;
-    if (gatherType === 'wood' && (obj.type === 'tree_large' || obj.type === 'tree_small' || obj.type === 'stump' || obj.type === 'fallen_log')) {
-      removeEnvAt(tx, ty);
-      const amount = obj.type === 'tree_large' ? 5 : obj.type === 'tree_small' ? 3 : 1;
-      return { resource: 'wood', amount };
+    if (!obj || obj.hp === undefined) return null;
+    
+    const woodTypes = ['tree_large', 'tree_small', 'stump', 'fallen_log', 'bush'];
+    const stoneTypes = ['rock', 'boulder'];
+    const crystalTypes = ['crystal_deposit'];
+    
+    const isWood = woodTypes.includes(obj.type);
+    const isStone = stoneTypes.includes(obj.type) || crystalTypes.includes(obj.type);
+    
+    if (gatherType === 'wood' && !isWood) return null;
+    if (gatherType === 'stone' && !isStone) return null;
+    
+    obj.hp -= dmg;
+    
+    // Show hit particles
+    const px = tx * TILE + TILE / 2;
+    const py = ty * TILE + TILE / 2;
+    Particles.hitSparks(px, py);
+    
+    // Not destroyed yet — return partial indicator
+    if (obj.hp > 0) return { hit: true, hp: obj.hp, maxHp: obj.maxHp, x: px, y: py };
+    
+    // Destroyed! Drop resources
+    removeEnvAt(tx, ty);
+    Particles.deathPoof(px, py, isWood ? '#8b6914' : '#888');
+    
+    let resource, amount;
+    if (obj.type === 'tree_large') { resource = 'wood'; amount = 5; }
+    else if (obj.type === 'tree_small') { resource = 'wood'; amount = 3; }
+    else if (obj.type === 'bush') { resource = 'wood'; amount = 1; }
+    else if (obj.type === 'stump') { resource = 'wood'; amount = 1; }
+    else if (obj.type === 'fallen_log') { resource = 'wood'; amount = 2; }
+    else if (obj.type === 'boulder') { resource = 'stone'; amount = 5; }
+    else if (obj.type === 'rock') { resource = 'stone'; amount = 3; }
+    else if (obj.type === 'crystal_deposit') { resource = 'crystal'; amount = 2; }
+    
+    return { destroyed: true, resource, amount, x: px, y: py };
+  }
+  
+  // Draw HP bar for damaged env objects
+  function drawEnvHpBars(ctx) {
+    for (const o of envObjects) {
+      if (o.hp !== undefined && o.hp < o.maxHp) {
+        const sx = o.tx * TILE + TILE / 2 - camera.x;
+        const sy = o.ty * TILE - camera.y;
+        const barW = 24;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(sx - barW / 2, sy - 4, barW, 4);
+        ctx.fillStyle = '#e67e22';
+        ctx.fillRect(sx - barW / 2, sy - 4, barW * (o.hp / o.maxHp), 4);
+      }
     }
-    if (gatherType === 'stone' && (obj.type === 'rock' || obj.type === 'boulder')) {
-      removeEnvAt(tx, ty);
-      const amount = obj.type === 'boulder' ? 5 : 3;
-      return { resource: 'stone', amount };
-    }
-    if (gatherType === 'stone' && obj.type === 'crystal_deposit') {
-      removeEnvAt(tx, ty);
-      return { resource: 'crystal', amount: 2 };
-    }
-    return null;
   }
   
   return {
     T, tiles: () => tiles, envObjects: () => envObjects, camera: () => camera,
-    generate, isEnvBlocking, removeEnvAt, gatherAt, updateCamera, drawTerrain, drawEnvObjects,
+    generate, isEnvBlocking, removeEnvAt, gatherHit, drawEnvHpBars, updateCamera, drawTerrain, drawEnvObjects,
     isWalkable(tx, ty) {
       if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
       return !isEnvBlocking(tx, ty);

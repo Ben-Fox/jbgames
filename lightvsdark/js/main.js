@@ -164,6 +164,7 @@ const Game = (() => {
     
     // Environment objects (below entities)
     GameMap.drawEnvObjects(ctx, performance.now(), Lighting.nightAmount());
+    GameMap.drawEnvHpBars(ctx);
     
     // Buildings
     Building.draw(ctx, cam);
@@ -268,23 +269,23 @@ const Game = (() => {
       if (result) {
         if (result.type === 'melee') {
           const hitAny = Enemies.hitEnemy(result);
-          // If holding a gathering tool and didn't hit an enemy, try gathering
-          if (!hitAny) {
-            const w = Player.WEAPONS[Player.state().weapon];
-            if (w && w.gather) {
-              const tx = Math.floor(result.x / TILE);
-              const ty = Math.floor(result.y / TILE);
-              // Check target tile and adjacent tiles
-              for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                  const gathered = GameMap.gatherAt(tx + dx, ty + dy, w.gather);
-                  if (gathered) {
-                    Player.addResource(gathered.resource, gathered.amount);
+          // If holding a gathering tool, try gathering env objects
+          const w = Player.WEAPONS[Player.state().weapon];
+          if (w && w.gather) {
+            const tx = Math.floor(result.x / TILE);
+            const ty = Math.floor(result.y / TILE);
+            let gathered = false;
+            for (let dx = -1; dx <= 1 && !gathered; dx++) {
+              for (let dy = -1; dy <= 1 && !gathered; dy++) {
+                const res = GameMap.gatherHit(tx + dx, ty + dy, w.gather, result.dmg);
+                if (res) {
+                  gathered = true;
+                  if (res.destroyed) {
+                    Player.addResource(res.resource, res.amount);
                     Audio.pickup();
-                    Particles.buildDust((tx + dx) * TILE + TILE/2, (ty + dy) * TILE + TILE/2);
-                    Particles.damageNumber((tx + dx) * TILE + TILE/2, (ty + dy) * TILE - 10, '+' + gathered.amount + ' ' + gathered.resource, '#2ecc71');
-                    break;
+                    Particles.damageNumber(res.x, res.y - 16, '+' + res.amount + ' ' + res.resource, '#2ecc71');
                   }
+                  // Hit but not destroyed — HP bar shows automatically
                 }
               }
             }
