@@ -112,89 +112,13 @@ footer p+p{margin-top:.3rem}
           <rect x="53" y="136" width="80" height="7" rx="4" fill="#383838"/>
         </g>
 
-        <!-- Brain — side view, thick outlined lobes with curvy S-shaped folds, pink fill -->
-        <g transform="translate(80, 28) scale(1.15)">
-          <!-- Shadow/outline layer (thick dark border like the reference) -->
-          <path d="
-            M140 18
-            C155 10, 175 6, 195 10
-            C210 13, 220 8, 235 14
-            C255 22, 268 42, 265 65
-            C268 72, 272 88, 266 108
-            C260 125, 248 142, 232 155
-            C218 166, 200 172, 180 175
-            C162 178, 142 176, 125 170
-            C108 162, 88 148, 75 128
-            C60 108, 56 85, 62 65
-            C65 50, 75 38, 90 28
-            C105 16, 125 15, 140 18Z
-          " fill="#1a1a2e" stroke="none"/>
-
-          <!-- Main brain fill — offset inward for thick outline effect -->
-          <path d="
-            M140 22
-            C154 14, 174 10, 193 14
-            C208 17, 218 12, 232 18
-            C250 26, 262 44, 260 66
-            C263 72, 267 86, 262 104
-            C256 120, 245 136, 230 148
-            C216 160, 198 166, 180 169
-            C164 172, 145 170, 128 165
-            C112 158, 94 144, 82 126
-            C68 108, 64 88, 68 68
-            C72 54, 80 42, 94 33
-            C108 22, 128 20, 140 22Z
-          " fill="url(#brainGrad)" stroke="none"/>
-
-          <!-- Lobes — thick dark curvy fold lines (S-curves like reference) -->
-          <!-- Top frontal folds -->
-          <path d="M110 38 C125 30, 145 32, 152 42 C158 50, 148 58, 135 55 C122 52, 115 48, 110 38Z" fill="none" stroke="#1a1a2e" stroke-width="4" stroke-linecap="round"/>
-          <path d="M155 28 C172 22, 192 26, 196 38 C200 48, 188 56, 175 52 C162 48, 155 40, 155 28Z" fill="none" stroke="#1a1a2e" stroke-width="4" stroke-linecap="round"/>
-          <path d="M200 24 C218 20, 238 28, 242 42 C246 52, 235 58, 222 54" fill="none" stroke="#1a1a2e" stroke-width="4" stroke-linecap="round"/>
-
-          <!-- Middle temporal folds -->
-          <path d="M88 58 C102 48, 128 50, 135 62 C142 74, 128 82, 112 78 C98 74, 88 68, 88 58Z" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-          <path d="M140 58 C158 50, 182 54, 188 68 C194 80, 178 88, 162 84 C148 80, 140 70, 140 58Z" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-          <path d="M192 58 C210 52, 232 58, 240 72 C248 84, 238 92, 222 88" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-
-          <!-- Lower parietal folds -->
-          <path d="M78 88 C95 78, 118 82, 125 95 C132 108, 118 115, 102 110 C88 106, 78 98, 78 88Z" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-          <path d="M130 88 C148 80, 175 85, 182 98 C188 110, 172 118, 155 114 C140 110, 130 100, 130 88Z" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-          <path d="M186 88 C205 82, 228 88, 238 102 C245 112, 238 120, 225 118" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
-
-          <!-- Bottom occipital folds -->
-          <path d="M95 118 C112 110, 135 114, 140 126 C145 136, 132 142, 118 138 C105 134, 95 128, 95 118Z" fill="none" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/>
-          <path d="M145 118 C162 112, 185 116, 192 128 C198 138, 185 145, 170 142" fill="none" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/>
-          <path d="M196 115 C212 110, 232 118, 240 132 C244 140, 238 148, 228 146" fill="none" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/>
-
-          <!-- Cerebellum (bottom back — striped area like reference) -->
-          <path d="M195 155 C215 148, 238 152, 248 140 C258 128, 252 115, 242 110" fill="#e05590" stroke="#1a1a2e" stroke-width="3"/>
-          <!-- Cerebellum stripes -->
-          <path d="M205 155 C218 148, 235 145, 245 138" stroke="#c93d85" stroke-width="1.5" fill="none"/>
-          <path d="M200 150 C215 142, 238 140, 250 130" stroke="#c93d85" stroke-width="1.5" fill="none"/>
-          <path d="M202 145 C218 138, 240 135, 252 125" stroke="#c93d85" stroke-width="1.5" fill="none"/>
-
-          <!-- Brain stem -->
-          <path d="M200 162 C196 175, 192 188, 188 200 C186 208, 182 212, 178 210" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <path d="M198 164 C194 176, 190 188, 187 198" stroke="#e05590" stroke-width="6" fill="none" stroke-linecap="round"/>
-          <path d="M198 170 C195 178, 192 186, 190 192" stroke="#c93d85" stroke-width="1.5" fill="none"/>
-
-          <!-- Pink highlights on lobes -->
-          <ellipse cx="125" cy="42" rx="12" ry="8" fill="rgba(255,200,220,0.25)"/>
-          <ellipse cx="170" cy="36" rx="14" ry="8" fill="rgba(255,200,220,0.2)"/>
-          <ellipse cx="110" cy="68" rx="10" ry="7" fill="rgba(255,200,220,0.2)"/>
-          <ellipse cx="160" cy="68" rx="12" ry="7" fill="rgba(255,200,220,0.18)"/>
-          <ellipse cx="105" cy="98" rx="10" ry="6" fill="rgba(255,200,220,0.15)"/>
-        </g>
-
-        <!-- Chomp particles -->
+        <!-- Chomp particles near the computer bite -->
         <g class="crunch-particles">
-          <polygon points="358,95 365,88 363,102" fill="#ff69b4" opacity="0.7"/>
-          <polygon points="370,125 378,118 375,132" fill="#ff8ec8" opacity="0.5"/>
-          <polygon points="352,150 360,143 358,155" fill="#d44a90" opacity="0.6"/>
-          <rect x="365" y="105" width="7" height="4" rx="2" fill="#ff69b4" transform="rotate(-20 368 107)" opacity="0.5"/>
-          <rect x="375" y="140" width="5" height="3" rx="1" fill="#e0559e" transform="rotate(15 377 141)" opacity="0.4"/>
-          <circle cx="362" cy="82" r="2.5" fill="#ff69b4" opacity="0.45"/>
+          <polygon points="378,85 385,78 383,92" fill="#ff69b4" opacity="0.7"/>
+          <polygon points="382,115 390,108 388,122" fill="#ff8ec8" opacity="0.5"/>
+          <polygon points="375,140 383,133 381,145" fill="#d44a90" opacity="0.6"/>
+          <rect x="388" y="98" width="7" height="4" rx="2" fill="#ff69b4" transform="rotate(-20 391 100)" opacity="0.5"/>
+          <rect x="385" y="130" width="5" height="3" rx="1" fill="#e0559e" transform="rotate(15 387 131)" opacity="0.4"/>
         </g>
       </g>
 
