@@ -96,6 +96,7 @@
       <span class="hint-badge">E Push/Scratch</span>
       <span class="hint-badge">Wall Jump off walls!</span>
       <span class="hint-badge">Double-tap → = Pounce!</span>
+      <span class="hint-badge">🐕 Beware the sleeping dog!</span>
     </div>
     <button class="btn" onclick="startGame()">START MAYHEM 😈</button>
   </div>
@@ -136,6 +137,25 @@ let roomDestructionMap = {};
 let visitedRooms = {};
 let slipperyZones = [];
 let glassShards = [];
+
+// ===== SLEEPING DOG =====
+let sleepingDog = {
+  x: 350, y: GROUND_Y - 50, w: 70, h: 40,
+  active: true, state: 'sleeping', // sleeping, alert, chasing, fled, caught
+  detectionRadius: 150,
+  detectionMeter: 0, // 0-100
+  snoreTimer: 0,
+  breathScale: 0,
+  zzzParticles: [],
+  alertTimer: 0,
+  chaseVx: 0,
+  barkTimer: 0,
+  legAnim: 0,
+  exclamationTimer: 0,
+  bonked: false,
+  bonkTimer: 0,
+  fleeX: 0, fleeDir: 0
+};
 
 // ===== AUDIO (Web Audio API) =====
 let audioCtx;
@@ -198,6 +218,40 @@ function playSound(type) {
       gain.gain.value = 0.2;
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
       osc.start(); osc.stop(audioCtx.currentTime + 0.6); break;
+  }
+}
+
+function playDogSound(type) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'snore':
+      osc.type = 'sine'; osc.frequency.value = 60 + Math.random()*20;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.8); break;
+    case 'growl':
+      osc.type = 'sawtooth'; osc.frequency.value = 80;
+      osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.4);
+      gain.gain.value = 0.12;
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.5); break;
+    case 'bark':
+      osc.type = 'square'; osc.frequency.value = 200;
+      osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12);
+      gain.gain.value = 0.18;
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.15); break;
+    case 'yelp':
+      osc.type = 'sine'; osc.frequency.value = 400;
+      osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.25);
+      gain.gain.value = 0.15;
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.3); break;
   }
 }
 
@@ -1921,6 +1975,345 @@ function drawHUD() {
   }
 }
 
+// ===== SLEEPING DOG SYSTEM =====
+function updateSleepingDog() {
+  if (!sleepingDog.active || gameState !== 'playing') return;
+  const dog = sleepingDog;
+  dog.breathScale = Math.sin(Date.now() * 0.002) * 0.03;
+  dog.legAnim += 0.15;
+
+  if (dog.state === 'sleeping') {
+    // Snore sound
+    dog.snoreTimer++;
+    if (dog.snoreTimer > 180) { playDogSound('snore'); dog.snoreTimer = 0; }
+
+    // Zzz particles
+    if (Math.random() < 0.03) {
+      dog.zzzParticles.push({ x: dog.x + dog.w/2 + 10, y: dog.y - 10, vy: -0.5, life: 80, size: 12 + Math.random()*8 });
+    }
+
+    // Detection zone check
+    const catCX = cat.x + cat.w/2, catCY = cat.y + cat.h/2;
+    const dogCX = dog.x + dog.w/2, dogCY = dog.y + dog.h/2;
+    const dist = Math.hypot(catCX - dogCX, catCY - dogCY);
+
+    if (dist < dog.detectionRadius) {
+      const catSpeed = Math.hypot(cat.vx, cat.vy);
+      const isJumping = !cat.onGround;
+      const isStill = catSpeed < 0.3;
+
+      if (!isStill) {
+        let rate = 0.3;
+        if (catSpeed > 3) rate = 1.2;
+        if (isJumping) rate = 1.5;
+        if (catSpeed > 6) rate = 2.0; // pouncing
+        dog.detectionMeter = Math.min(100, dog.detectionMeter + rate);
+      } else {
+        // Standing still - slowly decrease
+        dog.detectionMeter = Math.max(0, dog.detectionMeter - 0.15);
+      }
+
+      // Wake up threshold
+      if (dog.detectionMeter >= 100) {
+        dog.state = 'alert';
+        dog.alertTimer = 60;
+        dog.exclamationTimer = 90;
+        playDogSound('growl');
+        showWarning('🐕 DOG WAKING UP!!!', '#ff0000');
+        cat.puffTail = 10;
+      }
+    } else {
+      // Outside zone, slowly decrease
+      dog.detectionMeter = Math.max(0, dog.detectionMeter - 0.3);
+    }
+  } else if (dog.state === 'alert') {
+    dog.alertTimer--;
+    if (dog.alertTimer <= 0) {
+      dog.state = 'chasing';
+      playDogSound('bark');
+      showWarning('🐕 WOOF WOOF! DOG IS CHASING YOU!', '#ff0000');
+    }
+  } else if (dog.state === 'chasing') {
+    // Chase cat at 1.3x speed
+    const chaseSpeed = 4.2 * 1.3;
+    const dx = (cat.x + cat.w/2) - (dog.x + dog.w/2);
+    dog.chaseVx = dx > 0 ? chaseSpeed : -chaseSpeed;
+    dog.x += dog.chaseVx;
+
+    // Simple jump if cat is above
+    if (cat.y < dog.y - 40 && dog.y >= GROUND_Y - dog.h - 5) {
+      dog.y -= 8; // crude jump
+    }
+    // Gravity
+    if (dog.y < GROUND_Y - dog.h) dog.y += 5;
+    if (dog.y > GROUND_Y - dog.h) dog.y = GROUND_Y - dog.h;
+
+    // Keep in world
+    dog.x = Math.max(0, Math.min(WORLD_W - dog.w, dog.x));
+
+    // Bark periodically
+    dog.barkTimer++;
+    if (dog.barkTimer > 40) { playDogSound('bark'); dog.barkTimer = 0; }
+
+    // Check if caught cat
+    if (rectOverlap({ x: dog.x, y: dog.y, w: dog.w, h: dog.h }, { x: cat.x, y: cat.y, w: cat.w, h: cat.h })) {
+      dog.state = 'caught';
+      score = 0;
+      document.getElementById('scoreVal').textContent = '0';
+      endGameDogCaught();
+      return;
+    }
+  } else if (dog.state === 'fled') {
+    dog.x += dog.fleeDir * 10;
+    dog.bonkTimer--;
+    if (dog.bonkTimer <= 0) dog.active = false;
+  }
+
+  // Update zzz particles
+  dog.zzzParticles = dog.zzzParticles.filter(p => p.life > 0);
+  for (const p of dog.zzzParticles) { p.y += p.vy; p.x += Math.sin(p.y * 0.05) * 0.3; p.life--; }
+}
+
+function checkObjectBonkDog() {
+  if (!sleepingDog.active || sleepingDog.state !== 'sleeping') return;
+  const dog = sleepingDog;
+  const dogRect = { x: dog.x, y: dog.y, w: dog.w, h: dog.h };
+  for (const obj of objects) {
+    if (obj.destroyed || obj.fixed || !obj.pushable) continue;
+    if (Math.abs(obj.vy) > 2 && rectOverlap({ x: obj.x, y: obj.y, w: obj.w, h: obj.h }, dogRect)) {
+      // BONK!
+      dog.state = 'fled';
+      dog.bonked = true;
+      dog.bonkTimer = 60;
+      dog.fleeDir = obj.x < dog.x + dog.w/2 ? 1 : -1;
+      score += 25;
+      document.getElementById('scoreVal').textContent = score;
+      playDogSound('yelp');
+      showWarning('BONK! +25 Dog Startled! 🐕💫', '#ffdd00');
+      floatingTexts.push({ x: dog.x + dog.w/2, y: dog.y - 30, text: 'BONK! +25 Dog Startled!', life: 150, vy: -2 });
+      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#f1c40f', 30);
+      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#D4A574', 20);
+      // Destroy the object too
+      if (obj.smashable) {
+        obj.destroyed = true;
+        spawnParticles(obj.x + obj.w/2, obj.y, obj.color, 15);
+      }
+      return;
+    }
+  }
+  // Also check push boxes
+  for (const box of pushBoxes) {
+    if (Math.abs(box.vy) > 2 && rectOverlap({ x: box.x, y: box.y, w: box.w, h: box.h }, dogRect)) {
+      dog.state = 'fled';
+      dog.bonked = true;
+      dog.bonkTimer = 60;
+      dog.fleeDir = box.x < dog.x + dog.w/2 ? 1 : -1;
+      score += 25;
+      document.getElementById('scoreVal').textContent = score;
+      playDogSound('yelp');
+      showWarning('BONK! +25 Dog Startled! 🐕💫', '#ffdd00');
+      floatingTexts.push({ x: dog.x + dog.w/2, y: dog.y - 30, text: 'BONK! +25 Dog Startled!', life: 150, vy: -2 });
+      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#f1c40f', 30);
+      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#D4A574', 20);
+      return;
+    }
+  }
+}
+
+function drawSleepingDog() {
+  if (!sleepingDog.active) return;
+  const dog = sleepingDog;
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  const dx = dog.x, dy = dog.y;
+  const facing = dog.state === 'chasing' ? (dog.chaseVx >= 0 ? 1 : -1) : 1;
+
+  // Warning label visible from distance
+  if (dog.state === 'sleeping') {
+    ctx.fillStyle = 'rgba(255,200,0,0.7)';
+    ctx.font = 'bold 11px Fredoka One'; ctx.textAlign = 'center';
+    ctx.fillText('⚠️ SLEEPING DOG', dx + dog.w/2, dy - 40);
+  }
+
+  // Dog bed
+  if (dog.state === 'sleeping' || dog.state === 'alert') {
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(dx - 10, dy + dog.h - 8, dog.w + 20, 12, 6);
+    else ctx.rect(dx - 10, dy + dog.h - 8, dog.w + 20, 12);
+    ctx.fill();
+    ctx.fillStyle = '#A0522D';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(dx - 5, dy + dog.h - 5, dog.w + 10, 8, 4);
+    else ctx.rect(dx - 5, dy + dog.h - 5, dog.w + 10, 8);
+    ctx.fill();
+  }
+
+  ctx.save();
+  ctx.translate(dx + dog.w/2, dy + dog.h/2);
+  ctx.scale(facing, 1);
+  const breath = 1 + dog.breathScale;
+
+  if (dog.state === 'sleeping' || dog.state === 'alert') {
+    ctx.scale(breath, 1/breath * 0.97 + 0.03);
+    // Body - curled up
+    ctx.fillStyle = '#D4A574';
+    ctx.beginPath(); ctx.ellipse(0, 4, 32, 16, 0, 0, Math.PI*2); ctx.fill();
+    // Darker patches
+    ctx.fillStyle = '#C49A6C';
+    ctx.beginPath(); ctx.ellipse(-8, 2, 12, 8, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10, 6, 10, 6, -0.2, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#D4A574';
+    ctx.beginPath(); ctx.ellipse(22, -6, 14, 12, 0.2, 0, Math.PI*2); ctx.fill();
+    // Snout
+    ctx.fillStyle = '#C49A6C';
+    ctx.beginPath(); ctx.ellipse(32, -2, 8, 6, 0.1, 0, Math.PI*2); ctx.fill();
+    // Nose
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.ellipse(38, -3, 3, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    // Ear
+    ctx.fillStyle = '#B8895C';
+    ctx.beginPath(); ctx.ellipse(16, -16, 8, 10, -0.4, 0, Math.PI*2); ctx.fill();
+    // Eye (closed)
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(26, -8, 4, 0, Math.PI); ctx.stroke();
+    // Tail curled
+    ctx.strokeStyle = '#D4A574'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(-25, -2, 12, 0, Math.PI * 1.2); ctx.stroke();
+    // Front paw
+    ctx.fillStyle = '#D4A574';
+    ctx.beginPath(); ctx.ellipse(15, 16, 6, 4, 0, 0, Math.PI*2); ctx.fill();
+    // Belly highlight
+    ctx.fillStyle = '#E8C9A0';
+    ctx.beginPath(); ctx.ellipse(0, 12, 18, 6, 0, 0, Math.PI); ctx.fill();
+  } else if (dog.state === 'chasing' || dog.state === 'fled') {
+    // Running dog
+    const legSwing = Math.sin(dog.legAnim) * 10;
+    // Body
+    ctx.fillStyle = '#D4A574';
+    ctx.beginPath(); ctx.ellipse(0, 0, 30, 16, 0, 0, Math.PI*2); ctx.fill();
+    // Darker patches
+    ctx.fillStyle = '#C49A6C';
+    ctx.beginPath(); ctx.ellipse(-5, -2, 14, 8, 0, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#D4A574';
+    ctx.beginPath(); ctx.ellipse(28, -10, 14, 12, 0, 0, Math.PI*2); ctx.fill();
+    // Snout
+    ctx.fillStyle = '#C49A6C';
+    ctx.beginPath(); ctx.ellipse(38, -6, 9, 7, 0, 0, Math.PI*2); ctx.fill();
+    // Nose
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.ellipse(45, -7, 3, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    // Ear flopping
+    ctx.fillStyle = '#B8895C';
+    ctx.beginPath(); ctx.ellipse(22, -20 + Math.sin(dog.legAnim*2)*3, 8, 11, -0.3+Math.sin(dog.legAnim)*0.2, 0, Math.PI*2); ctx.fill();
+    // Eye (angry)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(32, -12, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(33, -12, 2.5, 0, Math.PI*2); ctx.fill();
+    // Angry brow
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(28, -18); ctx.lineTo(34, -16); ctx.stroke();
+    // Mouth open
+    if (dog.state === 'chasing') {
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath(); ctx.ellipse(42, -2, 6, 4, 0, 0, Math.PI); ctx.fill();
+    }
+    // Legs running
+    ctx.fillStyle = '#D4A574';
+    ctx.fillRect(-15, 14, 6, 14 + legSwing);
+    ctx.fillRect(-5, 14, 6, 14 - legSwing);
+    ctx.fillRect(8, 14, 6, 14 - legSwing);
+    ctx.fillRect(18, 14, 6, 14 + legSwing);
+    // Tail up
+    ctx.strokeStyle = '#D4A574'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-28, -2); ctx.quadraticCurveTo(-36, -20, -30, -28); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Zzz particles
+  if (dog.state === 'sleeping') {
+    for (const p of dog.zzzParticles) {
+      const alpha = p.life / 80;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#aaccff';
+      ctx.font = `${p.size}px Bangers`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Z', p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Exclamation mark
+  if (dog.state === 'alert' || (dog.exclamationTimer > 0 && dog.state === 'chasing')) {
+    dog.exclamationTimer--;
+    ctx.fillStyle = '#ff0000';
+    ctx.font = 'bold 28px Bangers'; ctx.textAlign = 'center';
+    ctx.fillText('!', dx + dog.w/2, dy - 20 + Math.sin(Date.now()*0.01)*3);
+  }
+
+  // Detection meter (stealth indicator)
+  if (dog.state === 'sleeping' && dog.detectionMeter > 0) {
+    const catCX = cat.x + cat.w/2, catCY = cat.y + cat.h/2;
+    const dogCX = dx + dog.w/2, dogCY = dy + dog.h/2;
+    const dist = Math.hypot(catCX - dogCX, catCY - dogCY);
+    if (dist < dog.detectionRadius + 50) {
+      // Eye icon above cat
+      const mx = cat.x + cat.w/2, my = cat.y - 20;
+      const pct = dog.detectionMeter / 100;
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(mx - 22, my - 6, 44, 10);
+      // Fill
+      const r = Math.floor(255 * pct), g = Math.floor(255 * (1-pct));
+      ctx.fillStyle = `rgb(${r},${g},0)`;
+      ctx.fillRect(mx - 21, my - 5, 42 * pct, 8);
+      // Eye icon
+      ctx.fillStyle = '#fff'; ctx.font = '10px serif'; ctx.textAlign = 'center';
+      ctx.fillText('👁', mx - 28, my + 3);
+    }
+  }
+
+  // Detection zone ring (subtle)
+  if (dog.state === 'sleeping') {
+    ctx.strokeStyle = 'rgba(255,200,0,0.1)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.arc(dx + dog.w/2, dy + dog.h/2, dog.detectionRadius, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+function endGameDogCaught() {
+  clearInterval(timerInterval);
+  gameState = 'ended';
+  cancelAnimationFrame(animFrame);
+
+  const overlay = document.getElementById('overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div id="scoreCard">
+      <h1 style="font-family:Bangers,cursive;font-size:52px;color:#ff4500;text-shadow:3px 3px 0 #1a0a2e;">🐕 BUSTED!</h1>
+      <p style="color:#f7c59f;font-size:24px;margin:12px 0">The dog caught you!</p>
+      <div class="big-score" style="color:#ff2200">0</div>
+      <p style="color:#ff6b35;font-size:18px">SCORE GOES TO ZERO</p>
+      <p style="color:#aaa;font-size:14px;margin-top:12px">Tip: Move slowly near the dog, or drop something on it for +25 points!</p>
+    </div>
+    <button class="btn" onclick="startGame()">TRY AGAIN 😈</button>
+    <div class="control-hint" style="margin-top:10px">
+      <span class="hint-badge">← → Move</span>
+      <span class="hint-badge">↑/Z Jump</span>
+      <span class="hint-badge">E Push/Scratch</span>
+      <span class="hint-badge">Sneak past the dog!</span>
+    </div>
+  `;
+}
+
 // ===== MAIN LOOP =====
 function gameLoop(timestamp) {
   ctx.clearRect(0, 0, CW, CH);
@@ -1934,11 +2327,14 @@ function gameLoop(timestamp) {
   updateCat();
   updateObjects();
   updateBoxes();
+  updateSleepingDog();
+  checkObjectBonkDog();
   updateParticles();
   updateCombo();
   updateCamera();
 
   drawCat();
+  drawSleepingDog();
   drawDog();
   drawParticles();
   drawFloatingTexts();
@@ -1977,6 +2373,24 @@ function startGame() {
   };
   camera = { x: 0, y: 500 };
   totalDestroyed = 0;
+
+  sleepingDog = {
+    x: 350, y: GROUND_Y - 50, w: 70, h: 40,
+    active: true, state: 'sleeping',
+    detectionRadius: 150,
+    detectionMeter: 0,
+    snoreTimer: 0,
+    breathScale: 0,
+    zzzParticles: [],
+    alertTimer: 0,
+    chaseVx: 0,
+    barkTimer: 0,
+    legAnim: 0,
+    exclamationTimer: 0,
+    bonked: false,
+    bonkTimer: 0,
+    fleeX: 0, fleeDir: 0
+  };
 
   document.getElementById('scoreVal').textContent = '0';
   document.getElementById('timerVal').textContent = '120';
