@@ -1,4 +1,4 @@
-// Tree Fall - game.js
+// Tree Fall - game.js (Overhauled: two-click cut, painterly graphics, subtle wind)
 (function() {
 'use strict';
 
@@ -15,6 +15,7 @@ const objectiveText = document.getElementById('objective-text');
 const windArrow = document.getElementById('wind-arrow');
 const windStrength = document.getElementById('wind-strength');
 const timberBtn = document.getElementById('btn-timber');
+const cutHint = document.getElementById('cut-hint');
 const resultOverlay = document.getElementById('result-overlay');
 const resultTitle = document.getElementById('result-title');
 const resultStars = document.getElementById('result-stars');
@@ -22,15 +23,15 @@ const resultMessage = document.getElementById('result-message');
 
 // State
 let W, H, scale;
-let state = 'menu'; // menu, levelselect, playing, cutting, falling, result
+let state = 'menu';
 let currentLevel = 0;
 let progress = JSON.parse(localStorage.getItem('treefall_progress') || '{}');
 let trees = [];
 let objects = [];
 let particles = [];
+let ambientParticles = [];
 let windLines = [];
 let cutLine = null;
-let cutReady = false;
 let activeTreeIndex = 0;
 let fallTime = 0;
 let shakeX = 0, shakeY = 0;
@@ -41,22 +42,18 @@ let objectiveTimer = 0;
 let slowMoFactor = 1;
 let damageTotal = 0;
 let hitObjects = [];
-let confetti = [];
 let groundCracks = [];
 let audioCtx = null;
-let dragStart = null;
-let dragCurrent = null;
 let mousePos = { x: 0, y: 0 };
-let touchId = null;
 let levelData = null;
 let animFrame = 0;
 let lastTime = 0;
-let ballPhysics = null; // for ramp level
-let walkerState = null; // for bridge level
+let ballPhysics = null;
+let walkerState = null;
 let dunked = false;
 let pinsKnocked = 0;
 
-// Audio
+// Audio (unchanged)
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
@@ -75,8 +72,7 @@ function playSound(type) {
         gain.gain.value = 0.15;
         gain.gain.linearRampToValueAtTime(0, now + 0.4);
         osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
         break;
       }
       case 'creak': {
@@ -88,8 +84,7 @@ function playSound(type) {
         gain.gain.value = 0.2;
         gain.gain.linearRampToValueAtTime(0, now + 0.8);
         osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.8);
+        osc.start(now); osc.stop(now + 0.8);
         break;
       }
       case 'crash': {
@@ -99,10 +94,8 @@ function playSound(type) {
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
         const src = audioCtx.createBufferSource();
         const gain = audioCtx.createGain();
-        src.buffer = buffer;
-        gain.gain.value = 0.4;
-        src.connect(gain).connect(audioCtx.destination);
-        src.start(now);
+        src.buffer = buffer; gain.gain.value = 0.4;
+        src.connect(gain).connect(audioCtx.destination); src.start(now);
         break;
       }
       case 'glass': {
@@ -110,12 +103,9 @@ function playSound(type) {
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.05)) * Math.sin(i * 0.3);
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.2;
-        src.connect(gain).connect(audioCtx.destination);
-        src.start(now);
+        const src = audioCtx.createBufferSource(); src.buffer = buffer;
+        const gain = audioCtx.createGain(); gain.gain.value = 0.2;
+        src.connect(gain).connect(audioCtx.destination); src.start(now);
         break;
       }
       case 'cheer': {
@@ -126,10 +116,8 @@ function playSound(type) {
           data[i] = (Math.random() * 2 - 1) * 0.3 * (1 - i / bufferSize);
           data[i] += Math.sin(i * 0.05) * 0.1 * (1 - i / bufferSize);
         }
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(audioCtx.destination);
-        src.start(now);
+        const src = audioCtx.createBufferSource(); src.buffer = buffer;
+        src.connect(audioCtx.destination); src.start(now);
         break;
       }
       case 'trombone': {
@@ -143,8 +131,7 @@ function playSound(type) {
         gain.gain.value = 0.15;
         gain.gain.linearRampToValueAtTime(0, now + 1.5);
         osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 1.5);
+        osc.start(now); osc.stop(now + 1.5);
         break;
       }
       case 'splash': {
@@ -152,10 +139,8 @@ function playSound(type) {
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1)) * 0.5;
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(audioCtx.destination);
-        src.start(now);
+        const src = audioCtx.createBufferSource(); src.buffer = buffer;
+        src.connect(audioCtx.destination); src.start(now);
         break;
       }
       case 'wind': {
@@ -163,23 +148,18 @@ function playSound(type) {
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.05 * Math.sin(i / bufferSize * Math.PI);
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(audioCtx.destination);
-        src.start(now);
+        const src = audioCtx.createBufferSource(); src.buffer = buffer;
+        src.connect(audioCtx.destination); src.start(now);
         break;
       }
       case 'bowling': {
         for (let i = 0; i < 3; i++) {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = 200 + i * 100;
-          gain.gain.value = 0.1;
-          gain.gain.linearRampToValueAtTime(0, now + 0.3 + i * 0.1);
+          osc.type = 'triangle'; osc.frequency.value = 200 + i * 100;
+          gain.gain.value = 0.1; gain.gain.linearRampToValueAtTime(0, now + 0.3 + i * 0.1);
           osc.connect(gain).connect(audioCtx.destination);
-          osc.start(now + i * 0.05);
-          osc.stop(now + 0.3 + i * 0.1);
+          osc.start(now + i * 0.05); osc.stop(now + 0.3 + i * 0.1);
         }
         break;
       }
@@ -188,12 +168,9 @@ function playSound(type) {
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.03));
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.3;
-        src.connect(gain).connect(audioCtx.destination);
-        src.start(now);
+        const src = audioCtx.createBufferSource(); src.buffer = buffer;
+        const gain = audioCtx.createGain(); gain.gain.value = 0.3;
+        src.connect(gain).connect(audioCtx.destination); src.start(now);
         break;
       }
     }
@@ -225,9 +202,7 @@ function buildLevelSelect() {
     else btn.classList.add('locked');
     const stars = progress[i] || 0;
     btn.innerHTML = `<span class="num">${i + 1}</span><span class="name" style="font-size:0.7em;display:block">${lv.name}</span><span class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</span>`;
-    if (unlocked) {
-      btn.onclick = () => startLevel(i);
-    }
+    if (unlocked) btn.onclick = () => startLevel(i);
     levelGrid.appendChild(btn);
   });
 }
@@ -241,7 +216,229 @@ function showScreen(name) {
   else if (name === 'hud') { hud.classList.add('active'); }
 }
 
-// Tree class
+// ============ PAINTERLY DRAWING HELPERS ============
+
+function drawPainterlySky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#2a5fa8');
+  grad.addColorStop(0.25, '#4a8fd9');
+  grad.addColorStop(0.5, '#7bb8e8');
+  grad.addColorStop(0.7, '#a8d4f0');
+  grad.addColorStop(0.85, '#d4e8c8');
+  grad.addColorStop(1, '#e8dcc0');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Atmospheric haze layers
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < 3; i++) {
+    const y = H * 0.3 + i * H * 0.15;
+    const hGrad = ctx.createLinearGradient(0, y - 30, 0, y + 30);
+    hGrad.addColorStop(0, 'transparent');
+    hGrad.addColorStop(0.5, '#d4c8b0');
+    hGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = hGrad;
+    ctx.fillRect(0, y - 30, W, 60);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPainterlyClouds() {
+  const cloudT = animFrame * 0.0002;
+  for (let i = 0; i < 4; i++) {
+    const cx = ((i * 220 + cloudT * 40 * (i + 1)) % (W + 300)) - 150;
+    const cy = 30 + i * 40 + Math.sin(i * 2.3) * 15;
+    const sz = 0.7 + Math.sin(i * 1.7) * 0.3;
+
+    // Shadow
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = '#556';
+    drawCloudShape(cx + 3, cy + 4, sz);
+
+    // Main cloud body
+    ctx.globalAlpha = 0.7;
+    const cGrad = ctx.createRadialGradient(cx + 20, cy - 10, 5, cx + 20, cy, 50 * sz);
+    cGrad.addColorStop(0, '#fff');
+    cGrad.addColorStop(0.6, 'rgba(240,245,255,0.8)');
+    cGrad.addColorStop(1, 'rgba(200,215,235,0.3)');
+    ctx.fillStyle = cGrad;
+    drawCloudShape(cx, cy, sz);
+
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawCloudShape(cx, cy, sz) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, 28 * sz, 0, Math.PI * 2);
+  ctx.arc(cx + 30 * sz, cy - 8 * sz, 24 * sz, 0, Math.PI * 2);
+  ctx.arc(cx + 55 * sz, cy + 2 * sz, 26 * sz, 0, Math.PI * 2);
+  ctx.arc(cx + 25 * sz, cy + 8 * sz, 20 * sz, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPainterlyGround(gy) {
+  if (levelData?.customGround === 'cliffs') {
+    drawCliffGround(gy);
+    return;
+  }
+
+  // Deep earth
+  const earthGrad = ctx.createLinearGradient(0, gy, 0, H);
+  earthGrad.addColorStop(0, '#5a7a2a');
+  earthGrad.addColorStop(0.05, '#4a6a20');
+  earthGrad.addColorStop(0.15, '#6b4a26');
+  earthGrad.addColorStop(0.5, '#5a3a1a');
+  earthGrad.addColorStop(1, '#3a2510');
+  ctx.fillStyle = earthGrad;
+  ctx.fillRect(0, gy - 8, W, H - gy + 20);
+
+  // Grass blades layer
+  const grassGrad = ctx.createLinearGradient(0, gy - 12, 0, gy + 5);
+  grassGrad.addColorStop(0, '#6aaa30');
+  grassGrad.addColorStop(0.4, '#5a9425');
+  grassGrad.addColorStop(1, '#4a7a1a');
+  ctx.fillStyle = grassGrad;
+  ctx.fillRect(0, gy - 8, W, 16);
+
+  // Grass highlight strip
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#8ccc44';
+  ctx.fillRect(0, gy - 8, W, 3);
+  ctx.globalAlpha = 1;
+
+  // Textured grass tufts
+  ctx.strokeStyle = '#6aaa30';
+  ctx.lineWidth = 1.5;
+  for (let x = 0; x < W; x += 8 + Math.random() * 6) {
+    const h = 4 + Math.random() * 8;
+    const lean = Math.sin(animFrame * 0.003 + x * 0.1) * 1.5;
+    ctx.globalAlpha = 0.4 + Math.random() * 0.3;
+    ctx.strokeStyle = `hsl(${95 + Math.random() * 25}, ${50 + Math.random() * 20}%, ${35 + Math.random() * 15}%)`;
+    ctx.beginPath();
+    ctx.moveTo(x, gy - 3);
+    ctx.quadraticCurveTo(x + lean, gy - 3 - h * 0.6, x + lean * 1.5, gy - 3 - h);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Dirt texture dots
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 40; i++) {
+    const dx = Math.random() * W;
+    const dy = gy + 15 + Math.random() * (H - gy - 15);
+    const dr = 1 + Math.random() * 3;
+    ctx.fillStyle = Math.random() > 0.5 ? '#8a6a3a' : '#5a4020';
+    ctx.beginPath();
+    ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCliffGround(gy) {
+  // Left cliff
+  const lGrad = ctx.createLinearGradient(0, gy - 10, 0, H);
+  lGrad.addColorStop(0, '#7a6b4a');
+  lGrad.addColorStop(0.1, '#6b5b3a');
+  lGrad.addColorStop(1, '#4a3a20');
+  ctx.fillStyle = lGrad;
+  ctx.fillRect(0, gy, W * 0.42, H - gy + 50);
+
+  // Right cliff
+  ctx.fillStyle = lGrad;
+  ctx.fillRect(W * 0.58, gy, W * 0.42 + 50, H - gy + 50);
+
+  // Gap (deep dark)
+  const gapGrad = ctx.createLinearGradient(0, gy, 0, H);
+  gapGrad.addColorStop(0, '#1a1a3e');
+  gapGrad.addColorStop(1, '#0a0a15');
+  ctx.fillStyle = gapGrad;
+  ctx.fillRect(W * 0.42, gy, W * 0.16, H - gy + 50);
+
+  // Fog in gap
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#668';
+  ctx.fillRect(W * 0.42, gy + 20, W * 0.16, 40);
+  ctx.globalAlpha = 1;
+
+  // Cliff edge highlights
+  ctx.fillStyle = '#8a7b5a';
+  ctx.fillRect(0, gy - 2, W * 0.42, 5);
+  ctx.fillRect(W * 0.58, gy - 2, W * 0.42 + 50, 5);
+
+  // Grass on cliffs
+  const cGrass = ctx.createLinearGradient(0, gy - 8, 0, gy + 3);
+  cGrass.addColorStop(0, '#6aaa30');
+  cGrass.addColorStop(1, '#4a8a1a');
+  ctx.fillStyle = cGrass;
+  ctx.fillRect(0, gy - 6, W * 0.42, 10);
+  ctx.fillRect(W * 0.58, gy - 6, W * 0.42 + 50, 10);
+}
+
+// ============ AMBIENT PARTICLES (floating leaves, dust motes) ============
+
+function initAmbientParticles() {
+  ambientParticles = [];
+  for (let i = 0; i < 15; i++) {
+    ambientParticles.push(createAmbientParticle());
+  }
+}
+
+function createAmbientParticle() {
+  const isLeaf = Math.random() > 0.5;
+  return {
+    x: Math.random() * W,
+    y: Math.random() * H * 0.8,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: 0.1 + Math.random() * 0.3,
+    size: isLeaf ? (3 + Math.random() * 4) : (1 + Math.random() * 2),
+    rot: Math.random() * Math.PI * 2,
+    rotV: (Math.random() - 0.5) * 0.02,
+    type: isLeaf ? 'leaf' : 'dust',
+    alpha: 0.15 + Math.random() * 0.25,
+    color: isLeaf
+      ? `hsl(${90 + Math.random() * 50}, ${40 + Math.random() * 30}%, ${30 + Math.random() * 25}%)`
+      : `rgba(200,190,160,${0.2 + Math.random() * 0.2})`
+  };
+}
+
+function updateAmbientParticles(dt) {
+  for (const p of ambientParticles) {
+    p.x += (p.vx + windCurrent * 0.05) * dt;
+    p.y += p.vy * dt;
+    p.rot += p.rotV * dt;
+    if (p.y > H || p.x < -20 || p.x > W + 20) {
+      Object.assign(p, createAmbientParticle());
+      p.y = -10;
+      p.x = Math.random() * W;
+    }
+  }
+}
+
+function drawAmbientParticles() {
+  for (const p of ambientParticles) {
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    if (p.type === 'leaf') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.size, p.size * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============ TREE CLASS (painterly) ============
+
 class Tree {
   constructor(cfg, idx) {
     this.idx = idx;
@@ -252,22 +449,23 @@ class Tree {
     this.lean = (cfg.lean || 0) * Math.PI / 180;
     this.x = this.baseX;
     this.y = this.groundY;
-    this.cutY = 0; // height of cut from base
-    this.cutAngle = 0; // angle of cut line
-    this.angle = this.lean; // current rotation
+    this.cutY = 0;
+    this.cutAngle = 0;
+    this.angle = this.lean;
     this.angularVel = 0;
     this.falling = false;
     this.fallen = false;
     this.detached = false;
-    this.detachVx = 0;
-    this.detachVy = 0;
     this.pivotX = 0;
     this.pivotY = 0;
     this.settled = false;
     this.settleTime = 0;
     this.branches = [];
+    this.canopySeeds = [];
     this.generateBranches();
+    this.generateCanopySeeds();
   }
+
   generateBranches() {
     const n = Math.floor(3 + Math.random() * 4);
     for (let i = 0; i < n; i++) {
@@ -277,14 +475,30 @@ class Tree {
       this.branches.push({ h, side, len, angle: side * (0.3 + Math.random() * 0.5) });
     }
   }
+
+  generateCanopySeeds() {
+    // Pre-generate organic canopy blob positions
+    for (let i = 0; i < 8; i++) {
+      this.canopySeeds.push({
+        ox: (Math.random() - 0.5) * this.trunkW * 4,
+        oy: (Math.random() - 0.5) * this.trunkW * 2,
+        r: this.trunkW * (1.2 + Math.random() * 1.2),
+        hue: 95 + Math.random() * 40,
+        sat: 40 + Math.random() * 25,
+        lit: 25 + Math.random() * 20
+      });
+    }
+  }
+
   get tipX() {
     return this.pivotX + Math.sin(this.angle) * (this.height - this.cutY);
   }
   get tipY() {
     return this.pivotY - Math.cos(this.angle) * (this.height - this.cutY);
   }
+
   startFall(cutAngle) {
-    this.cutY = this.height * 0.15; // cut near base
+    this.cutY = this.height * 0.15;
     this.cutAngle = cutAngle;
     this.pivotX = this.x;
     this.pivotY = this.y - this.cutY;
@@ -292,33 +506,39 @@ class Tree {
     this.angularVel = cutAngle;
     playSound('creak');
   }
+
   update(dt, wind) {
     if (!this.falling || this.settled) return;
     const gravity = 9.8 * scale * 0.001;
     const windForce = wind * 0.0003;
-    // Torque from gravity
     const massDist = (this.height - this.cutY) * 0.5;
     const torque = gravity * Math.sin(this.angle) * massDist * 0.01 + windForce * Math.cos(this.angle) * massDist * 0.01;
     this.angularVel += torque * dt;
-    this.angularVel *= 0.999; // slight damping
+    this.angularVel *= 0.999;
     this.angle += this.angularVel * dt;
-    // Check if tree tip hits ground
     const tipY = this.pivotY - Math.cos(this.angle) * (this.height - this.cutY);
-    const tipX = this.pivotX + Math.sin(this.angle) * (this.height - this.cutY);
     if (tipY >= this.groundY) {
       this.fallen = true;
       this.settled = true;
-      // Clamp angle
       const maxAngle = Math.acos(Math.max(-1, Math.min(1, (this.pivotY - this.groundY) / (this.height - this.cutY))));
       if (this.angle > 0) this.angle = maxAngle || this.angle;
       else this.angle = -(maxAngle || -this.angle);
       this.settleTime = 0;
     }
   }
+
   getFallTipWorldX() {
     return this.pivotX + Math.sin(this.angle) * (this.height - this.cutY);
   }
+
   draw(ctx) {
+    // Subtle sway when not falling (very gentle, 1-2 degrees max)
+    let swayAngle = 0;
+    if (!this.falling) {
+      swayAngle = Math.sin(animFrame * 0.008 + this.idx * 2) * 0.02
+                + Math.sin(animFrame * 0.013 + this.idx * 5) * 0.01;
+    }
+
     ctx.save();
     if (this.falling) {
       ctx.translate(this.pivotX, this.pivotY);
@@ -326,80 +546,179 @@ class Tree {
       this.drawTree(ctx, -(this.height - this.cutY));
     } else {
       ctx.translate(this.x, this.y);
-      ctx.rotate(this.lean);
+      ctx.rotate(this.lean + swayAngle);
       this.drawTree(ctx, -this.height);
     }
     ctx.restore();
-    // Draw stump if falling
+
+    // Stump
     if (this.falling) {
       ctx.save();
-      ctx.fillStyle = '#5a3a1a';
       const stumpH = this.cutY;
+      // Stump gradient
+      const sGrad = ctx.createLinearGradient(this.x - this.trunkW / 2, this.y - stumpH, this.x + this.trunkW / 2, this.y);
+      sGrad.addColorStop(0, '#5a3a1a');
+      sGrad.addColorStop(0.5, '#6b4a26');
+      sGrad.addColorStop(1, '#4a2a10');
+      ctx.fillStyle = sGrad;
       ctx.fillRect(this.x - this.trunkW / 2, this.y - stumpH, this.trunkW, stumpH);
-      // Cut surface
-      ctx.fillStyle = '#c9a55a';
+      // Cut surface (rings)
+      const cGrad = ctx.createRadialGradient(this.x, this.y - stumpH, 0, this.x, this.y - stumpH, this.trunkW / 2 + 2);
+      cGrad.addColorStop(0, '#e8c878');
+      cGrad.addColorStop(0.3, '#d4aa50');
+      cGrad.addColorStop(0.6, '#c09040');
+      cGrad.addColorStop(1, '#8a6020');
+      ctx.fillStyle = cGrad;
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y - stumpH, this.trunkW / 2 + 2, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y - stumpH, this.trunkW / 2 + 2, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Rings
+      ctx.strokeStyle = 'rgba(120,80,30,0.3)';
+      ctx.lineWidth = 0.5;
+      for (let r = 3; r < this.trunkW / 2; r += 3) {
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y - stumpH, r, r * 0.4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Drop shadow on ground
+    if (!this.falling) {
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(this.x + 5, this.y + 2, this.trunkW * 2.5, 6, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
+
   drawTree(ctx, startY) {
     const h = this.height - (this.falling ? this.cutY : 0);
-    // Trunk
-    ctx.fillStyle = '#6b4226';
-    ctx.fillRect(-this.trunkW / 2, startY, this.trunkW, h);
-    // Bark texture
-    ctx.strokeStyle = '#5a3518';
+
+    // Trunk with gradient and bark
+    const tw = this.trunkW;
+    const tGrad = ctx.createLinearGradient(-tw / 2, startY, tw / 2, startY);
+    tGrad.addColorStop(0, '#3a2010');
+    tGrad.addColorStop(0.2, '#5a3518');
+    tGrad.addColorStop(0.5, '#7a5030');
+    tGrad.addColorStop(0.8, '#5a3518');
+    tGrad.addColorStop(1, '#3a2010');
+    ctx.fillStyle = tGrad;
+
+    // Slightly tapered trunk
+    ctx.beginPath();
+    ctx.moveTo(-tw / 2, startY + h);
+    ctx.lineTo(-tw * 0.35, startY);
+    ctx.lineTo(tw * 0.35, startY);
+    ctx.lineTo(tw / 2, startY + h);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bark texture lines
+    ctx.strokeStyle = 'rgba(40,20,5,0.3)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < h; i += 15 * scale) {
+    for (let i = 0; i < h; i += 10 * scale) {
+      const t = i / h;
+      const w = tw * 0.5 * (1 - t * 0.3);
       ctx.beginPath();
-      ctx.moveTo(-this.trunkW / 2 + 2, startY + i);
-      ctx.lineTo(this.trunkW / 2 - 2, startY + i + 5);
+      ctx.moveTo(-w + 2 + Math.sin(i * 0.7) * 2, startY + i);
+      ctx.bezierCurveTo(
+        -w * 0.3 + Math.sin(i * 0.5) * 3, startY + i + 3,
+        w * 0.3 + Math.cos(i * 0.3) * 3, startY + i + 6,
+        w - 2 + Math.sin(i * 0.9) * 2, startY + i + 4
+      );
       ctx.stroke();
     }
-    // Branches
+
+    // Highlight strip on trunk
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = '#c8a060';
+    ctx.fillRect(-tw * 0.1, startY, tw * 0.15, h);
+    ctx.globalAlpha = 1;
+
+    // Branches with gradient
     for (const b of this.branches) {
       const by = startY + h * (1 - b.h);
       ctx.save();
       ctx.translate(0, by);
       ctx.rotate(b.angle);
-      ctx.fillStyle = '#5a3518';
-      ctx.fillRect(0, -3 * scale, b.len, 6 * scale);
-      // Leaves on branch
-      ctx.fillStyle = '#2d8a2d';
+
+      const bGrad = ctx.createLinearGradient(0, 0, b.len, 0);
+      bGrad.addColorStop(0, '#5a3518');
+      bGrad.addColorStop(1, '#7a5530');
+      ctx.fillStyle = bGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -3 * scale);
+      ctx.lineTo(b.len, -1.5 * scale);
+      ctx.lineTo(b.len, 1.5 * scale);
+      ctx.lineTo(0, 3 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      // Leaves on branch (painterly blobs)
       for (let j = 0; j < 3; j++) {
         const lx = b.len * (0.4 + j * 0.25);
+        const lr = (10 + Math.random() * 4) * scale;
+        const lGrad = ctx.createRadialGradient(lx - 2, -7 * scale, 1, lx, -3 * scale, lr);
+        lGrad.addColorStop(0, '#5cc840');
+        lGrad.addColorStop(0.5, '#3a9a28');
+        lGrad.addColorStop(1, '#1e6818');
+        ctx.fillStyle = lGrad;
         ctx.beginPath();
-        ctx.arc(lx, -5 * scale, 12 * scale, 0, Math.PI * 2);
+        ctx.arc(lx, -5 * scale, lr, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
     }
-    // Canopy
-    const canopyY = startY + h * 0.05;
-    const canopyR = this.trunkW * 2.5;
-    ctx.fillStyle = '#2d8a2d';
-    for (let i = 0; i < 5; i++) {
-      const cx = (i - 2) * canopyR * 0.5;
-      const cy = canopyY + (Math.abs(i - 2)) * canopyR * 0.15;
+
+    // Canopy (organic blobby shapes with gradients)
+    const canopyBaseY = startY + h * 0.05;
+    const canopyR = tw * 2.5;
+
+    // Shadow layer under canopy
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = '#000';
+    for (const s of this.canopySeeds) {
       ctx.beginPath();
-      ctx.arc(cx, cy, canopyR * (0.7 + Math.random() * 0.1), 0, Math.PI * 2);
+      ctx.arc(s.ox + 4, canopyBaseY + s.oy + 6, s.r * 0.95, 0, Math.PI * 2);
       ctx.fill();
     }
-    // Darker leaf accents
-    ctx.fillStyle = '#1e6b1e';
-    for (let i = 0; i < 4; i++) {
-      const cx = (i - 1.5) * canopyR * 0.4;
-      const cy = canopyY + 5 + Math.random() * canopyR * 0.3;
+    ctx.globalAlpha = 1;
+
+    // Main canopy blobs
+    for (const s of this.canopySeeds) {
+      const cGrad = ctx.createRadialGradient(
+        s.ox - s.r * 0.3, canopyBaseY + s.oy - s.r * 0.3, s.r * 0.1,
+        s.ox, canopyBaseY + s.oy, s.r
+      );
+      cGrad.addColorStop(0, `hsl(${s.hue}, ${s.sat + 15}%, ${s.lit + 20}%)`);
+      cGrad.addColorStop(0.5, `hsl(${s.hue}, ${s.sat}%, ${s.lit + 5}%)`);
+      cGrad.addColorStop(1, `hsl(${s.hue + 10}, ${s.sat - 5}%, ${s.lit - 5}%)`);
+      ctx.fillStyle = cGrad;
       ctx.beginPath();
-      ctx.arc(cx, cy, canopyR * 0.4, 0, Math.PI * 2);
+      ctx.arc(s.ox, canopyBaseY + s.oy, s.r, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Highlight blobs on top
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#8ce060';
+    for (let i = 0; i < 3; i++) {
+      const hx = (i - 1) * canopyR * 0.4;
+      const hy = canopyBaseY - canopyR * 0.15 + i * 3;
+      ctx.beginPath();
+      ctx.arc(hx, hy, canopyR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
-// Object drawing functions
+// ============ OBJECT DRAWING (painterly) ============
+
 function drawObject(obj) {
   const ox = obj.x * W;
   const ow = obj.w * W;
@@ -407,34 +726,93 @@ function drawObject(obj) {
   const oh = obj.h * scale;
   const oy = gy - oh + (obj.yOff || 0) * scale;
 
-  if (obj.hit && obj.type !== 'pin') {
-    // Draw destroyed version
-    ctx.globalAlpha = 0.5;
+  if (obj.hit && obj.type !== 'pin') ctx.globalAlpha = 0.5;
+
+  // Drop shadow
+  ctx.save();
+  if (obj.type !== 'cliff' && obj.type !== 'powerline' && obj.type !== 'pool') {
+    ctx.globalAlpha = (ctx.globalAlpha || 1) * 0.1;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(ox, gy + 3, ow / 2 + 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = obj.hit && obj.type !== 'pin' ? 0.5 : 1;
   }
 
-  ctx.save();
   switch(obj.type) {
-    case 'house':
-      // Wall
-      ctx.fillStyle = obj.hit ? '#888' : '#e8d4b0';
+    case 'house': {
+      // Wall with gradient
+      const wGrad = ctx.createLinearGradient(ox - ow / 2, oy, ox + ow / 2, oy + oh);
+      wGrad.addColorStop(0, obj.hit ? '#888' : '#f0e4cc');
+      wGrad.addColorStop(0.5, obj.hit ? '#777' : '#e8d4b0');
+      wGrad.addColorStop(1, obj.hit ? '#666' : '#d8c4a0');
+      ctx.fillStyle = wGrad;
       ctx.fillRect(ox - ow / 2, oy, ow, oh);
-      // Roof
-      ctx.fillStyle = obj.hit ? '#666' : '#c0392b';
+
+      // Wall shadow on left side
+      ctx.globalAlpha = (obj.hit ? 0.5 : 1) * 0.15;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(ox - ow / 2, oy, ow * 0.15, oh);
+      ctx.globalAlpha = obj.hit ? 0.5 : 1;
+
+      // Roof gradient
+      const rGrad = ctx.createLinearGradient(ox, oy - oh * 0.4, ox, oy);
+      rGrad.addColorStop(0, obj.hit ? '#555' : '#a82818');
+      rGrad.addColorStop(1, obj.hit ? '#666' : '#c83828');
+      ctx.fillStyle = rGrad;
       ctx.beginPath();
       ctx.moveTo(ox - ow / 2 - 10, oy);
       ctx.lineTo(ox, oy - oh * 0.4);
       ctx.lineTo(ox + ow / 2 + 10, oy);
       ctx.closePath();
       ctx.fill();
-      // Door
-      ctx.fillStyle = '#8b4513';
+
+      // Roof highlight
+      ctx.globalAlpha = (obj.hit ? 0.5 : 1) * 0.2;
+      ctx.fillStyle = '#f88';
+      ctx.beginPath();
+      ctx.moveTo(ox - ow / 4, oy);
+      ctx.lineTo(ox, oy - oh * 0.35);
+      ctx.lineTo(ox + ow / 8, oy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = obj.hit ? 0.5 : 1;
+
+      // Door gradient
+      const dGrad = ctx.createLinearGradient(ox - 8 * scale, oy + oh * 0.4, ox + 8 * scale, oy + oh);
+      dGrad.addColorStop(0, '#9a5520');
+      dGrad.addColorStop(1, '#6a3510');
+      ctx.fillStyle = dGrad;
       ctx.fillRect(ox - 8 * scale, oy + oh * 0.4, 16 * scale, oh * 0.6);
-      // Windows
-      ctx.fillStyle = obj.hit ? '#555' : '#87ceeb';
+
+      // Door knob
+      ctx.fillStyle = '#d4aa40';
+      ctx.beginPath();
+      ctx.arc(ox + 4 * scale, oy + oh * 0.7, 1.5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Windows with glow
+      const winCol = obj.hit ? '#555' : '#88ccee';
+      ctx.fillStyle = winCol;
       ctx.fillRect(ox - ow / 3, oy + oh * 0.15, 14 * scale, 12 * scale);
       ctx.fillRect(ox + ow / 6, oy + oh * 0.15, 14 * scale, 12 * scale);
+
+      // Window shine
+      if (!obj.hit) {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(ox - ow / 3 + 1, oy + oh * 0.15 + 1, 4 * scale, 5 * scale);
+        ctx.fillRect(ox + ow / 6 + 1, oy + oh * 0.15 + 1, 4 * scale, 5 * scale);
+        ctx.globalAlpha = 1;
+      }
+
+      // Window frames
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ox - ow / 3, oy + oh * 0.15, 14 * scale, 12 * scale);
+      ctx.strokeRect(ox + ow / 6, oy + oh * 0.15, 14 * scale, 12 * scale);
+
       if (obj.hit) {
-        // Cracks
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -444,66 +822,107 @@ function drawObject(obj) {
         ctx.stroke();
       }
       break;
-    case 'car':
-      // Body
-      ctx.fillStyle = obj.hit ? '#666' : '#e74c3c';
+    }
+    case 'car': {
       const carY = gy - oh;
+      // Body gradient
+      const bGrad = ctx.createLinearGradient(ox, carY, ox, carY + oh * 0.6);
+      bGrad.addColorStop(0, obj.hit ? '#777' : '#f05040');
+      bGrad.addColorStop(1, obj.hit ? '#555' : '#b02818');
+      ctx.fillStyle = bGrad;
       ctx.beginPath();
       ctx.roundRect(ox - ow / 2, carY, ow, oh * 0.6, 5);
       ctx.fill();
-      // Top
-      ctx.fillStyle = obj.hit ? '#555' : '#c0392b';
+
+      // Car top
+      const tGrad = ctx.createLinearGradient(ox, carY - oh * 0.35, ox, carY + oh * 0.05);
+      tGrad.addColorStop(0, obj.hit ? '#666' : '#d83020');
+      tGrad.addColorStop(1, obj.hit ? '#555' : '#c02818');
+      ctx.fillStyle = tGrad;
       ctx.beginPath();
       ctx.roundRect(ox - ow / 3, carY - oh * 0.35, ow * 0.6, oh * 0.4, 4);
       ctx.fill();
+
       // Windows
-      ctx.fillStyle = obj.hit ? '#444' : '#87ceeb';
+      ctx.fillStyle = obj.hit ? '#444' : '#88ccee';
       ctx.fillRect(ox - ow / 4, carY - oh * 0.3, ow * 0.2, oh * 0.25);
       ctx.fillRect(ox + ow / 12, carY - oh * 0.3, ow * 0.2, oh * 0.25);
-      // Wheels
-      ctx.fillStyle = '#222';
-      ctx.beginPath();
-      ctx.arc(ox - ow / 3, gy, 8 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(ox + ow / 3, gy, 8 * scale, 0, Math.PI * 2);
-      ctx.fill();
+
+      // Shine on body
+      ctx.globalAlpha = (obj.hit ? 0.5 : 1) * 0.15;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(ox - ow / 2 + 5, carY + 3, ow - 10, oh * 0.15);
+      ctx.globalAlpha = obj.hit ? 0.5 : 1;
+
+      // Wheels with depth
+      for (const wx of [ox - ow / 3, ox + ow / 3]) {
+        const wGrad = ctx.createRadialGradient(wx - 1, gy - 1, 1, wx, gy, 8 * scale);
+        wGrad.addColorStop(0, '#444');
+        wGrad.addColorStop(0.6, '#222');
+        wGrad.addColorStop(1, '#111');
+        ctx.fillStyle = wGrad;
+        ctx.beginPath();
+        ctx.arc(wx, gy, 8 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        // Hubcap
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.arc(wx, gy, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       if (obj.hit) {
         ctx.fillStyle = '#888';
         ctx.fillRect(ox - ow / 2, carY, ow, oh * 0.3);
       }
       break;
-    case 'fence':
-      ctx.fillStyle = obj.hit ? '#888' : '#f5f5dc';
+    }
+    case 'fence': {
+      const fColor = obj.hit ? '#999' : '#f5eedd';
+      const fShadow = obj.hit ? '#777' : '#d4c8aa';
       const posts = 6;
       for (let i = 0; i < posts; i++) {
         const px = ox - ow / 2 + (ow / (posts - 1)) * i;
+        const pGrad = ctx.createLinearGradient(px - 2 * scale, gy - oh, px + 2 * scale, gy);
+        pGrad.addColorStop(0, fColor);
+        pGrad.addColorStop(1, fShadow);
+        ctx.fillStyle = pGrad;
         ctx.fillRect(px - 2 * scale, gy - oh, 4 * scale, oh);
+        // Post cap
+        ctx.fillStyle = fColor;
+        ctx.beginPath();
+        ctx.moveTo(px - 3 * scale, gy - oh);
+        ctx.lineTo(px, gy - oh - 4);
+        ctx.lineTo(px + 3 * scale, gy - oh);
+        ctx.closePath();
+        ctx.fill();
       }
-      // Rails
+      ctx.fillStyle = fShadow;
       ctx.fillRect(ox - ow / 2, gy - oh * 0.7, ow, 3 * scale);
       ctx.fillRect(ox - ow / 2, gy - oh * 0.35, ow, 3 * scale);
       break;
-    case 'playground':
-      // Swing set
-      ctx.strokeStyle = '#888';
+    }
+    case 'playground': {
+      ctx.strokeStyle = '#999';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(ox - ow / 3, gy);
       ctx.lineTo(ox, gy - oh);
       ctx.lineTo(ox + ow / 3, gy);
       ctx.stroke();
-      // Swing
-      ctx.strokeStyle = '#555';
+      ctx.strokeStyle = '#666';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(ox - 5, gy - oh);
       ctx.lineTo(ox - 8, gy - 10);
       ctx.stroke();
-      ctx.fillStyle = '#c0392b';
+      ctx.fillStyle = '#d04030';
       ctx.fillRect(ox - 14, gy - 12, 12, 3);
-      // Slide
-      ctx.fillStyle = '#3498db';
+      // Slide gradient
+      const sGrad = ctx.createLinearGradient(ox + ow / 4, gy - oh * 0.8, ox + ow / 2, gy);
+      sGrad.addColorStop(0, '#5ab8ee');
+      sGrad.addColorStop(1, '#2878aa');
+      ctx.fillStyle = sGrad;
       ctx.beginPath();
       ctx.moveTo(ox + ow / 4, gy - oh * 0.8);
       ctx.lineTo(ox + ow / 2, gy);
@@ -512,44 +931,32 @@ function drawObject(obj) {
       ctx.closePath();
       ctx.fill();
       break;
+    }
     case 'stickfigure': {
       const sfx = obj.fleeX != null ? obj.fleeX : ox;
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 2;
       const headY = gy - 25 * scale;
-      // Head
-      ctx.beginPath();
-      ctx.arc(sfx, headY, 4 * scale, 0, Math.PI * 2);
-      ctx.stroke();
-      // Body
-      ctx.beginPath();
-      ctx.moveTo(sfx, headY + 4 * scale);
-      ctx.lineTo(sfx, gy - 8 * scale);
-      ctx.stroke();
-      // Arms
-      ctx.beginPath();
-      ctx.moveTo(sfx - 8 * scale, gy - 18 * scale);
-      ctx.lineTo(sfx + 8 * scale, gy - 18 * scale);
-      ctx.stroke();
-      // Legs
-      ctx.beginPath();
-      ctx.moveTo(sfx, gy - 8 * scale);
-      ctx.lineTo(sfx - 6 * scale, gy);
-      ctx.moveTo(sfx, gy - 8 * scale);
-      ctx.lineTo(sfx + 6 * scale, gy);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(sfx, headY, 4 * scale, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sfx, headY + 4 * scale); ctx.lineTo(sfx, gy - 8 * scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sfx - 8 * scale, gy - 18 * scale); ctx.lineTo(sfx + 8 * scale, gy - 18 * scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sfx, gy - 8 * scale); ctx.lineTo(sfx - 6 * scale, gy); ctx.moveTo(sfx, gy - 8 * scale); ctx.lineTo(sfx + 6 * scale, gy); ctx.stroke();
       break;
     }
-    case 'powerline':
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 4;
+    case 'powerline': {
       const plY = gy + (obj.yOff || 0) * scale;
-      // Poles
-      ctx.fillStyle = '#8b7355';
+      // Pole gradient
+      const polGrad = ctx.createLinearGradient(0, plY, 0, gy);
+      polGrad.addColorStop(0, '#9a8565');
+      polGrad.addColorStop(1, '#6a5535');
+      ctx.fillStyle = polGrad;
       ctx.fillRect(ox - ow / 2, plY, 6, gy - plY);
       ctx.fillRect(ox + ow / 2 - 6, plY, 6, gy - plY);
+      // Cross bar
+      ctx.fillStyle = '#7a6545';
+      ctx.fillRect(ox - ow / 2 - 5, plY, ow + 10, 4);
       // Wires
-      ctx.strokeStyle = '#333';
+      ctx.strokeStyle = '#222';
       ctx.lineWidth = 2;
       for (let w = 0; w < 3; w++) {
         ctx.beginPath();
@@ -559,71 +966,92 @@ function drawObject(obj) {
         ctx.stroke();
       }
       break;
-    case 'pool':
-      ctx.fillStyle = '#4aa3df';
+    }
+    case 'pool': {
+      // Water gradient
+      const pGrad = ctx.createLinearGradient(ox - ow / 2, gy - oh, ox - ow / 2, gy);
+      pGrad.addColorStop(0, '#5ac8ff');
+      pGrad.addColorStop(0.5, '#3898dd');
+      pGrad.addColorStop(1, '#2070aa');
+      ctx.fillStyle = pGrad;
       ctx.fillRect(ox - ow / 2, gy - oh, ow, oh);
-      ctx.strokeStyle = '#ccc';
+      // Pool edge
+      ctx.strokeStyle = '#bbb';
       ctx.lineWidth = 3;
       ctx.strokeRect(ox - ow / 2, gy - oh, ow, oh);
-      // Water ripples
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      // Water surface shimmer
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#8ae';
+      ctx.fillRect(ox - ow / 2 + 3, gy - oh + 2, ow - 6, 4);
+      ctx.globalAlpha = 1;
+      // Ripples
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.lineWidth = 1;
       for (let r = 0; r < 3; r++) {
+        const rx = ox + (r - 1) * ow / 4 + Math.sin(animFrame * 0.02 + r) * 3;
         ctx.beginPath();
-        ctx.arc(ox + (r - 1) * ow / 4, gy - oh / 2, 6, 0, Math.PI * 2);
+        ctx.arc(rx, gy - oh / 2, 5 + Math.sin(animFrame * 0.03 + r * 2) * 2, 0, Math.PI * 2);
         ctx.stroke();
       }
       break;
-    case 'can':
+    }
+    case 'can': {
       if (!obj.hit) {
-        ctx.fillStyle = '#e74c3c';
+        const canGrad = ctx.createLinearGradient(ox - 4 * scale, 0, ox + 4 * scale, 0);
+        canGrad.addColorStop(0, '#c82818');
+        canGrad.addColorStop(0.3, '#f04030');
+        canGrad.addColorStop(0.7, '#e83828');
+        canGrad.addColorStop(1, '#a01808');
+        ctx.fillStyle = canGrad;
         ctx.fillRect(ox - 4 * scale, gy - oh, 8 * scale, oh);
-        ctx.fillStyle = '#c0392b';
-        ctx.fillRect(ox - 4 * scale, gy - oh, 8 * scale, 3);
+        // Top
+        ctx.fillStyle = '#ccc';
+        ctx.beginPath();
+        ctx.ellipse(ox, gy - oh, 4 * scale, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = `${6 * scale}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('Cola', ox, gy - oh / 3);
       } else {
-        // Crushed can
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(ox - 6 * scale, gy - 3, 12 * scale, 3);
       }
       break;
-    case 'truck':
+    }
+    case 'truck': {
       const trY = gy - oh;
-      // Cab
-      ctx.fillStyle = '#2980b9';
-      ctx.beginPath();
-      ctx.roundRect(ox + ow / 4, trY, ow / 3, oh * 0.7, 3);
-      ctx.fill();
-      // Windshield
-      ctx.fillStyle = '#87ceeb';
+      // Cab gradient
+      const cabGrad = ctx.createLinearGradient(ox + ow / 4, trY, ox + ow / 4, trY + oh * 0.7);
+      cabGrad.addColorStop(0, '#3898dd');
+      cabGrad.addColorStop(1, '#2070aa');
+      ctx.fillStyle = cabGrad;
+      ctx.beginPath(); ctx.roundRect(ox + ow / 4, trY, ow / 3, oh * 0.7, 3); ctx.fill();
+      ctx.fillStyle = '#88ccee';
       ctx.fillRect(ox + ow / 4 + 3, trY + 3, ow / 4, oh * 0.3);
       // Bed
-      ctx.fillStyle = '#555';
+      const bedGrad = ctx.createLinearGradient(0, trY + oh * 0.3, 0, trY + oh * 0.7);
+      bedGrad.addColorStop(0, '#666');
+      bedGrad.addColorStop(1, '#444');
+      ctx.fillStyle = bedGrad;
       ctx.fillRect(ox - ow / 2, trY + oh * 0.3, ow * 0.75, oh * 0.4);
-      // Bed walls
-      ctx.fillStyle = '#444';
+      ctx.fillStyle = '#555';
       ctx.fillRect(ox - ow / 2, trY + oh * 0.2, 3, oh * 0.5);
       ctx.fillRect(ox + ow / 4 - 3, trY + oh * 0.2, 3, oh * 0.5);
       // Wheels
       ctx.fillStyle = '#222';
       ctx.beginPath(); ctx.arc(ox - ow / 3, gy, 8 * scale, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(ox + ow / 3, gy, 8 * scale, 0, Math.PI * 2); ctx.fill();
-      // Bounce effect
-      if (obj.bounceTime > 0) {
-        ctx.save();
-        ctx.translate(0, -Math.sin(obj.bounceTime * 10) * 5 * obj.bounceTime);
-        ctx.restore();
-      }
       break;
-    case 'cliff':
-      // Drawn in custom ground
-      break;
-    case 'pin':
+    }
+    case 'cliff': break;
+    case 'pin': {
       if (!obj.hit) {
-        ctx.fillStyle = '#fff';
+        const pinGrad = ctx.createLinearGradient(ox - 4 * scale, gy - oh, ox + 4 * scale, gy);
+        pinGrad.addColorStop(0, '#fff');
+        pinGrad.addColorStop(0.7, '#eee');
+        pinGrad.addColorStop(1, '#ccc');
+        ctx.fillStyle = pinGrad;
         ctx.beginPath();
         ctx.moveTo(ox - 4 * scale, gy);
         ctx.lineTo(ox - 2 * scale, gy - oh * 0.6);
@@ -632,12 +1060,12 @@ function drawObject(obj) {
         ctx.lineTo(ox + 4 * scale, gy);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#e74c3c';
+        // Stripe
+        ctx.fillStyle = '#e83828';
         ctx.beginPath();
         ctx.arc(ox, gy - oh + 3, 3 * scale, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Fallen pin
         ctx.fillStyle = '#ddd';
         ctx.save();
         ctx.translate(ox, gy);
@@ -646,57 +1074,73 @@ function drawObject(obj) {
         ctx.restore();
       }
       break;
-    case 'dunktank':
-      // Tank
-      ctx.fillStyle = '#4aa3df';
+    }
+    case 'dunktank': {
+      const dtGrad = ctx.createLinearGradient(ox - ow / 2, gy - oh, ox - ow / 2, gy);
+      dtGrad.addColorStop(0, '#5ac8ff');
+      dtGrad.addColorStop(1, '#2070aa');
+      ctx.fillStyle = dtGrad;
       ctx.fillRect(ox - ow / 2, gy - oh, ow, oh);
       ctx.strokeStyle = '#888';
       ctx.lineWidth = 2;
       ctx.strokeRect(ox - ow / 2, gy - oh, ow, oh);
-      // Target
-      ctx.fillStyle = '#e74c3c';
+      ctx.fillStyle = '#e83828';
       ctx.beginPath();
       ctx.arc(ox + ow / 2 + 10, gy - oh * 0.7, 8 * scale, 0, Math.PI * 2);
       ctx.fill();
-      // Person on seat
+      // White ring on target
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ox + ow / 2 + 10, gy - oh * 0.7, 4 * scale, 0, Math.PI * 2);
+      ctx.stroke();
       if (!dunked) {
         ctx.fillStyle = '#f5c542';
-        ctx.beginPath();
-        ctx.arc(ox, gy - oh - 10, 6 * scale, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(ox, gy - oh - 10, 6 * scale, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#333';
         ctx.fillRect(ox - 3, gy - oh - 4, 6, 8);
       }
       break;
-    case 'ramp':
-      ctx.fillStyle = '#8b7355';
+    }
+    case 'ramp': {
+      const rGrad = ctx.createLinearGradient(ox - ow / 2, gy, ox - ow / 2, gy - oh);
+      rGrad.addColorStop(0, '#6a4a2a');
+      rGrad.addColorStop(1, '#9a7a5a');
+      ctx.fillStyle = rGrad;
       ctx.beginPath();
       ctx.moveTo(ox - ow / 2, gy);
       ctx.lineTo(ox + ow / 2, gy);
       ctx.lineTo(ox - ow / 2, gy - oh);
       ctx.closePath();
       ctx.fill();
-      // Ball on ramp
       if (!obj.hit) {
-        ctx.fillStyle = '#e67e22';
+        const ballGrad = ctx.createRadialGradient(ox - ow / 4 - 2, gy - oh / 2 - 8, 1, ox - ow / 4, gy - oh / 2 - 6, 6 * scale);
+        ballGrad.addColorStop(0, '#f0a040');
+        ballGrad.addColorStop(1, '#c06010');
+        ctx.fillStyle = ballGrad;
         ctx.beginPath();
         ctx.arc(ox - ow / 4, gy - oh / 2 - 6, 6 * scale, 0, Math.PI * 2);
         ctx.fill();
       }
       break;
-    case 'hoop':
+    }
+    case 'hoop': {
       const hoopY = gy - oh;
-      // Pole
-      ctx.fillStyle = '#888';
+      const polGrad = ctx.createLinearGradient(0, hoopY, 0, gy);
+      polGrad.addColorStop(0, '#aaa'); polGrad.addColorStop(1, '#666');
+      ctx.fillStyle = polGrad;
       ctx.fillRect(ox - 2, hoopY, 4, oh);
-      // Backboard
       ctx.fillStyle = '#fff';
       ctx.fillRect(ox - 12 * scale, hoopY, 24 * scale, 18 * scale);
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 2;
       ctx.strokeRect(ox - 12 * scale, hoopY, 24 * scale, 18 * scale);
+      // Inner box
+      ctx.strokeStyle = '#e83828';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(ox - 6 * scale, hoopY + 4 * scale, 12 * scale, 10 * scale);
       // Rim
-      ctx.strokeStyle = '#e74c3c';
+      ctx.strokeStyle = '#e83828';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(ox - 10 * scale, hoopY + 18 * scale);
@@ -705,21 +1149,22 @@ function drawObject(obj) {
       // Net
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1;
-      for (let n = 0; n < 4; n++) {
+      for (let n = 0; n < 5; n++) {
         ctx.beginPath();
-        ctx.moveTo(ox - 8 * scale + n * 5 * scale, hoopY + 18 * scale);
-        ctx.lineTo(ox - 4 * scale + n * 3 * scale, hoopY + 30 * scale);
+        ctx.moveTo(ox - 9 * scale + n * 4.5 * scale, hoopY + 18 * scale);
+        ctx.lineTo(ox - 5 * scale + n * 2.5 * scale, hoopY + 30 * scale);
         ctx.stroke();
       }
       break;
+    }
   }
   ctx.restore();
   ctx.globalAlpha = 1;
 }
 
-// Particles
+// ============ PARTICLES ============
+
 function spawnParticles(x, y, type, count) {
-  // Cap total particles to prevent performance issues
   const maxParticles = 150;
   if (particles.length > maxParticles) return;
   count = Math.min(count, maxParticles - particles.length);
@@ -760,13 +1205,7 @@ function drawParticles() {
   for (const p of particles) {
     ctx.globalAlpha = p.life;
     ctx.fillStyle = p.color;
-    if (p.type === 'leaf') {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot || 0);
-      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-      ctx.restore();
-    } else if (p.type === 'confetti') {
+    if (p.type === 'leaf' || p.type === 'confetti') {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot || 0);
@@ -801,10 +1240,10 @@ function updateWindLines(dt) {
 }
 
 function drawWindLines() {
-  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 1.5;
   for (const wl of windLines) {
-    ctx.globalAlpha = wl.life * 0.5;
+    ctx.globalAlpha = wl.life * 0.4;
     ctx.beginPath();
     ctx.moveTo(wl.x, wl.y);
     ctx.lineTo(wl.x + wl.len * Math.sign(wl.speed), wl.y);
@@ -813,87 +1252,24 @@ function drawWindLines() {
   ctx.globalAlpha = 1;
 }
 
-// Background
-function drawBackground() {
-  // Sky gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#4a90d9');
-  grad.addColorStop(0.6, '#87ceeb');
-  grad.addColorStop(1, '#b5e7ff');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+// ============ CUT LINE DRAWING ============
 
-  // Clouds
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  const cloudT = animFrame * 0.0002;
-  for (let i = 0; i < 3; i++) {
-    const cx = ((i * 200 + cloudT * 50 * (i + 1)) % (W + 200)) - 100;
-    const cy = 40 + i * 35;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 25, 0, Math.PI * 2);
-    ctx.arc(cx + 25, cy - 5, 20, 0, Math.PI * 2);
-    ctx.arc(cx + 50, cy, 25, 0, Math.PI * 2);
-    ctx.arc(cx + 25, cy + 5, 18, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Ground
-  const gy = (levelData?.groundLevel || 0.85) * H;
-
-  if (levelData?.customGround === 'cliffs') {
-    // Left cliff
-    ctx.fillStyle = '#6b5b3a';
-    ctx.fillRect(0, gy, W * 0.42, H - gy + 50);
-    ctx.fillStyle = '#5a4a2a';
-    ctx.fillRect(0, gy, W * 0.42, 10);
-    // Right cliff
-    ctx.fillStyle = '#6b5b3a';
-    ctx.fillRect(W * 0.58, gy, W * 0.42 + 50, H - gy + 50);
-    ctx.fillStyle = '#5a4a2a';
-    ctx.fillRect(W * 0.58, gy, W * 0.42 + 50, 10);
-    // Gap (dark)
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(W * 0.42, gy, W * 0.16, H - gy + 50);
-    // Grass on cliffs
-    ctx.fillStyle = '#4a2';
-    ctx.fillRect(0, gy - 5, W * 0.42, 8);
-    ctx.fillRect(W * 0.58, gy - 5, W * 0.42 + 50, 8);
-  } else {
-    ctx.fillStyle = '#4a2';
-    ctx.fillRect(0, gy - 3, W, H - gy + 10);
-    ctx.fillStyle = '#3a8a1a';
-    ctx.fillRect(0, gy - 3, W, 6);
-    // Dirt
-    ctx.fillStyle = '#6b4226';
-    ctx.fillRect(0, gy + 20, W, H - gy);
-  }
-
-  // Ground cracks (earthquake)
-  for (const c of groundCracks) {
-    ctx.strokeStyle = `rgba(80,60,30,${c.life})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(c.x, gy);
-    ctx.lineTo(c.x + c.dx, gy + c.dy);
-    ctx.lineTo(c.x + c.dx * 1.5, gy + c.dy * 0.5);
-    ctx.stroke();
-  }
-}
-
-// Cut line
 function drawCutLine() {
   if (!cutLine || state !== 'cutting') return;
   const tree = trees[activeTreeIndex];
+  const cx = tree.x;
+  const cy = tree.y - tree.height * 0.15;
+  const len = tree.trunkW * 2;
+
   ctx.save();
+
+  // Cut line at base
   ctx.setLineDash([8, 6]);
   ctx.strokeStyle = '#ff0';
   ctx.lineWidth = 3;
   ctx.shadowColor = '#ff0';
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 12;
   ctx.beginPath();
-  const cx = tree.x;
-  const cy = tree.y - tree.height * 0.15;
-  const len = tree.trunkW * 2;
   ctx.moveTo(cx + Math.cos(cutLine.angle) * len, cy + Math.sin(cutLine.angle) * len);
   ctx.lineTo(cx - Math.cos(cutLine.angle) * len, cy - Math.sin(cutLine.angle) * len);
   ctx.stroke();
@@ -901,21 +1277,36 @@ function drawCutLine() {
   ctx.shadowBlur = 0;
 
   // Arrow showing fall direction
-  const fallDir = cutLine.angle > 0 ? 1 : -1;
+  const fallDir = Math.cos(cutLine.angle) > 0 ? 1 : -1;
+  const arrowLen = 60;
+  const arrowX = cx + fallDir * arrowLen;
+  const arrowY = cy - 50;
+
+  // Arrow shaft with glow
   ctx.strokeStyle = '#f80';
-  ctx.lineWidth = 2;
-  const arrowX = cx + fallDir * 40;
-  const arrowY = cy - 40;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#f80';
+  ctx.shadowBlur = 8;
   ctx.beginPath();
-  ctx.moveTo(cx, cy - 30);
+  ctx.moveTo(cx, cy - 35);
   ctx.lineTo(arrowX, arrowY);
   ctx.stroke();
+
+  // Arrowhead
+  ctx.fillStyle = '#f80';
   ctx.beginPath();
   ctx.moveTo(arrowX, arrowY);
-  ctx.lineTo(arrowX - fallDir * 8, arrowY + 5);
-  ctx.moveTo(arrowX, arrowY);
-  ctx.lineTo(arrowX - fallDir * 5, arrowY + 10);
-  ctx.stroke();
+  ctx.lineTo(arrowX - fallDir * 12, arrowY + 6);
+  ctx.lineTo(arrowX - fallDir * 8, arrowY + 14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // "Aim" text
+  ctx.fillStyle = 'rgba(255,200,50,0.7)';
+  ctx.font = `bold ${12 * scale}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('← Move mouse to aim →', cx, cy + 40);
 
   ctx.restore();
 }
@@ -927,8 +1318,6 @@ function updateBall(dt) {
   b.x += b.vx * dt * 0.5;
   b.y += b.vy * dt * 0.5;
   b.vy += 0.2 * dt;
-
-  // Check if ball goes through hoop
   const hoop = objects.find(o => o.type === 'hoop');
   if (hoop) {
     const hx = hoop.x * W;
@@ -939,17 +1328,18 @@ function updateBall(dt) {
       spawnParticles(hx, hy, 'confetti', 30);
     }
   }
-
-  // Draw ball
-  ctx.fillStyle = '#e67e22';
+  const bGrad = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, 6 * scale);
+  bGrad.addColorStop(0, '#f0a040');
+  bGrad.addColorStop(1, '#c06010');
+  ctx.fillStyle = bGrad;
   ctx.beginPath();
   ctx.arc(b.x, b.y, 6 * scale, 0, Math.PI * 2);
   ctx.fill();
-
   if (b.y > H) ballPhysics = null;
 }
 
-// Start level
+// ============ START LEVEL ============
+
 function startLevel(idx) {
   currentLevel = idx;
   levelData = LEVELS[idx];
@@ -961,14 +1351,11 @@ function startLevel(idx) {
   objects = [];
   particles = [];
   windLines = [];
-  confetti = [];
   groundCracks = [];
   cutLine = null;
-  cutReady = false;
   activeTreeIndex = 0;
   fallTime = 0;
-  shakeX = 0;
-  shakeY = 0;
+  shakeX = 0; shakeY = 0;
   damageTotal = 0;
   hitObjects = [];
   ballPhysics = null;
@@ -977,55 +1364,47 @@ function startLevel(idx) {
   pinsKnocked = 0;
   slowMoFactor = 1;
 
-  // Create tree(s)
   trees.push(new Tree(levelData.tree, 0));
   if (levelData.doubleTree && levelData.tree2) {
     trees.push(new Tree(levelData.tree2, 1));
   }
 
-  // Create objects
   objects = levelData.objects.map(o => ({ ...o, hit: false, bounceTime: 0, fleeX: null, fallAngle: null }));
 
-  // Wind
   windCurrent = levelData.wind.base;
   windTimer = 0;
 
-  // UI
   levelTitle.textContent = `${idx + 1}. ${levelData.name}`;
   objectiveText.textContent = levelData.objective;
   objectiveText.classList.add('show');
   objectiveTimer = 180;
   timberBtn.style.display = 'none';
+  cutHint.style.display = 'block';
   resultOverlay.style.display = 'none';
+
+  initAmbientParticles();
 }
 
-// Collision check
+// ============ COLLISIONS ============
+
 function checkCollisions(tree) {
   if (!tree.fallen) return;
   const tipX = tree.getFallTipWorldX();
   const tipNorm = tipX / W;
   const gy = (levelData.groundLevel || 0.85) * H;
-
   for (const obj of objects) {
     if (obj.hit) continue;
     const ox = obj.x;
     const hw = obj.w / 2;
-
-    // Simple horizontal range check for tip
     if (tipNorm > ox - hw && tipNorm < ox + hw) {
-      // Special handling by type
       if (obj.type === 'powerline') {
         const wireY = gy + (obj.yOff || 0) * scale;
         const tipY = tree.pivotY - Math.cos(tree.angle) * (tree.height - tree.cutY);
-        // Only hit if tree reaches the wire height
-        if (tipY < wireY + 20) {
-          hitObject(obj, tipX);
-        }
+        if (tipY < wireY + 20) hitObject(obj, tipX);
         continue;
       }
       hitObject(obj, tipX);
     }
-    // Also check along tree body
     for (let t = 0.2; t < 1; t += 0.2) {
       const bx = tree.pivotX + Math.sin(tree.angle) * (tree.height - tree.cutY) * t;
       const bn = bx / W;
@@ -1033,9 +1412,7 @@ function checkCollisions(tree) {
         if (obj.type === 'powerline') {
           const wireY = gy + (obj.yOff || 0) * scale;
           const by = tree.pivotY - Math.cos(tree.angle) * (tree.height - tree.cutY) * t;
-          if (by < wireY + 20) {
-            hitObject(obj, bx);
-          }
+          if (by < wireY + 20) hitObject(obj, bx);
         } else {
           hitObject(obj, bx);
         }
@@ -1049,84 +1426,50 @@ function hitObject(obj, x) {
   obj.hit = true;
   hitObjects.push(obj);
   const gy = (levelData.groundLevel || 0.85) * H;
-
   switch (obj.type) {
     case 'house':
-      playSound('crash');
-      playSound('glass');
+      playSound('crash'); playSound('glass');
       spawnParticles(x, gy - obj.h * scale * 0.5, 'dust', 20);
       spawnParticles(x, gy - obj.h * scale * 0.5, 'splinter', 10);
-      shakeX = 15; shakeY = 10;
-      damageTotal += obj.cost || 0;
-      break;
+      shakeX = 15; shakeY = 10; damageTotal += obj.cost || 0; break;
     case 'car':
       playSound('crash');
-      spawnParticles(x, gy - 20, 'dust', 15);
-      spawnParticles(x, gy - 20, 'splinter', 8);
-      shakeX = 10; shakeY = 8;
-      damageTotal += obj.cost || 0;
-      break;
+      spawnParticles(x, gy - 20, 'dust', 15); spawnParticles(x, gy - 20, 'splinter', 8);
+      shakeX = 10; shakeY = 8; damageTotal += obj.cost || 0; break;
     case 'fence':
-      playSound('crunch');
-      spawnParticles(x, gy - 20, 'splinter', 12);
-      shakeX = 3; shakeY = 2;
-      damageTotal += obj.cost || 0;
-      break;
+      playSound('crunch'); spawnParticles(x, gy - 20, 'splinter', 12);
+      shakeX = 3; shakeY = 2; damageTotal += obj.cost || 0; break;
     case 'playground':
-      playSound('crash');
-      spawnParticles(x, gy - 25, 'dust', 15);
-      shakeX = 8; shakeY = 5;
-      damageTotal += obj.cost || 0;
-      break;
+      playSound('crash'); spawnParticles(x, gy - 25, 'dust', 15);
+      shakeX = 8; shakeY = 5; damageTotal += obj.cost || 0; break;
     case 'powerline':
-      playSound('crash');
-      spawnParticles(obj.x * W, gy + (obj.yOff || 0) * scale, 'splinter', 10);
-      shakeX = 5; shakeY = 3;
-      damageTotal += obj.cost || 0;
-      break;
+      playSound('crash'); spawnParticles(obj.x * W, gy + (obj.yOff || 0) * scale, 'splinter', 10);
+      shakeX = 5; shakeY = 3; damageTotal += obj.cost || 0; break;
     case 'can':
-      playSound('crunch');
-      spawnParticles(x, gy - 5, 'dust', 8);
-      shakeX = 2; shakeY = 2;
-      break;
+      playSound('crunch'); spawnParticles(x, gy - 5, 'dust', 8);
+      shakeX = 2; shakeY = 2; break;
     case 'truck':
-      playSound('crash');
-      obj.bounceTime = 2;
-      spawnParticles(x, gy - 20, 'dust', 10);
-      shakeX = 6; shakeY = 4;
-      break;
+      playSound('crash'); obj.bounceTime = 2;
+      spawnParticles(x, gy - 20, 'dust', 10); shakeX = 6; shakeY = 4; break;
     case 'pin':
-      playSound('bowling');
-      obj.fallAngle = (Math.random() - 0.5) * Math.PI;
-      pinsKnocked++;
-      break;
+      playSound('bowling'); obj.fallAngle = (Math.random() - 0.5) * Math.PI;
+      pinsKnocked++; break;
     case 'dunktank':
-      playSound('splash');
-      dunked = true;
+      playSound('splash'); dunked = true;
       spawnParticles(obj.x * W, gy - obj.h * scale, 'splash', 25);
-      shakeX = 4; shakeY = 3;
-      break;
+      shakeX = 4; shakeY = 3; break;
     case 'ramp':
       playSound('crash');
-      // Launch ball
       const gy2 = (levelData.groundLevel || 0.85) * H;
-      ballPhysics = {
-        x: obj.x * W,
-        y: gy2 - obj.h * scale,
-        vx: 4,
-        vy: -12,
-        scored: false
-      };
-      shakeX = 4; shakeY = 3;
-      break;
+      ballPhysics = { x: obj.x * W, y: gy2 - obj.h * scale, vx: 4, vy: -12, scored: false };
+      shakeX = 4; shakeY = 3; break;
     case 'pool':
-      playSound('splash');
-      spawnParticles(obj.x * W, gy - 10, 'splash', 30);
-      break;
+      playSound('splash'); spawnParticles(obj.x * W, gy - 10, 'splash', 30); break;
   }
 }
 
-// Evaluate level result
+// ============ EVALUATE RESULT ============
+
 function evaluateResult() {
   const lv = levelData;
   let stars = 0;
@@ -1134,128 +1477,67 @@ function evaluateResult() {
   let message = '';
   const tree = trees[0];
   const tipNorm = tree.getFallTipWorldX() / W;
-
-  // Check avoidAll
   const destructibleHits = hitObjects.filter(o => o.destructible && o.type !== 'can');
-  if (lv.starCriteria.any) {
-    stars = 3;
-    message = 'Great job!';
-  } else if (lv.starCriteria.avoidAll) {
-    if (destructibleHits.length === 0) {
-      stars = 3;
-      message = 'Perfect! No damage!';
-    } else {
-      stars = 0;
-      success = false;
-      message = `$${damageTotal.toLocaleString()} in damages!`;
-    }
+
+  if (lv.starCriteria.any) { stars = 3; message = 'Great job!'; }
+  else if (lv.starCriteria.avoidAll) {
+    if (destructibleHits.length === 0) { stars = 3; message = 'Perfect! No damage!'; }
+    else { stars = 0; success = false; message = `$${damageTotal.toLocaleString()} in damages!`; }
   }
 
   if (lv.starCriteria.hitTarget) {
     const targetHit = hitObjects.find(o => o.target);
     if (targetHit) {
-      stars = Math.max(stars, 2);
-      message = 'Target hit!';
+      stars = Math.max(stars, 2); message = 'Target hit!';
       if (lv.starCriteria.precision) {
         const obj = lv.objects.find(o => o.target);
-        if (obj && Math.abs(tipNorm - obj.x) < lv.starCriteria.precision) {
-          stars = 3;
-          message = 'PERFECT hit! 🎯';
-        }
+        if (obj && Math.abs(tipNorm - obj.x) < lv.starCriteria.precision) { stars = 3; message = 'PERFECT hit! 🎯'; }
       }
       if (lv.starCriteria.flatLanding) {
-        if (Math.abs(tree.angle) > 1.3 && Math.abs(tree.angle) < 1.8) {
-          stars = 3;
-          message = 'Perfect flat landing! 🛻';
-        }
+        if (Math.abs(tree.angle) > 1.3 && Math.abs(tree.angle) < 1.8) { stars = 3; message = 'Perfect flat landing! 🛻'; }
       }
-    } else {
-      stars = 0;
-      success = false;
-      message = 'Missed the target!';
-    }
+    } else { stars = 0; success = false; message = 'Missed the target!'; }
   }
 
   if (lv.starCriteria.pinsKnocked) {
     const totalPins = objects.filter(o => o.type === 'pin').length;
-    if (pinsKnocked >= totalPins) {
-      stars = 3;
-      message = 'STRIKE! 🎳';
-    } else if (pinsKnocked > totalPins / 2) {
-      stars = 2;
-      message = `${pinsKnocked}/${totalPins} pins!`;
-    } else if (pinsKnocked > 0) {
-      stars = 1;
-      message = `Only ${pinsKnocked}/${totalPins} pins...`;
-    } else {
-      stars = 0;
-      success = false;
-      message = 'Gutter ball!';
-    }
+    if (pinsKnocked >= totalPins) { stars = 3; message = 'STRIKE! 🎳'; }
+    else if (pinsKnocked > totalPins / 2) { stars = 2; message = `${pinsKnocked}/${totalPins} pins!`; }
+    else if (pinsKnocked > 0) { stars = 1; message = `Only ${pinsKnocked}/${totalPins} pins...`; }
+    else { stars = 0; success = false; message = 'Gutter ball!'; }
   }
 
   if (lv.starCriteria.bridge) {
-    // Check if tree spans the gap
     if (tipNorm > 0.58 && tree.pivotX / W < 0.42) {
-      stars = 3;
-      message = 'Bridge complete! 🌉';
+      stars = 3; message = 'Bridge complete! 🌉';
       walkerState = { x: tree.pivotX - 20, progress: 0 };
-    } else {
-      stars = 0;
-      success = false;
-      message = 'Tree fell into the gap!';
-    }
+    } else { stars = 0; success = false; message = 'Tree fell into the gap!'; }
   }
 
   if (lv.starCriteria.chainReaction) {
-    if (ballPhysics?.scored) {
-      stars = 3;
-      message = 'SWISH! Nothing but net! 🏀';
-    } else if (hitObjects.find(o => o.type === 'ramp')) {
-      stars = 1;
-      message = 'Hit the ramp but missed the hoop!';
-    } else {
-      stars = 0;
-      success = false;
-      message = 'Missed the ramp!';
-    }
+    if (ballPhysics?.scored) { stars = 3; message = 'SWISH! Nothing but net! 🏀'; }
+    else if (hitObjects.find(o => o.type === 'ramp')) { stars = 1; message = 'Hit the ramp but missed the hoop!'; }
+    else { stars = 0; success = false; message = 'Missed the ramp!'; }
   }
 
   if (lv.starCriteria.bonusPool) {
     const poolHit = hitObjects.find(o => o.type === 'pool');
     if (poolHit) {
-      if (destructibleHits.length === 0) {
-        stars = 3;
-        message = 'CANNONBALL! Bonus splash! 💦';
-      } else {
-        stars = 1;
-        message = 'Splash! But also damage...';
-      }
-    } else if (destructibleHits.length === 0) {
-      stars = 2;
-      message = 'Pool is safe! (But splashing is fun...)';
-    }
+      if (destructibleHits.length === 0) { stars = 3; message = 'CANNONBALL! Bonus splash! 💦'; }
+      else { stars = 1; message = 'Splash! But also damage...'; }
+    } else if (destructibleHits.length === 0) { stars = 2; message = 'Pool is safe! (But splashing is fun...)'; }
   }
 
   if (lv.starCriteria.bothTrees) {
     if (trees.length > 1 && trees[0].fallen && trees[1].fallen) {
       const dir0 = trees[0].angle > 0 ? 1 : -1;
       const dir1 = trees[1].angle > 0 ? 1 : -1;
-      if (dir0 !== dir1 && destructibleHits.length === 0) {
-        stars = 3;
-        message = 'Both trees fell perfectly! 🌲↔️🌲';
-      } else if (destructibleHits.length === 0) {
-        stars = 1;
-        message = 'No damage, but not opposite directions!';
-      } else {
-        stars = 0;
-        success = false;
-        message = `$${damageTotal.toLocaleString()} in damages!`;
-      }
+      if (dir0 !== dir1 && destructibleHits.length === 0) { stars = 3; message = 'Both trees fell perfectly! 🌲↔️🌲'; }
+      else if (destructibleHits.length === 0) { stars = 1; message = 'No damage, but not opposite directions!'; }
+      else { stars = 0; success = false; message = `$${damageTotal.toLocaleString()} in damages!`; }
     }
   }
 
-  // Show result
   state = 'result';
   resultOverlay.style.display = 'block';
   resultTitle.textContent = success ? '🎉 TIMBER!' : '💥 Oops!';
@@ -1263,28 +1545,19 @@ function evaluateResult() {
   resultStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
   resultMessage.textContent = message;
 
-  if (success) {
-    playSound('cheer');
-    spawnParticles(W / 2, H / 3, 'confetti', 20);
-  } else {
-    playSound('trombone');
-  }
+  if (success) { playSound('cheer'); spawnParticles(W / 2, H / 3, 'confetti', 20); }
+  else playSound('trombone');
 
-  // Save progress
   const prev = progress[currentLevel] || 0;
-  if (stars > prev) {
-    progress[currentLevel] = stars;
-    saveProgress();
-  }
+  if (stars > prev) { progress[currentLevel] = stars; saveProgress(); }
 
   document.getElementById('btn-next').style.display = currentLevel < LEVELS.length - 1 ? 'inline-block' : 'none';
 }
 
-// Input handling
+// ============ INPUT — TWO-CLICK SYSTEM ============
+
 function getInputPos(e) {
-  if (e.touches) {
-    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
+  if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
   return { x: e.clientX, y: e.clientY };
 }
 
@@ -1292,23 +1565,24 @@ function onPointerDown(e) {
   e.preventDefault();
   initAudio();
   const pos = getInputPos(e);
+
   if (state === 'playing') {
     const tree = trees[activeTreeIndex];
-    // Check if clicking on trunk area
     const dx = Math.abs(pos.x - tree.x);
     const dy = pos.y - (tree.y - tree.height);
-    if (dx < tree.trunkW * 2 && dy > 0 && dy < tree.height) {
+    // Click on or near trunk to start aiming
+    if (dx < tree.trunkW * 3 && dy > -20 && dy < tree.height + 20) {
       state = 'cutting';
-      dragStart = { x: pos.x, y: pos.y };
       cutLine = { angle: 0 };
       playSound('chainsaw');
       spawnParticles(tree.x, tree.y - tree.height * 0.15, 'sawdust', 15);
       timberBtn.style.display = 'block';
+      cutHint.style.display = 'none';
+      updateCutAngle(pos);
     }
-  }
-  if (state === 'cutting') {
-    dragCurrent = pos;
-    updateCutAngle(pos);
+  } else if (state === 'cutting') {
+    // Second click = execute the cut
+    executeCut();
   }
 }
 
@@ -1316,16 +1590,14 @@ function onPointerMove(e) {
   e.preventDefault();
   const pos = getInputPos(e);
   mousePos = pos;
-  if (state === 'cutting' && dragStart) {
-    dragCurrent = pos;
+  if (state === 'cutting' && cutLine) {
     updateCutAngle(pos);
   }
 }
 
 function onPointerUp(e) {
   e.preventDefault();
-  dragStart = null;
-  dragCurrent = null;
+  // No action on pointer up in two-click system
 }
 
 function updateCutAngle(pos) {
@@ -1339,19 +1611,15 @@ function updateCutAngle(pos) {
 function executeCut() {
   if (state !== 'cutting' || !cutLine) return;
   const tree = trees[activeTreeIndex];
-  // Determine fall direction from cut angle
-  // If cut angle points right (cos > 0), the wedge is on the right, tree falls RIGHT (positive angle)
-  // If cut angle points left (cos < 0), tree falls LEFT (negative angle)
   const cosA = Math.cos(cutLine.angle);
   const fallDir = cosA > 0 ? 0.05 : -0.05;
   tree.startFall(fallDir);
   state = 'falling';
   fallTime = 0;
   timberBtn.style.display = 'none';
+  cutHint.style.display = 'none';
   cutLine = null;
-
   if (levelData.slowMo) slowMoFactor = 0.3;
-
   spawnParticles(tree.x, tree.y - tree.height * 0.15, 'sawdust', 15);
 }
 
@@ -1362,7 +1630,6 @@ canvas.addEventListener('touchstart', onPointerDown, { passive: false });
 canvas.addEventListener('touchmove', onPointerMove, { passive: false });
 canvas.addEventListener('touchend', onPointerUp, { passive: false });
 
-// Timber button
 timberBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   executeCut();
@@ -1371,23 +1638,19 @@ timberBtn.addEventListener('click', (e) => {
 // Menu buttons
 document.getElementById('btn-play').addEventListener('click', () => showScreen('levelselect'));
 document.getElementById('btn-back-menu').addEventListener('click', () => showScreen('menu'));
-document.getElementById('btn-back-levels').addEventListener('click', () => {
-  showScreen('levelselect');
-  state = 'levelselect';
-});
+document.getElementById('btn-back-levels').addEventListener('click', () => { showScreen('levelselect'); state = 'levelselect'; });
 document.getElementById('btn-restart').addEventListener('click', () => startLevel(currentLevel));
 document.getElementById('btn-retry').addEventListener('click', () => startLevel(currentLevel));
 document.getElementById('btn-next').addEventListener('click', () => {
   if (currentLevel < LEVELS.length - 1) startLevel(currentLevel + 1);
 });
 
-// Main loop
+// ============ MAIN LOOP ============
+
 function update(dt) {
   if (state === 'falling' || state === 'result') {
     const adt = dt * slowMoFactor;
     fallTime += adt;
-
-    // Wind
     windTimer += adt;
     if (levelData.wind.changing) {
       windCurrent = levelData.wind.base * Math.sin(windTimer * 0.02) + (Math.random() - 0.5) * levelData.wind.gust * 0.1;
@@ -1396,31 +1659,17 @@ function update(dt) {
       windTimer = 0;
       if (Math.abs(windCurrent) > 0.5) playSound('wind');
     }
-
-    // Earthquake
     if (levelData.earthquake) {
       quakeTimer += adt;
       if (Math.random() < 0.02 * adt) {
         shakeX += (Math.random() - 0.5) * 8;
         shakeY += (Math.random() - 0.5) * 4;
-        groundCracks.push({
-          x: Math.random() * W,
-          dx: (Math.random() - 0.5) * 30,
-          dy: Math.random() * 20,
-          life: 1
-        });
+        groundCracks.push({ x: Math.random() * W, dx: (Math.random() - 0.5) * 30, dy: Math.random() * 20, life: 1 });
       }
     }
-
-    // Update trees
-    for (const tree of trees) {
-      tree.update(adt, windCurrent);
-    }
-
-    // Check tree settled
+    for (const tree of trees) tree.update(adt, windCurrent);
     const allSettled = trees.filter(t => t.falling).every(t => t.settled);
     if (allSettled && trees.some(t => t.falling)) {
-      // Impact effects
       for (const tree of trees) {
         if (tree.settled && tree.settleTime === 0) {
           tree.settleTime = 1;
@@ -1434,13 +1683,7 @@ function update(dt) {
           shakeY = Math.max(shakeY, 8 * (levelData.tree.height / 250));
         }
       }
-
-      // Check collisions
-      for (const tree of trees) {
-        checkCollisions(tree);
-      }
-
-      // Handle flee for stick figures
+      for (const tree of trees) checkCollisions(tree);
       for (const obj of objects) {
         if (obj.flee && !obj.fleeing) {
           obj.fleeing = true;
@@ -1448,38 +1691,27 @@ function update(dt) {
           obj.fleeX = obj.x * W + dir * 100;
         }
       }
-
-      // Handle double chop
       if (levelData.doubleTree && activeTreeIndex === 0 && trees.length > 1 && !trees[1].falling) {
         activeTreeIndex = 1;
         state = 'playing';
         timberBtn.style.display = 'none';
+        cutHint.style.display = 'block';
         cutLine = null;
         objectiveText.textContent = 'Now chop the second tree!';
         objectiveText.classList.add('show');
         objectiveTimer = 120;
         return;
       }
-
-      // Delay before showing result
       if (fallTime > 30 && state === 'falling') {
-        // Wait a bit more for ball physics etc
         const waitForBall = ballPhysics && !ballPhysics.scored && ballPhysics.y < H;
         if (!waitForBall) {
-          setTimeout(() => {
-            if (state === 'falling') evaluateResult();
-          }, 500);
+          setTimeout(() => { if (state === 'falling') evaluateResult(); }, 500);
         }
       }
     }
-
-    // Slow mo ramp back up
-    if (slowMoFactor < 1) {
-      slowMoFactor = Math.min(1, slowMoFactor + 0.001 * dt);
-    }
+    if (slowMoFactor < 1) slowMoFactor = Math.min(1, slowMoFactor + 0.001 * dt);
   }
 
-  // Playing state - wind indicator
   if (state === 'playing' || state === 'cutting') {
     windTimer += dt;
     if (levelData.wind.changing) {
@@ -1490,51 +1722,42 @@ function update(dt) {
         windTimer = 0;
       }
     }
-
-    // Earthquake wobble
     if (levelData.earthquake && Math.random() < 0.01) {
       shakeX += (Math.random() - 0.5) * 5;
       shakeY += (Math.random() - 0.5) * 3;
     }
   }
 
-  // Update fleeing stick figures
   for (const obj of objects) {
     if (obj.fleeing && obj.fleeX != null) {
-      const target = obj.fleeX;
       const current = obj._currentFleeX || obj.x * W;
-      obj._currentFleeX = current + (target - current) * 0.05;
+      obj._currentFleeX = current + (obj.fleeX - current) * 0.05;
       obj.fleeX = obj._currentFleeX;
     }
   }
 
-  // Shake decay
-  shakeX *= 0.9;
-  shakeY *= 0.9;
+  shakeX *= 0.9; shakeY *= 0.9;
   if (Math.abs(shakeX) < 0.1) shakeX = 0;
   if (Math.abs(shakeY) < 0.1) shakeY = 0;
 
-  // Ground cracks decay
   for (let i = groundCracks.length - 1; i >= 0; i--) {
     groundCracks[i].life -= 0.005 * dt;
     if (groundCracks[i].life <= 0) groundCracks.splice(i, 1);
   }
 
-  // Objective text timer
   if (objectiveTimer > 0) {
     objectiveTimer -= dt;
     if (objectiveTimer <= 0) objectiveText.classList.remove('show');
   }
 
-  // Truck bounce decay
   for (const obj of objects) {
     if (obj.bounceTime > 0) obj.bounceTime -= 0.02 * dt;
   }
 
   updateParticles(dt);
   updateWindLines(dt);
+  updateAmbientParticles(dt);
 
-  // Wind UI
   if (state === 'playing' || state === 'cutting' || state === 'falling') {
     const dir = windCurrent > 0 ? '→' : windCurrent < 0 ? '←' : '·';
     windArrow.textContent = dir;
@@ -1547,19 +1770,27 @@ function draw() {
   ctx.save();
   ctx.translate(shakeX * (Math.random() - 0.5), shakeY * (Math.random() - 0.5));
 
-  drawBackground();
+  drawPainterlySky();
+  drawPainterlyClouds();
+
+  const gy = (levelData?.groundLevel || 0.85) * H;
 
   if (state === 'playing' || state === 'cutting' || state === 'falling' || state === 'result') {
-    // Draw objects behind tree
-    for (const obj of objects) {
-      drawObject(obj);
+    drawPainterlyGround(gy);
+
+    // Ground cracks
+    for (const c of groundCracks) {
+      ctx.strokeStyle = `rgba(80,60,30,${c.life})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(c.x, gy);
+      ctx.lineTo(c.x + c.dx, gy + c.dy);
+      ctx.lineTo(c.x + c.dx * 1.5, gy + c.dy * 0.5);
+      ctx.stroke();
     }
 
-    // Draw trees
-    for (const tree of trees) {
-      tree.draw(ctx);
-    }
-
+    for (const obj of objects) drawObject(obj);
+    for (const tree of trees) tree.draw(ctx);
     drawCutLine();
     drawWindLines();
     if (ballPhysics) updateBall(1);
@@ -1574,24 +1805,31 @@ function draw() {
         const wy = tree.pivotY - Math.cos(tree.angle) * (tree.height - tree.cutY) * t - 15;
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(wx, wy - 8, 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(wx, wy - 4);
-        ctx.lineTo(wx, wy + 8);
-        ctx.moveTo(wx - 5, wy);
-        ctx.lineTo(wx + 5, wy);
-        ctx.moveTo(wx, wy + 8);
-        ctx.lineTo(wx - 4, wy + 14);
-        ctx.moveTo(wx, wy + 8);
-        ctx.lineTo(wx + 4, wy + 14);
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(wx, wy - 8, 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx, wy - 4); ctx.lineTo(wx, wy + 8);
+        ctx.moveTo(wx - 5, wy); ctx.lineTo(wx + 5, wy);
+        ctx.moveTo(wx, wy + 8); ctx.lineTo(wx - 4, wy + 14);
+        ctx.moveTo(wx, wy + 8); ctx.lineTo(wx + 4, wy + 14); ctx.stroke();
       }
     }
+
+    drawAmbientParticles();
+  } else {
+    // Menu/level select background
+    drawPainterlyGround(H * 0.85);
   }
 
   drawParticles();
+
+  // Vignette overlay for painterly feel
+  if (state === 'playing' || state === 'cutting' || state === 'falling' || state === 'result') {
+    const vGrad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.8);
+    vGrad.addColorStop(0, 'transparent');
+    vGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+    ctx.fillStyle = vGrad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   ctx.restore();
 }
 
@@ -1599,7 +1837,6 @@ function gameLoop(time) {
   const dt = lastTime ? Math.min((time - lastTime) / 16.67, 3) : 1;
   lastTime = time;
   animFrame++;
-
   try { update(dt); } catch(e) { console.error('Update error:', e); }
   try { draw(); } catch(e) { console.error('Draw error:', e); }
   requestAnimationFrame(gameLoop);
