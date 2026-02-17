@@ -15,11 +15,13 @@
 <meta name="twitter:title" content="Light vs Dark — Free Action Strategy Game | BrainSmacks">
 <meta name="twitter:description" content="Battle between light and dark in this free browser action strategy game. Survive the night, grow your power. Play online instantly.">
 <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#0e0e12">
 </head>
 <body>
 <a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🏠 Home</a>
 <div id="game-container">
-  <canvas id="gameCanvas"></canvas>
+  <canvas role="img" aria-label="Light vs Dark gameplay area" id="gameCanvas"></canvas>
   <div id="hud">
     <div id="hud-left">
       <div id="hp-bar-container"><div id="hp-bar"></div><span id="hp-text">100/100</span></div>
@@ -43,7 +45,7 @@
       <button id="menu-btn" title="Back to Menu (Esc)">☰ Menu</button>
     </div>
   </div>
-  <div id="minimap-container"><canvas id="minimap" width="180" height="135"></canvas></div>
+  <div id="minimap-container"><canvas role="img" aria-label="Light vs Dark gameplay area" id="minimap" width="180" height="135"></canvas></div>
   <div id="inventory-screen" class="hidden">
     <div id="inv-panel">
       <h2>Inventory & Crafting</h2>
@@ -146,5 +148,12 @@
 <script src="js/effects.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
+<div id="more-games" style="position:fixed;bottom:0;left:0;right:0;background:rgba(14,14,18,0.95);padding:8px 16px;z-index:9998;display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Space Grotesk',system-ui,sans-serif;border-top:1px solid #333">
+  <span style="color:#888;font-size:13px;margin-right:8px">More games →</span>
+  <a href="../magnitude/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Magnitude</a>
+  <a href="../shatterform/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Shatterform</a>
+  <a href="../treefall/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Treefall</a>
+  <span onclick="this.parentElement.style.display='none'" style="color:#666;cursor:pointer;margin-left:auto;font-size:16px;padding:0 8px">✕</span>
+</div>
 </body>
 </html>

@@ -15,13 +15,15 @@
 <meta name="twitter:title" content="Fill Or Spill — Free Reflex Game | BrainSmacks">
 <meta name="twitter:description" content="Hold to fill, but don't spill! A tense two-player reflex game you can play free in your browser. No download required.">
 <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#0e0e12">
 </head>
 <body>
 <a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🏠 Home</a>
 <div id="app">
   <!-- Start Screen -->
   <div id="start-screen" class="screen active">
-    <canvas id="bg-canvas"></canvas>
+    <canvas role="img" aria-label="Fill or Spill gameplay area" id="bg-canvas"></canvas>
     <div class="start-content">
       <h1 class="title">Fill <span class="or">Or</span> Spill</h1>
       <p class="subtitle">Hold to fill. Don't spill. 💧</p>
@@ -52,7 +54,7 @@
         <div class="your-turn-flash">YOUR TURN</div>
       </div>
       <div class="glass-container">
-        <canvas id="game-canvas"></canvas>
+        <canvas role="img" aria-label="Fill or Spill gameplay area" id="game-canvas"></canvas>
         <div id="fill-prompt">HOLD TO FILL</div>
         <div id="water-pct">0%</div>
       </div>
@@ -65,7 +67,7 @@
 
   <!-- End Screen -->
   <div id="end-screen" class="screen">
-    <canvas id="end-canvas"></canvas>
+    <canvas role="img" aria-label="Fill or Spill gameplay area" id="end-canvas"></canvas>
     <div class="end-content">
       <h2 id="end-title">SPILL!</h2>
       <p id="end-loser"></p>
@@ -80,5 +82,12 @@
   </div>
 </div>
 <script src="game.js"></script>
+<div id="more-games" style="position:fixed;bottom:0;left:0;right:0;background:rgba(14,14,18,0.95);padding:8px 16px;z-index:9998;display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Space Grotesk',system-ui,sans-serif;border-top:1px solid #333">
+  <span style="color:#888;font-size:13px;margin-right:8px">More games →</span>
+  <a href="../treefall/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Treefall</a>
+  <a href="../zoomout/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Zoom Out</a>
+  <a href="../breakpoint/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Breakpoint</a>
+  <span onclick="this.parentElement.style.display='none'" style="color:#666;cursor:pointer;margin-left:auto;font-size:16px;padding:0 8px">✕</span>
+</div>
 </body>
 </html>
