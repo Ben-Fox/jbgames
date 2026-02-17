@@ -64,6 +64,9 @@ canvas {
     font-weight: 900;
     letter-spacing: 0.05em;
     margin-bottom: 0.2em;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
     text-shadow: 0 0 30px rgba(0, 200, 255, 0.5);
 }
 
