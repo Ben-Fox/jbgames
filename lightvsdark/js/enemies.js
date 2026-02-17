@@ -250,7 +250,7 @@ const Enemies = (() => {
       const l = loot[i];
       l.life -= dt;
       if (l.life <= 0) { loot.splice(i, 1); continue; }
-      if (dist(l, playerState) < PICKUP_RANGE) {
+      if (dist(l, playerState) < 40) {
         Player.addResource(l.item, l.amount);
         Audio.pickup();
         Particles.lootGlow(l.x, l.y, l.color);

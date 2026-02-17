@@ -14,7 +14,7 @@ const Player = (() => {
       w: 20, h: 20,
       hp: 100, maxHp: 100,
       speed: SPEED,
-      facing: 1, // 1=right, -1=left
+      facing: 'right', // right, left, up, down
       attacking: false, attackTimer: 0, attackCd: 0,
       dodging: false, dodgeTimer: 0, dodgeCd: 0, dodgeDir: { x: 0, y: 0 },
       invincible: false, invTimer: 0,
@@ -124,7 +124,6 @@ const Player = (() => {
         if (canMoveX) state.x += dx * state.speed * dt;
         if (canMoveY) state.y += dy * state.speed * dt;
         
-        if (dx !== 0) state.facing = dx > 0 ? 1 : -1;
       }
     }
     
@@ -147,9 +146,15 @@ const Player = (() => {
       if (state.invTimer <= 0) state.invincible = false;
     }
     
-    // Face mouse
+    // Face mouse (4 directions)
     if (mouseWorld) {
-      state.facing = mouseWorld.x > state.x ? 1 : -1;
+      const dx = mouseWorld.x - state.x;
+      const dy = mouseWorld.y - state.y;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        state.facing = dx > 0 ? 'right' : 'left';
+      } else {
+        state.facing = dy > 0 ? 'down' : 'up';
+      }
     }
     
     // Heal near crystal during day
@@ -187,7 +192,12 @@ const Player = (() => {
     if (keys['s'] || keys['arrowdown']) dy = 1;
     if (keys['a'] || keys['arrowleft']) dx = -1;
     if (keys['d'] || keys['arrowright']) dx = 1;
-    if (dx === 0 && dy === 0) dx = state.facing;
+    if (dx === 0 && dy === 0) {
+      if (state.facing === 'right') dx = 1;
+      else if (state.facing === 'left') dx = -1;
+      else if (state.facing === 'up') dy = -1;
+      else dy = 1;
+    }
     const len = Math.hypot(dx, dy) || 1;
     state.dodgeDir = { x: dx / len, y: dy / len };
     state.dodging = true;
@@ -254,31 +264,59 @@ const Player = (() => {
     // Blink when invincible
     if (state.invincible && !state.dodging && Math.floor(Date.now() / 80) % 2) return;
     
+    const f = state.facing;
+    const fx = f === 'right' ? 1 : f === 'left' ? -1 : 0;
+    const fy = f === 'down' ? 1 : f === 'up' ? -1 : 0;
+    
     // Body
     ctx.fillStyle = '#3498db';
     ctx.fillRect(sx - 8, sy - 10, 16, 20);
     
     // Head
     ctx.fillStyle = '#f5c890';
-    ctx.fillRect(sx - 5, sy - 16, 10, 8);
-    
-    // Eyes
-    ctx.fillStyle = '#333';
-    ctx.fillRect(sx + (state.facing > 0 ? 1 : -4), sy - 14, 2, 2);
+    if (f === 'up') {
+      ctx.fillRect(sx - 5, sy - 16, 10, 8);
+      // Back of head, no eyes
+    } else if (f === 'down') {
+      ctx.fillRect(sx - 5, sy - 16, 10, 8);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sx - 3, sy - 13, 2, 2);
+      ctx.fillRect(sx + 1, sy - 13, 2, 2);
+    } else {
+      ctx.fillRect(sx - 5, sy - 16, 10, 8);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sx + (fx > 0 ? 1 : -4), sy - 14, 2, 2);
+    }
     
     // Weapon
     const w = WEAPONS[state.weapon];
     if (w) {
       ctx.fillStyle = w.color;
+      // Weapon offset based on facing
+      let wx, wy, ww, wh, swingDir;
+      if (f === 'up') { wx = sx + 8; wy = sy - 14; ww = 3; wh = -14; swingDir = 1; }
+      else if (f === 'down') { wx = sx - 8; wy = sy + 2; ww = 3; wh = 14; swingDir = -1; }
+      else { wx = sx + fx * 8; wy = sy - 4; ww = fx * 14; wh = 3; swingDir = fx; }
+      
       if (state.attacking) {
-        const swingAngle = (state.attackTimer / 0.15) * Math.PI * 0.5 * state.facing;
         ctx.save();
         ctx.translate(sx, sy);
-        ctx.rotate(swingAngle - Math.PI * 0.25 * state.facing);
-        ctx.fillRect(state.facing * 8, -2, state.facing * 16, 3);
+        if (f === 'up' || f === 'down') {
+          const swingAngle = (state.attackTimer / 0.15) * Math.PI * 0.5 * swingDir;
+          ctx.rotate(swingAngle);
+          ctx.fillRect(-1, fy * 8, 3, fy * 16);
+        } else {
+          const swingAngle = (state.attackTimer / 0.15) * Math.PI * 0.5 * fx;
+          ctx.rotate(swingAngle - Math.PI * 0.25 * fx);
+          ctx.fillRect(fx * 8, -2, fx * 16, 3);
+        }
         ctx.restore();
       } else {
-        ctx.fillRect(sx + state.facing * 8, sy - 4, state.facing * 12, 3);
+        if (f === 'up' || f === 'down') {
+          ctx.fillRect(sx + (f === 'up' ? 8 : -10), sy + fy * 8, 3, fy * 12);
+        } else {
+          ctx.fillRect(sx + fx * 8, sy - 4, fx * 12, 3);
+        }
       }
     }
     
