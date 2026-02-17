@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Likelihood — How Well Do You Know the Odds?</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- SPLASH -->
+    <div id="splash" class="screen active">
+      <div class="splash-bg"></div>
+      <div class="splash-content">
+        <div class="logo">
+          <span class="dice">🎲</span>
+          <h1>Likelihood</h1>
+        </div>
+        <p class="tagline">How well do you know the odds?</p>
+        <div class="mode-toggle">
+          <button id="mode-casual" class="mode-btn selected" onclick="setMode('casual')">☕ Casual</button>
+          <button id="mode-timed" class="mode-btn" onclick="setMode('timed')">⏱️ Timed</button>
+        </div>
+        <button id="play-btn" class="btn-play" onclick="startGame()">Play</button>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="game" class="screen">
+      <div class="game-header">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <div class="round-info">
+          <span id="round-label">Round 1/5</span>
+          <span id="category-tag" class="category-tag">Category</span>
+          <span id="score-label" class="score-label">Score: 0</span>
+        </div>
+        <div id="timer-bar" class="timer-bar hidden">
+          <div id="timer-fill" class="timer-fill"></div>
+          <span id="timer-text" class="timer-text">15</span>
+        </div>
+      </div>
+      <div class="question-area">
+        <h2 id="question-text" class="question-text"></h2>
+      </div>
+      <div id="options" class="options"></div>
+      <div id="result-panel" class="result-panel hidden">
+        <div id="result-icon" class="result-icon"></div>
+        <div id="result-answer" class="result-answer"></div>
+        <p id="result-fact" class="result-fact"></p>
+      </div>
+    </div>
+
+    <!-- FINAL -->
+    <div id="final" class="screen">
+      <div id="confetti-container" class="confetti-container"></div>
+      <div class="final-content">
+        <h2 id="final-score"></h2>
+        <div id="final-rating" class="final-rating"></div>
+        <div id="final-stars" class="final-stars"></div>
+        <button class="btn-play" onclick="startGame()">Play Again</button>
+        <button class="btn-home" onclick="goHome()">Home</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="particles" class="particles-canvas"></canvas>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
