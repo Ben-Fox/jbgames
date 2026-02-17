@@ -744,7 +744,7 @@ function showResult(win, mag) {
 
   const homeBtn = document.createElement('a');
   homeBtn.href = '../';
-  homeBtn.textContent = '🏠 Home';
+  homeBtn.textContent = 'Back to Homepage';
   homeBtn.className = 'result-btn-retry';
   homeBtn.style.cssText = 'display:inline-block;text-decoration:none;text-align:center';
   buttons.appendChild(homeBtn);
