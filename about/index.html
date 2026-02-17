@@ -12,50 +12,124 @@
   <meta property="og:url" content="https://brainsmacks.com/about/">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#0e0e12">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0e0e12; color: #e0e0e0; font-family: 'Space Grotesk', system-ui, sans-serif; line-height: 1.7; }
-    .container { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
-    h1 { color: #f0f0f0; font-size: 2rem; margin-bottom: 8px; }
-    h2 { color: #ccc; font-size: 1.2rem; margin: 32px 0 12px; }
-    p { margin-bottom: 16px; color: #aaa; }
-    a { color: #7c8cf8; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .home-btn { display: inline-block; margin-bottom: 32px; padding: 8px 20px; background: #1a1a24; border: 1px solid #333; border-radius: 8px; color: #f0f0f0; font-size: 14px; }
-    .games-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
-    .games-grid a { padding: 6px 14px; background: #1a1a24; border: 1px solid #333; border-radius: 8px; color: #f0f0f0; font-size: 13px; }
+    :root { --bg: #0e0e12; --surface: #1a1a24; --text: #f0f0f0; --muted: #888; --accent: #7c3aed; }
+    body { font-family: 'Space Grotesk', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.7; }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 48px 24px 64px; }
+
+    .back-btn {
+      display: inline-block; margin-bottom: 2.5rem; padding: 10px 22px;
+      background: var(--surface); border: 1px solid rgba(255,255,255,.1); border-radius: 12px;
+      color: var(--text); font-size: .9rem; font-weight: 600;
+      transition: border-color .2s, transform .2s;
+    }
+    .back-btn:hover { border-color: rgba(124,58,237,.5); transform: translateY(-2px); }
+
+    h1 {
+      font-size: 2.2rem; font-weight: 700; margin-bottom: .5rem;
+      background: linear-gradient(90deg, #ff69b4, #c4b5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    h2 {
+      font-size: 1.25rem; font-weight: 700; color: #c4b5fd;
+      margin: 2.5rem 0 .75rem; letter-spacing: -.3px;
+    }
+    p { margin-bottom: 1rem; color: rgba(255,255,255,.7); font-size: 1rem; }
+    strong { color: var(--text); }
+    a { color: #a78bfa; text-decoration: none; transition: color .2s; }
+    a:hover { color: #c4b5fd; }
+
+    .games-grid {
+      display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 1.5rem;
+    }
+    .games-grid a {
+      padding: 8px 16px; background: var(--surface); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px; color: var(--text); font-size: .85rem; font-weight: 600;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .games-grid a:hover {
+      border-color: rgba(124,58,237,.4); transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(124,58,237,.15);
+      -webkit-text-fill-color: initial; color: var(--text);
+    }
+
+    .divider {
+      border: none; border-top: 1px solid rgba(255,255,255,.06);
+      margin: 2.5rem 0;
+    }
+
+    footer {
+      text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .85rem;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeUp .6s ease both; }
+    .fade-in:nth-child(2) { animation-delay: .05s; }
+    .fade-in:nth-child(3) { animation-delay: .1s; }
+    .fade-in:nth-child(4) { animation-delay: .15s; }
+    .fade-in:nth-child(5) { animation-delay: .2s; }
+    .fade-in:nth-child(6) { animation-delay: .25s; }
+    .fade-in:nth-child(7) { animation-delay: .3s; }
+
+    @media (max-width: 600px) {
+      .container { padding: 32px 16px 48px; }
+      h1 { font-size: 1.7rem; }
+      h2 { font-size: 1.1rem; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="/" class="home-btn">← Back to BrainSmacks</a>
-    <h1>About BrainSmacks</h1>
-    <p>BrainSmacks is a collection of <strong>free online games</strong> you can play right in your browser. No downloads, no installs, no accounts — just pick a game and play.</p>
+    <a href="/" class="back-btn fade-in">← Back to BrainSmacks</a>
 
-    <h2>What We Offer</h2>
-    <p>Whether you're into <strong>puzzle games</strong>, <strong>arcade games</strong>, or just want a quick <strong>casual games</strong> break, BrainSmacks has something for you. All our games are <strong>browser games — no download</strong> required. Just click and <strong>play games online free</strong>.</p>
-
-    <h2>Who It's For</h2>
-    <p>BrainSmacks is for everyone — casual gamers, puzzle lovers, anyone looking for a quick fun break during the day. Our games are designed to be instantly accessible and endlessly replayable.</p>
-
-    <h2>Our Games</h2>
-    <div class="games-grid">
-      <a href="/breakpoint/">Breakpoint</a>
-      <a href="/catastrophe/">Catastrophe</a>
-      <a href="/circle/">Circle</a>
-      <a href="/fillOrSpill/">Fill or Spill</a>
-      <a href="/heavyeye/">Heavy Eye</a>
-      <a href="/holdfast/">Holdfast</a>
-      <a href="/lightvsdark/">Light vs Dark</a>
-      <a href="/likelihood/">Likelihood</a>
-      <a href="/magnitude/">Magnitude</a>
-      <a href="/shatterform/">Shatterform</a>
-      <a href="/treefall/">Treefall</a>
-      <a href="/zoomout/">Zoom Out</a>
+    <div class="fade-in">
+      <h1>About BrainSmacks</h1>
+      <p>BrainSmacks is a collection of <strong>free online games</strong> you can play right in your browser. No downloads, no installs, no accounts — just pick a game and play.</p>
     </div>
 
-    <h2>Free Online Games, Always</h2>
-    <p>Every game on BrainSmacks is completely free. No paywalls, no ads, no tricks. We believe great <strong>free online games</strong> should be accessible to everyone, everywhere, on any device with a browser.</p>
+    <div class="fade-in">
+      <h2>What We Offer</h2>
+      <p>Whether you're into <strong>puzzle games</strong>, <strong>arcade games</strong>, or just want a quick <strong>casual game</strong> break, BrainSmacks has something for you. All our games are <strong>browser games — no download</strong> required. Just click and <strong>play games online free</strong>.</p>
+    </div>
+
+    <div class="fade-in">
+      <h2>Who It's For</h2>
+      <p>BrainSmacks is for everyone — casual gamers, puzzle lovers, anyone looking for a quick fun break during the day. Our games are designed to be instantly accessible and endlessly replayable.</p>
+    </div>
+
+    <div class="fade-in">
+      <h2>Our Games</h2>
+      <div class="games-grid">
+        <a href="/breakpoint/">🃏 BreakPoint</a>
+        <a href="/catastrophe/">🐱 Catastrophe</a>
+        <a href="/circle/">✏️ Circle</a>
+        <a href="/fillOrSpill/">🫗 Fill or Spill</a>
+        <a href="/heavyeye/">⚖️ Heavy Eye</a>
+        <a href="/holdfast/">🏰 Holdfast</a>
+        <a href="/lightvsdark/">🌗 Light vs Dark</a>
+        <a href="/likelihood/">🎲 Likelihood</a>
+        <a href="/magnitude/">🏢 Magnitude</a>
+        <a href="/shatterform/">🔷 Shatterform</a>
+        <a href="/treefall/">🌲 Treefall</a>
+        <a href="/zoomout/">🔍 Zoom Out</a>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="fade-in">
+      <h2>Free Online Games, Always</h2>
+      <p>Every game on BrainSmacks is completely free. We believe great <strong>free online games</strong> should be accessible to everyone, everywhere, on any device with a browser.</p>
+    </div>
   </div>
+
+  <footer>
+    <p>Made with 🧠 by BrainSmacks</p>
+    <p>© 2026 BrainSmacks. All games free to play.</p>
+  </footer>
 </body>
 </html>
