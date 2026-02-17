@@ -37,42 +37,97 @@ a{text-decoration:none;color:inherit}
 .subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
 
 /* GRID */
-.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;max-width:1100px;margin:2rem auto 4rem;padding:0 1.5rem}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;max-width:1200px;margin:2rem auto 4rem;padding:0 1.5rem}
 
-/* CARD */
-.card{background:var(--surface);border-radius:16px;overflow:hidden;transition:transform .25s,box-shadow .25s;animation:fadeUp .6s ease both;cursor:pointer;display:flex;flex-direction:column}
-.card:nth-child(1){animation-delay:.15s}.card:nth-child(2){animation-delay:.25s}.card:nth-child(3){animation-delay:.35s}
-.card:hover{transform:translateY(-6px) scale(1.02)}
-.card:hover .thumb{filter:brightness(1.15)}
+/* CARD — redesigned */
+.card{border-radius:20px;overflow:hidden;transition:transform .3s cubic-bezier(.25,.46,.45,.94),box-shadow .3s;animation:fadeUp .6s ease both;cursor:pointer;display:flex;flex-direction:column;position:relative}
+.card:nth-child(1){animation-delay:.15s}.card:nth-child(2){animation-delay:.25s}.card:nth-child(3){animation-delay:.35s}.card:nth-child(4){animation-delay:.45s}
+.card:hover{transform:translateY(-10px) scale(1.03)}
 
-.thumb{height:180px;display:flex;align-items:center;justify-content:center;transition:filter .3s}
-.card-body{padding:1.25rem;flex:1;display:flex;flex-direction:column}
-.card-title{font-size:1.3rem;font-weight:700;margin-bottom:.4rem}
-.card-desc{color:var(--muted);font-size:.95rem;flex:1;line-height:1.5}
-.play-btn{display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;border-radius:10px;font-weight:600;font-size:.95rem;text-align:center;transition:filter .2s,transform .15s}
-.play-btn:hover{filter:brightness(1.2);transform:scale(1.05)}
+/* Emoji badge */
+.card-badge{position:absolute;top:14px;right:14px;font-size:1.6rem;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.card-hot{position:absolute;top:14px;left:14px;z-index:2;background:#ef4444;color:#fff;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
 
-/* CARD COLORS */
-.card--heavyeye .thumb{background:linear-gradient(135deg,#78350f,#f59e0b)}
-.card--heavyeye .play-btn{background:#f59e0b;color:#1a1a24}
-.card--heavyeye:hover{box-shadow:0 8px 30px rgba(245,158,11,.25)}
+.thumb{height:220px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.thumb svg{filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
 
-.card--circle .thumb{background:linear-gradient(135deg,#334155,#e2e8f0)}
-.card--circle .play-btn{background:#e2e8f0;color:#1a1a24}
-.card--circle:hover{box-shadow:0 8px 30px rgba(226,232,240,.2)}
+.card-body{padding:1.25rem 1.5rem 1.5rem;flex:1;display:flex;flex-direction:column}
+.card-title{font-size:1.4rem;font-weight:700;margin-bottom:.35rem}
+.card-desc{color:rgba(255,255,255,.7);font-size:.95rem;flex:1;line-height:1.5}
+.play-btn{display:block;margin-top:1rem;padding:.75rem;border-radius:12px;font-weight:700;font-size:1rem;text-align:center;transition:filter .2s,transform .15s;letter-spacing:.3px}
+.play-btn:hover{filter:brightness(1.2);transform:scale(1.03)}
 
-.card--breakpoint .thumb{background:linear-gradient(135deg,#7f1d1d,#ef4444,#166534)}
+/* ===== Heavy Eye ===== */
+.card--heavyeye{background:linear-gradient(160deg,#1a1508 0%,#2d1f04 40%,#3d2906 100%);border:1px solid rgba(245,158,11,.2);box-shadow:0 0 20px rgba(245,158,11,.08)}
+.card--heavyeye:hover{box-shadow:0 8px 40px rgba(245,158,11,.35),0 0 60px rgba(245,158,11,.1)}
+.card--heavyeye .thumb{background:radial-gradient(ellipse at 50% 60%,rgba(245,158,11,.15),transparent 70%)}
+.card--heavyeye .play-btn{background:linear-gradient(135deg,#f59e0b,#d97706);color:#1a1a24}
+.card--heavyeye .card-title{color:#fbbf24}
+
+/* Scale animation */
+.scale-group{animation:rockScale 3s ease-in-out infinite;transform-origin:60px 20px}
+@keyframes rockScale{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.card--heavyeye:hover .scale-group{animation-duration:1.5s}
+
+/* ===== Circle ===== */
+.card--circle{background:linear-gradient(160deg,#1e293b 0%,#334155 50%,#1e293b 100%);border:1px solid rgba(226,232,240,.15);box-shadow:0 0 20px rgba(226,232,240,.05)}
+.card--circle:hover{box-shadow:0 8px 40px rgba(226,232,240,.2),0 0 60px rgba(226,232,240,.06)}
+.card--circle .thumb{background:radial-gradient(ellipse at 50% 50%,rgba(226,232,240,.06),transparent 70%)}
+.card--circle .play-btn{background:linear-gradient(135deg,#e2e8f0,#cbd5e1);color:#1e293b}
+.card--circle .card-title{color:#e2e8f0}
+
+/* Draw circle animation */
+.draw-circle{stroke-dasharray:300;stroke-dashoffset:300;animation:drawCircle 3s ease-in-out infinite}
+@keyframes drawCircle{0%{stroke-dashoffset:300}50%{stroke-dashoffset:0}100%{stroke-dashoffset:-300}}
+
+/* Chalk dots */
+.chalk-dot{opacity:0;animation:chalkAppear 3s ease-in-out infinite}
+.chalk-dot:nth-child(2){animation-delay:.3s}.chalk-dot:nth-child(3){animation-delay:.6s}.chalk-dot:nth-child(4){animation-delay:.9s}
+@keyframes chalkAppear{0%,20%{opacity:0}30%,70%{opacity:.4}80%,100%{opacity:0}}
+
+/* ===== BreakPoint ===== */
+.card--breakpoint{background:linear-gradient(160deg,#1a0a0a 0%,#1c1c1c 50%,#0a1a0e 100%);border:1px solid rgba(239,68,68,.2);box-shadow:0 0 20px rgba(239,68,68,.08)}
+.card--breakpoint:hover{box-shadow:0 8px 40px rgba(239,68,68,.3),0 0 40px rgba(34,197,94,.15)}
+.card--breakpoint .thumb{background:radial-gradient(ellipse at 40% 50%,rgba(239,68,68,.1),transparent 50%),radial-gradient(ellipse at 60% 50%,rgba(34,197,94,.1),transparent 50%)}
 .card--breakpoint .play-btn{background:linear-gradient(135deg,#ef4444,#22c55e);color:#fff}
-.card--breakpoint:hover{box-shadow:0 8px 30px rgba(239,68,68,.25)}
+.card--breakpoint .card-title{background:linear-gradient(90deg,#ef4444,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
-.card--likelihood .thumb{background:linear-gradient(135deg,#4c1d95,#7c3aed,#a78bfa)}
-.card--likelihood .play-btn{background:#7c3aed;color:#fff}
-.card--likelihood:hover{box-shadow:0 8px 30px rgba(124,58,237,.3)}
+/* Fan cards on hover */
+.fan-card{transition:transform .4s cubic-bezier(.25,.46,.45,.94)}
+.card--breakpoint:hover .fan-card--1{transform:rotate(-20deg) translateX(-8px)}
+.card--breakpoint:hover .fan-card--2{transform:rotate(0deg) translateY(-4px)}
+.card--breakpoint:hover .fan-card--3{transform:rotate(20deg) translateX(8px)}
 
-/* COMING SOON */
-.coming-soon{text-align:center;padding:2rem 1.5rem;max-width:1100px;margin:0 auto}
-.coming-soon h2{font-size:1.5rem;color:var(--muted);margin-bottom:.5rem;animation:fadeUp .6s ease .5s both}
-.coming-soon p{color:#555;font-size:1rem;animation:fadeUp .6s ease .6s both}
+/* ===== Likelihood ===== */
+.card--likelihood{background:linear-gradient(160deg,#1a0a2e 0%,#2e1065 50%,#1a0a2e 100%);border:1px solid rgba(124,58,237,.25);box-shadow:0 0 20px rgba(124,58,237,.1)}
+.card--likelihood:hover{box-shadow:0 8px 40px rgba(124,58,237,.35),0 0 60px rgba(124,58,237,.1)}
+.card--likelihood .thumb{background:radial-gradient(ellipse at 50% 50%,rgba(124,58,237,.15),transparent 70%)}
+.card--likelihood .play-btn{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff}
+.card--likelihood .card-title{color:#c4b5fd}
+
+/* Percentage counter */
+.pct-counter{animation:pctPulse 2s ease-in-out infinite}
+@keyframes pctPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.05)}}
+.bar-animate{animation:barGrow 2s ease-in-out infinite alternate}
+.bar-animate:nth-child(1){animation-delay:0s}
+.bar-animate:nth-child(2){animation-delay:.3s}
+.bar-animate:nth-child(3){animation-delay:.6s}
+.bar-animate:nth-child(4){animation-delay:.9s}
+@keyframes barGrow{0%{transform:scaleY(0.5);transform-origin:bottom}100%{transform:scaleY(1);transform-origin:bottom}}
+
+/* Dot pulse on likelihood */
+.dot-pulse{animation:dotPulse 1.5s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{r:2}50%{r:4}}
+
+/* COMING SOON — redesigned */
+.coming-soon{text-align:center;padding:2rem 1.5rem 3rem;max-width:1200px;margin:0 auto}
+.coming-soon h2{font-size:1.6rem;color:var(--text);margin-bottom:.5rem;animation:fadeUp .6s ease .5s both}
+.coming-soon p{color:var(--muted);font-size:1.05rem;margin-bottom:2rem;animation:fadeUp .6s ease .6s both}
+.coming-soon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;max-width:700px;margin:0 auto}
+.ghost-card{background:linear-gradient(160deg,rgba(255,255,255,.03),rgba(255,255,255,.06));border:1px dashed rgba(255,255,255,.1);border-radius:20px;height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;animation:fadeUp .6s ease .7s both;transition:border-color .3s,transform .3s}
+.ghost-card:hover{border-color:rgba(255,255,255,.25);transform:translateY(-4px)}
+.ghost-card .ghost-icon{font-size:2.5rem;opacity:.4}
+.ghost-card .ghost-label{font-size:.85rem;color:var(--muted);font-weight:600}
 
 /* FOOTER */
 footer{text-align:center;padding:2rem 1rem 3rem;color:var(--muted);font-size:.9rem}
@@ -81,20 +136,19 @@ footer p+p{margin-top:.3rem}
 /* ANIM */
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
-/* SVG thumb styles */
-.thumb svg{width:120px;height:120px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.3))}
-
 /* MOBILE */
 @media (max-width: 600px) {
-  .games{grid-template-columns:1fr}
+  .games{grid-template-columns:1fr;gap:1.5rem}
   .hero{padding:3rem 1rem 2rem}
   .logo-svg{max-width:95%}
   .tagline{font-size:1.1rem}
   .subtitle{font-size:.9rem}
-  .thumb{height:140px}
-  .card-title{font-size:1.15rem}
+  .thumb{height:200px}
+  .card-title{font-size:1.2rem}
   .card-desc{font-size:.9rem}
-  .play-btn{padding:.5rem 1.2rem;font-size:.9rem}
+  .play-btn{padding:.65rem;font-size:.95rem}
+  .coming-soon-grid{grid-template-columns:1fr 1fr}
+  .ghost-card{height:140px}
 }
 </style>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -115,18 +169,12 @@ footer p+p{margin-top:.3rem}
           <stop offset="0%" stop-color="#ff69b4" stop-opacity="0.5"/>
           <stop offset="100%" stop-color="#ff69b4" stop-opacity="0"/>
         </radialGradient>
-        <!-- Mask to cut the logo out from behind the text with buffer -->
         <mask id="textMask">
           <rect width="700" height="300" fill="white"/>
-          <!-- Thicker knockout for readable buffer -->
           <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1" fill="black" stroke="black" stroke-width="16">BrainSmacks</text>
         </mask>
       </defs>
-
-      <!-- Everything behind the text gets masked -->
       <g mask="url(#textMask)">
-
-        <!-- Computer monitor — tilted, being consumed -->
         <g transform="translate(390, 60) rotate(6)">
           <rect x="0" y="0" width="185" height="130" rx="8" fill="#1e1e30" stroke="#444" stroke-width="2"/>
           <rect x="8" y="8" width="169" height="104" rx="4" fill="#0e0e18"/>
@@ -134,15 +182,11 @@ footer p+p{margin-top:.3rem}
           <line x1="18" y1="35" x2="90" y2="35" stroke="#ff69b4" stroke-width="1" opacity="0.2"/>
           <line x1="25" y1="55" x2="130" y2="55" stroke="#ff69b4" stroke-width="1" opacity="0.15"/>
           <line x1="15" y1="75" x2="100" y2="75" stroke="#ff69b4" stroke-width="1" opacity="0.2"/>
-          <!-- Bite chunks out of left side -->
           <circle cx="-5" cy="40" r="30" fill="#0e0e12"/>
           <circle cx="-3" cy="90" r="22" fill="#0e0e12"/>
-          <!-- Stand -->
           <rect x="68" y="130" width="50" height="8" rx="3" fill="#444"/>
           <rect x="53" y="136" width="80" height="7" rx="4" fill="#383838"/>
         </g>
-
-        <!-- Chomp particles near the computer bite -->
         <g class="crunch-particles">
           <polygon points="378,85 385,78 383,92" fill="#ff69b4" opacity="0.7"/>
           <polygon points="382,115 390,108 388,122" fill="#ff8ec8" opacity="0.5"/>
@@ -151,8 +195,6 @@ footer p+p{margin-top:.3rem}
           <rect x="385" y="130" width="5" height="3" rx="1" fill="#e0559e" transform="rotate(15 387 131)" opacity="0.4"/>
         </g>
       </g>
-
-      <!-- Text on top — clean, no logo behind it -->
       <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1">
         <tspan fill="#ff69b4">Brain</tspan><tspan fill="#fff">Smacks</tspan>
       </text>
@@ -166,66 +208,172 @@ footer p+p{margin-top:.3rem}
 
   <!-- Heavy Eye -->
   <a href="/heavyeye/" class="card card--heavyeye">
+    <span class="card-badge">⚖️</span>
     <div class="thumb">
-      <svg viewBox="0 0 120 120" fill="none"><line x1="60" y1="15" x2="60" y2="40" stroke="#fff" stroke-width="3"/><line x1="30" y1="40" x2="90" y2="40" stroke="#fff" stroke-width="3"/><line x1="30" y1="40" x2="15" y2="75" stroke="#fff" stroke-width="2.5"/><line x1="90" y1="40" x2="105" y2="75" stroke="#fff" stroke-width="2.5"/><path d="M5 75 Q15 85 25 75" stroke="#fff" stroke-width="2.5" fill="none"/><circle cx="15" cy="78" r="12" stroke="#fff" stroke-width="2" fill="rgba(255,255,255,.1)"/><path d="M95 75 Q105 65 115 75" stroke="#fff" stroke-width="2.5" fill="none"/><circle cx="105" cy="72" r="12" stroke="#fff" stroke-width="2" fill="rgba(255,255,255,.1)"/><circle cx="60" cy="15" r="5" fill="#fff"/></svg>
+      <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
+        <g class="scale-group">
+          <!-- Fulcrum -->
+          <polygon points="60,120 50,130 70,130" fill="#f59e0b" opacity=".6"/>
+          <!-- Beam -->
+          <line x1="60" y1="20" x2="60" y2="45" stroke="#fbbf24" stroke-width="3"/>
+          <circle cx="60" cy="18" r="5" fill="#fbbf24"/>
+          <line x1="20" y1="45" x2="100" y2="45" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+          <!-- Left pan -->
+          <line x1="20" y1="45" x2="10" y2="80" stroke="#fbbf24" stroke-width="2"/>
+          <line x1="20" y1="45" x2="30" y2="80" stroke="#fbbf24" stroke-width="2"/>
+          <path d="M5 80 Q20 95 35 80" stroke="#fbbf24" stroke-width="2.5" fill="rgba(245,158,11,.15)"/>
+          <!-- Right pan -->
+          <line x1="100" y1="45" x2="90" y2="80" stroke="#fbbf24" stroke-width="2"/>
+          <line x1="100" y1="45" x2="110" y2="80" stroke="#fbbf24" stroke-width="2"/>
+          <path d="M85 80 Q100 95 115 80" stroke="#fbbf24" stroke-width="2.5" fill="rgba(245,158,11,.15)"/>
+          <!-- Weights -->
+          <circle cx="20" cy="75" r="6" fill="rgba(245,158,11,.4)" stroke="#fbbf24" stroke-width="1.5"/>
+          <circle cx="100" cy="75" r="8" fill="rgba(245,158,11,.5)" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="100" y="79" text-anchor="middle" font-size="8" fill="#fbbf24" font-weight="700">?</text>
+        </g>
+      </svg>
     </div>
     <div class="card-body">
       <div class="card-title">Heavy Eye</div>
-      <p class="card-desc">Which one's heavier? Trust your eyes... or get crushed.</p>
-      <span class="play-btn">Play →</span>
+      <p class="card-desc">Which one's heavier? Trust your gut.</p>
+      <span class="play-btn">▶ Play Now</span>
     </div>
   </a>
 
   <!-- Circle -->
   <a href="/circle/" class="card card--circle">
+    <span class="card-badge">✏️</span>
     <div class="thumb">
-      <svg viewBox="0 0 120 120" fill="none"><path d="M60 20 C85 18, 108 40, 105 65 C102 90, 80 108, 55 105 C30 102, 12 82, 15 57 C18 32, 35 22, 60 20" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 2"/></svg>
+      <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
+        <!-- Chalkboard grid dots -->
+        <circle class="chalk-dot" cx="30" cy="30" r="1.5" fill="rgba(226,232,240,.3)"/>
+        <circle class="chalk-dot" cx="130" cy="110" r="1.5" fill="rgba(226,232,240,.3)"/>
+        <circle class="chalk-dot" cx="25" cy="110" r="1.5" fill="rgba(226,232,240,.3)"/>
+        <circle class="chalk-dot" cx="135" cy="30" r="1.5" fill="rgba(226,232,240,.3)"/>
+        <!-- Main circle that draws itself -->
+        <circle cx="80" cy="70" r="45" stroke="#e2e8f0" stroke-width="3" fill="none" stroke-linecap="round" class="draw-circle" stroke-dasharray="283" stroke-dashoffset="283"/>
+        <!-- Imperfect wobble overlay -->
+        <path d="M80 25 C108 23, 130 45, 127 70 C124 95, 105 118, 78 115 C51 112, 32 92, 35 67 C38 42, 55 27, 80 25" stroke="rgba(226,232,240,.15)" stroke-width="1.5" fill="none" stroke-dasharray="3 5"/>
+        <!-- Pencil icon -->
+        <g transform="translate(115,20) rotate(30)">
+          <rect x="0" y="0" width="5" height="25" rx="1" fill="#94a3b8"/>
+          <polygon points="0,25 5,25 2.5,32" fill="#fbbf24"/>
+        </g>
+      </svg>
     </div>
     <div class="card-body">
       <div class="card-title">Circle</div>
       <p class="card-desc">Draw a perfect circle. Spoiler: you can't.</p>
-      <span class="play-btn">Play →</span>
+      <span class="play-btn">▶ Play Now</span>
     </div>
   </a>
 
   <!-- BreakPoint -->
   <a href="/breakpoint/" class="card card--breakpoint">
+    <span class="card-badge">🃏</span>
+    <span class="card-hot">🔥 HOT</span>
     <div class="thumb">
-      <svg viewBox="0 0 120 120" fill="none"><g transform="translate(60,60)"><rect x="-15" y="-30" width="28" height="40" rx="3" fill="rgba(239,68,68,.3)" stroke="#fff" stroke-width="2" transform="rotate(-15)"/><rect x="-14" y="-30" width="28" height="40" rx="3" fill="rgba(34,197,94,.3)" stroke="#fff" stroke-width="2" transform="rotate(5)"/><rect x="-13" y="-30" width="28" height="40" rx="3" fill="rgba(255,255,255,.1)" stroke="#fff" stroke-width="2" transform="rotate(25)"/></g><text x="47" y="62" font-size="14" fill="#ef4444" font-family="serif">♠</text><text x="63" y="55" font-size="14" fill="#22c55e" font-family="serif">♦</text><text x="78" y="60" font-size="14" fill="#fff" font-family="serif">♥</text></svg>
+      <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
+        <g transform="translate(80,70)">
+          <!-- Card 1 - red -->
+          <g class="fan-card fan-card--1" style="transform-origin:0 0">
+            <rect x="-22" y="-40" width="44" height="62" rx="5" fill="rgba(239,68,68,.2)" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="0" y="-10" text-anchor="middle" font-size="22" fill="#ef4444" font-family="serif">♠</text>
+            <text x="-14" y="-28" font-size="9" fill="#ef4444" font-weight="700">A</text>
+          </g>
+          <!-- Card 2 - white -->
+          <g class="fan-card fan-card--2" style="transform-origin:0 0">
+            <rect x="-22" y="-40" width="44" height="62" rx="5" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+            <text x="0" y="-10" text-anchor="middle" font-size="22" fill="#fff" font-family="serif">♥</text>
+            <text x="-14" y="-28" font-size="9" fill="#fff" font-weight="700">K</text>
+          </g>
+          <!-- Card 3 - green -->
+          <g class="fan-card fan-card--3" style="transform-origin:0 0">
+            <rect x="-22" y="-40" width="44" height="62" rx="5" fill="rgba(34,197,94,.2)" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="0" y="-10" text-anchor="middle" font-size="22" fill="#22c55e" font-family="serif">♦</text>
+            <text x="-14" y="-28" font-size="9" fill="#22c55e" font-weight="700">7</text>
+          </g>
+        </g>
+        <!-- Sparks -->
+        <circle cx="40" cy="35" r="2" fill="#ef4444" opacity=".5"/>
+        <circle cx="120" cy="35" r="2" fill="#22c55e" opacity=".5"/>
+        <circle cx="80" cy="120" r="1.5" fill="#fff" opacity=".3"/>
+      </svg>
     </div>
     <div class="card-body">
       <div class="card-title">BreakPoint</div>
       <p class="card-desc">Every card is a weapon. Every turn is a gamble.</p>
-      <span class="play-btn">Play →</span>
+      <span class="play-btn">▶ Play Now</span>
     </div>
   </a>
 
   <!-- Likelihood -->
   <a href="/likelihood/" class="card card--likelihood">
+    <span class="card-badge">🎲</span>
     <div class="thumb">
-      <svg viewBox="0 0 120 120" fill="none">
-        <text x="60" y="38" text-anchor="middle" font-size="28" fill="#fff" font-family="sans-serif" font-weight="700">%</text>
-        <text x="60" y="62" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.7)" font-family="sans-serif">How likely is it?</text>
-        <rect x="25" y="72" width="14" height="28" rx="3" fill="rgba(255,255,255,.2)"/><rect x="25" y="82" width="14" height="18" rx="2" fill="rgba(167,139,250,.6)"/>
-        <rect x="43" y="72" width="14" height="28" rx="3" fill="rgba(255,255,255,.2)"/><rect x="43" y="76" width="14" height="24" rx="2" fill="rgba(167,139,250,.7)"/>
-        <rect x="61" y="72" width="14" height="28" rx="3" fill="rgba(255,255,255,.2)"/><rect x="61" y="88" width="14" height="12" rx="2" fill="rgba(167,139,250,.5)"/>
-        <rect x="79" y="72" width="14" height="28" rx="3" fill="rgba(255,255,255,.2)"/><rect x="79" y="74" width="14" height="26" rx="2" fill="rgba(167,139,250,.8)"/>
-        <circle cx="32" cy="68" r="2" fill="#a78bfa"/><circle cx="50" cy="64" r="2" fill="#a78bfa"/><circle cx="68" cy="70" r="2" fill="#a78bfa"/><circle cx="86" cy="62" r="2" fill="#a78bfa"/>
-        <line x1="32" y1="68" x2="50" y2="64" stroke="#a78bfa" stroke-width="1.5"/><line x1="50" y1="64" x2="68" y2="70" stroke="#a78bfa" stroke-width="1.5"/><line x1="68" y1="70" x2="86" y2="62" stroke="#a78bfa" stroke-width="1.5"/>
+      <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
+        <!-- Big percentage -->
+        <text x="80" y="50" text-anchor="middle" font-size="42" fill="#c4b5fd" font-family="'Space Grotesk',sans-serif" font-weight="700" class="pct-counter">73%</text>
+        <text x="80" y="68" text-anchor="middle" font-size="10" fill="rgba(196,181,253,.5)" font-family="sans-serif">How likely is it?</text>
+        <!-- Bar chart -->
+        <g class="bar-animate" style="transform-origin:30px 120px">
+          <rect x="22" y="80" width="16" height="40" rx="3" fill="rgba(124,58,237,.3)"/>
+          <rect x="22" y="95" width="16" height="25" rx="2" fill="rgba(167,139,250,.6)"/>
+        </g>
+        <g class="bar-animate" style="transform-origin:52px 120px">
+          <rect x="44" y="80" width="16" height="40" rx="3" fill="rgba(124,58,237,.3)"/>
+          <rect x="44" y="84" width="16" height="36" rx="2" fill="rgba(167,139,250,.7)"/>
+        </g>
+        <g class="bar-animate" style="transform-origin:74px 120px">
+          <rect x="66" y="80" width="16" height="40" rx="3" fill="rgba(124,58,237,.3)"/>
+          <rect x="66" y="100" width="16" height="20" rx="2" fill="rgba(167,139,250,.5)"/>
+        </g>
+        <g class="bar-animate" style="transform-origin:96px 120px">
+          <rect x="88" y="80" width="16" height="40" rx="3" fill="rgba(124,58,237,.3)"/>
+          <rect x="88" y="82" width="16" height="38" rx="2" fill="rgba(167,139,250,.8)"/>
+        </g>
+        <g class="bar-animate" style="transform-origin:118px 120px">
+          <rect x="110" y="80" width="16" height="40" rx="3" fill="rgba(124,58,237,.3)"/>
+          <rect x="110" y="90" width="16" height="30" rx="2" fill="rgba(167,139,250,.65)"/>
+        </g>
+        <!-- Trend line dots -->
+        <circle class="dot-pulse" cx="30" cy="78" r="2" fill="#a78bfa"/>
+        <circle class="dot-pulse" cx="52" cy="74" r="2" fill="#a78bfa" style="animation-delay:.3s"/>
+        <circle class="dot-pulse" cx="74" cy="80" r="2" fill="#a78bfa" style="animation-delay:.6s"/>
+        <circle class="dot-pulse" cx="96" cy="72" r="2" fill="#a78bfa" style="animation-delay:.9s"/>
+        <circle class="dot-pulse" cx="118" cy="76" r="2" fill="#a78bfa" style="animation-delay:1.2s"/>
+        <line x1="30" y1="78" x2="52" y2="74" stroke="#a78bfa" stroke-width="1.5" opacity=".5"/>
+        <line x1="52" y1="74" x2="74" y2="80" stroke="#a78bfa" stroke-width="1.5" opacity=".5"/>
+        <line x1="74" y1="80" x2="96" y2="72" stroke="#a78bfa" stroke-width="1.5" opacity=".5"/>
+        <line x1="96" y1="72" x2="118" y2="76" stroke="#a78bfa" stroke-width="1.5" opacity=".5"/>
       </svg>
     </div>
     <div class="card-body">
       <div class="card-title">Likelihood</div>
-      <p class="card-desc">Guess the odds. How well do you really know probability?</p>
-      <span class="play-btn">Play →</span>
+      <p class="card-desc">How well do you REALLY know probability?</p>
+      <span class="play-btn">▶ Play Now</span>
     </div>
   </a>
 
 </section>
 
 <section class="coming-soon">
-  <h2>More games coming soon 🧠</h2>
-  <p>We're cooking up new stuff. Stay tuned.</p>
+  <h2>More games cooking... 🧑‍🍳</h2>
+  <p>New brain-busters are on the way. Stay tuned.</p>
+  <div class="coming-soon-grid">
+    <div class="ghost-card">
+      <span class="ghost-icon">🧩</span>
+      <span class="ghost-label">Coming Soon</span>
+    </div>
+    <div class="ghost-card">
+      <span class="ghost-icon">🎯</span>
+      <span class="ghost-label">Coming Soon</span>
+    </div>
+    <div class="ghost-card">
+      <span class="ghost-icon">💡</span>
+      <span class="ghost-label">Coming Soon</span>
+    </div>
+  </div>
 </section>
 
 <section class="about-brainsmacks" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="false">
