@@ -2066,10 +2066,13 @@ function showScreen(id) {
 }
 
 function startGame() {
+    console.log('startGame called');
     initAudio();
     resetGame();
+    console.log('resetGame done, playerX:', playerX, 'playerY:', playerY, 'WORLD_W:', WORLD_W);
     state = 'playing';
     showScreen(null);
+    console.log('state:', state, 'HUD hidden:', document.getElementById('hud').classList.contains('hidden'));
     document.getElementById('hud').classList.remove('hidden');
 }
 
@@ -2296,8 +2299,12 @@ function loop(time) {
     const dt = Math.min((time - lastTime) / 1000, 0.05);
     lastTime = time;
 
-    update(dt);
-    render();
+    try {
+        update(dt);
+        render();
+    } catch(e) {
+        console.error('GAME LOOP ERROR:', e);
+    }
 }
 
 // Init
