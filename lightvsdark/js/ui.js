@@ -62,7 +62,8 @@ const UI = (() => {
     const nightTimer = document.getElementById('night-timer');
     if (phase === 'night') {
       nightTimer.classList.remove('hidden');
-      nightTimer.textContent = `⏱ ${nightRemain}s | 👾 ${Enemies.enemyCount()}`;
+      const eCount = Enemies.enemyCount();
+      nightTimer.innerHTML = `⏱ ${nightRemain}s<br><span id="enemy-counter">👾 Enemies: ${eCount} remaining</span>`;
     } else {
       nightTimer.classList.add('hidden');
     }

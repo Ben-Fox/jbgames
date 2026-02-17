@@ -81,9 +81,10 @@ const Crafting = (() => {
   }
   
   function craft(recipe) {
-    if (!canCraft(recipe)) { Audio.error(); return false; }
+    if (!canCraft(recipe)) { Audio.error(); Effects.notEnoughResources(); return false; }
     Player.spendResources(recipe.cost);
     Audio.craft();
+    Effects.craftedItem(recipe.name);
     
     if (recipe.type === 'weapon') {
       Player.addToInventory(recipe.id);

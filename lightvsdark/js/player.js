@@ -279,8 +279,8 @@ const Player = (() => {
     state.invincible = true;
     state.invTimer = 0.3;
     Audio.playerHit();
-    Particles.shake(6);
-    Particles.damageNumber(state.x, state.y - 15, amount, '#ff4444');
+    Particles.shake(Math.min(15, 4 + amount * 0.5));
+    Particles.damageNumber(state.x, state.y - 15, amount, '#ff4444', amount >= 15);
     return state.hp <= 0;
   }
   

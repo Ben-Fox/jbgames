@@ -33,6 +33,7 @@ const Game = (() => {
     Player.init();
     Enemies.init();
     Building.init();
+    Effects.init();
     UI.init();
     
     // Skip to night button
@@ -80,10 +81,16 @@ const Game = (() => {
     if (phase === 'night' && !waveSpawned) {
       waveSpawned = true;
       Enemies.spawnWave(Lighting.nightCount());
+      Effects.nightBegins(Lighting.nightCount());
     }
     if (phase === 'dawn' && waveSpawned) {
       waveSpawned = false;
       Enemies.retreatAll();
+      Effects.dawnArrives();
+    }
+    // Check wave complete (all enemies dead during night, no more spawning)
+    if (phase === 'night' && !Enemies.waveActive() && Enemies.enemyCount() === 0 && waveSpawned) {
+      // already handled by dawn
     }
     
     // Win condition
@@ -112,6 +119,13 @@ const Game = (() => {
     if (enemyResult) {
       if (enemyResult.type === 'playerHit') {
         const dead = Player.takeDamage(enemyResult.dmg);
+        Effects.flashScreen('rgba(255,0,0,1)', 0.3, 3);
+        if (enemyResult.fromX !== undefined) {
+          Effects.addDamageIndicator(enemyResult.fromX, enemyResult.fromY, ps.x, ps.y);
+        }
+        if (enemyResult.enemyName) {
+          Effects.enemyHitPlayer(enemyResult.enemyName, enemyResult.dmg);
+        }
         if (dead) {
           gameOver = true;
           UI.showGameOver(false, 'You were slain!');
@@ -145,6 +159,9 @@ const Game = (() => {
     // Particles
     Particles.update(dt);
     Particles.updateAmbient(Lighting.nightAmount(), cam, canvas.width, canvas.height);
+    
+    // Effects
+    Effects.update(dt);
     
     // UI
     UI.updateHUD();
@@ -209,6 +226,9 @@ const Game = (() => {
     
     // Lighting (darkness overlay)
     Lighting.drawLighting(ctx, canvas.width, canvas.height, Building.getLightSources(), Player.state().x, Player.state().y, cam);
+    
+    // Effects overlays (damage indicators, screen flash, vignette)
+    Effects.draw(ctx, canvas.width, canvas.height);
     
     ctx.restore();
   }
@@ -287,9 +307,13 @@ const Game = (() => {
                   if (res.destroyed) {
                     Player.addResource(res.resource, res.amount);
                     Audio.pickup();
-                    Particles.damageNumber(res.x, res.y - 16, '+' + res.amount + ' ' + res.resource, '#2ecc71');
+                    const icon = { wood:'🪵', stone:'🪨', iron:'⛏️', copper:'🟤', tin:'⬜', coal:'⬛', crystal:'💎' }[res.resource] || '';
+                    Particles.damageNumber(res.x, res.y - 16, `+${res.amount} ${res.resource} ${icon}`, '#2ecc71', true);
+                    Effects.resourceGathered(res.amount, res.resource);
+                    Particles.gatherChips(res.x, res.y, res.resource);
+                  } else if (res.hit) {
+                    Particles.gatherChips(res.x, res.y, w.gather);
                   }
-                  // blocked or hit-not-destroyed handled in gatherHit
                 }
               }
             }

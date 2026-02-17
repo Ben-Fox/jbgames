@@ -46,8 +46,41 @@ const Particles = (() => {
     screenShake.amount = Math.max(screenShake.amount, amount);
   }
   
-  function damageNumber(x, y, amount, color = '#ff4444') {
-    damageNumbers.push({ x, y, amount: typeof amount === 'number' ? Math.round(amount) : amount, color, life: 0.8, maxLife: 0.8 });
+  function damageNumber(x, y, amount, color = '#ff4444', big = false) {
+    damageNumbers.push({ x, y, amount: typeof amount === 'number' ? Math.round(amount) : amount, color, life: 1.0, maxLife: 1.0, big });
+  }
+
+  function gatherChips(x, y, type) {
+    const colors = {
+      wood: ['#8b6914', '#a0845c', '#6d4c1d'],
+      stone: ['#888', '#aaa', '#666'],
+      iron: ['#777', '#999', '#555'],
+      copper: ['#b87333', '#d4954a', '#8a5522'],
+      crystal: ['#66ccff', '#88ddff', '#44aadd']
+    };
+    const c = colors[type] || colors.stone;
+    for (let i = 0; i < 5; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = Math.random() * 3 + 1;
+      particles.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2,
+        life: 0.4, maxLife: 0.4, color: c[i % c.length], size: 2.5,
+        gravity: 0.15
+      });
+    }
+  }
+
+  function buildBurst(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const s = 2 + Math.random() * 2;
+      particles.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.5, maxLife: 0.5, color: color || '#f1c40f', size: 3,
+        gravity: 0
+      });
+    }
+    spawn(x, y, 6, '#fff', 1.5, 0.3, 2);
   }
   
   function updateAmbient(nightAmount, cam, canvasW, canvasH) {
@@ -176,21 +209,32 @@ const Particles = (() => {
     
     // Damage numbers
     ctx.textAlign = 'center';
-    ctx.font = 'bold 14px sans-serif';
     for (const d of damageNumbers) {
       const alpha = d.life / d.maxLife;
+      const scale = d.big ? 1.3 : 1;
+      const fontSize = d.big ? 22 : 16;
+      ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = d.color;
       ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.strokeText(d.amount, d.x - cam.x, d.y - cam.y);
-      ctx.fillText(d.amount, d.x - cam.x, d.y - cam.y);
+      ctx.lineWidth = 3;
+      const dx = d.x - cam.x;
+      const dy = d.y - cam.y;
+      ctx.strokeText(d.amount, dx, dy);
+      ctx.fillStyle = d.color;
+      ctx.fillText(d.amount, dx, dy);
+      if (d.big) {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#fff';
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.strokeText(d.amount, dx, dy);
+      }
     }
     ctx.globalAlpha = 1;
   }
   
   return {
     init, spawn, hitSparks, deathPoof, buildDust, lootGlow, shake, damageNumber,
+    gatherChips, buildBurst,
     update, updateAmbient, draw,
     getShake: () => screenShake
   };

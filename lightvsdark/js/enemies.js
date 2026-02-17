@@ -102,6 +102,7 @@ const Enemies = (() => {
         if (isBossNight && waveEnemiesLeft === 1) {
           spawnAtEdge('umbra_lord');
           Audio.bossCry();
+          Effects.bossIncoming();
         } else {
           spawnAtEdge(getSpawnType(nightNum));
         }
@@ -125,6 +126,9 @@ const Enemies = (() => {
         e.knockbackY *= 0.8;
         continue;
       }
+      
+      // Hit flash decay
+      if (e.hitFlash > 0) e.hitFlash -= dt;
       
       // Night stalker visibility
       if (e.invisible) {
@@ -186,7 +190,7 @@ const Enemies = (() => {
         if (!attacked && dist(e, playerState) < 28 + e.size) {
           e.attackCd = 1;
           attacked = true;
-          if (!result) result = { type: 'playerHit', dmg: e.dmg };
+          if (!result) result = { type: 'playerHit', dmg: e.dmg, fromX: e.x, fromY: e.y, enemyName: e.name };
         }
         
         // Attack buildings if targeting them
@@ -230,7 +234,7 @@ const Enemies = (() => {
       if (p.life <= 0) { projectiles.splice(i, 1); continue; }
       if (dist(p, playerState) < 15) {
         projectiles.splice(i, 1);
-        return { type: 'playerHit', dmg: p.dmg };
+        return { type: 'playerHit', dmg: p.dmg, fromX: p.x, fromY: p.y, enemyName: 'Void Archer' };
       }
     }
     
@@ -255,7 +259,8 @@ const Enemies = (() => {
         Audio.pickup();
         Particles.lootGlow(l.x, l.y, l.color);
         const displayName = l.item.replace(/_/g, ' ');
-        Particles.damageNumber(l.x, l.y - 12, '+' + l.amount + ' ' + displayName, l.color);
+        Particles.damageNumber(l.x, l.y - 12, '+' + l.amount + ' ' + displayName, l.color, true);
+        Effects.log(`+${l.amount} ${displayName}`, l.color);
         loot.splice(i, 1);
       }
     }
@@ -285,11 +290,14 @@ const Enemies = (() => {
       }
       
       e.hp -= dmg;
+      e.hitFlash = 0.12;
       hit = true;
       Audio.hit();
       Particles.hitSparks(e.x, e.y);
-      Particles.damageNumber(e.x, e.y - 10, dmg, '#ffd700');
-      Particles.shake(3);
+      const isBig = dmg >= 15;
+      Particles.damageNumber(e.x, e.y - 10, dmg, '#ffd700', isBig);
+      Particles.shake(Math.min(8, 2 + dmg * 0.3));
+      Effects.setNameplate(e);
       
       // Knockback
       const kb = attackInfo.knockback || 3;
@@ -309,9 +317,11 @@ const Enemies = (() => {
       const e = enemies[i];
       if (dist(e, proj) < e.size + 5) {
         e.hp -= proj.dmg;
+        e.hitFlash = 0.12;
         Audio.hit();
         Particles.hitSparks(e.x, e.y);
-        Particles.damageNumber(e.x, e.y - 10, proj.dmg, '#ffd700');
+        Particles.damageNumber(e.x, e.y - 10, proj.dmg, '#ffd700', proj.dmg >= 15);
+        Effects.setNameplate(e);
         if (e.hp <= 0) killEnemy(i);
         return true;
       }
@@ -324,6 +334,7 @@ const Enemies = (() => {
     Audio.enemyDie();
     Particles.deathPoof(e.x, e.y, e.color);
     Player.state().kills++;
+    Effects.playerKilledEnemy(e.name || e.type);
     
     // Drops
     const drops = e.drops || TYPES[e.type]?.drops || [];
@@ -456,6 +467,22 @@ const Enemies = (() => {
         ctx.fill();
       }
       
+      // Hit flash overlay
+      if (e.hitFlash > 0) {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(1, e.hitFlash * 8)})`;
+        if (e.boss) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, e.size + 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(sx, sy, e.size / 2 + 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
       // Eyes (non-boss)
       if (!e.boss) {
         ctx.fillStyle = '#f44';

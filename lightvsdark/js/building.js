@@ -65,7 +65,10 @@ const Building = (() => {
     });
     
     Audio.build();
-    Particles.buildDust(tx * TILE + TILE / 2, ty * TILE + TILE / 2);
+    const bx = tx * TILE + TILE / 2;
+    const by = ty * TILE + TILE / 2;
+    Particles.buildBurst(bx, by, t.color);
+    Effects.buildingPlaced(t.name);
     return true;
   }
   
@@ -85,6 +88,7 @@ const Building = (() => {
     Particles.hitSparks(tx * TILE + TILE / 2, ty * TILE + TILE / 2);
     if (b.hp <= 0) {
       Particles.deathPoof(tx * TILE + TILE / 2, ty * TILE + TILE / 2, '#8b6914');
+      Effects.buildingDestroyed(TYPES[b.type].name);
       buildings = buildings.filter(bb => bb !== b);
     }
   }
@@ -166,6 +170,7 @@ const Building = (() => {
           const bx = b.tx * TILE + TILE / 2;
           const by = b.ty * TILE + TILE / 2;
           Particles.damageNumber(bx, by - 16, '+1 ' + t.produces, resColors[t.produces] || '#2ecc71');
+          Effects.pulseResource(t.produces);
         }
       }
       
@@ -282,10 +287,32 @@ const Building = (() => {
         ctx.fillRect(sx + 2, sy + 6, TILE - 4, TILE - 8);
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.fillRect(sx + TILE - 10, sy + 2, 6, 8);
+        // Working animation - spinning gear
+        const spin = (Date.now() * 0.003) % (Math.PI * 2);
+        ctx.save();
+        ctx.translate(sx + TILE - 7, sy + 6);
+        ctx.rotate(spin);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        for (let g = 0; g < 4; g++) {
+          ctx.fillRect(-1, -4, 2, 3);
+          ctx.rotate(Math.PI / 2);
+        }
+        ctx.restore();
       }
       
       if (b.hp !== Infinity && b.hp < b.maxHp) {
         const pct = b.hp / b.maxHp;
+        // Damage cracks overlay
+        if (pct < 0.75) {
+          ctx.strokeStyle = `rgba(0,0,0,${0.5 * (1 - pct)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx + 4, sy + 4); ctx.lineTo(sx + TILE/2, sy + TILE/2);
+          if (pct < 0.5) { ctx.moveTo(sx + TILE - 4, sy + 6); ctx.lineTo(sx + TILE/2 + 2, sy + TILE - 4); }
+          if (pct < 0.25) { ctx.moveTo(sx + 2, sy + TILE - 2); ctx.lineTo(sx + TILE - 2, sy + 4); }
+          ctx.stroke();
+        }
+        // HP bar
         ctx.fillStyle = '#333';
         ctx.fillRect(sx, sy - 5, TILE, 3);
         ctx.fillStyle = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
