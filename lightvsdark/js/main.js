@@ -38,6 +38,9 @@ const Game = (() => {
     // Skip to night button
     document.getElementById('skip-night-btn').onclick = () => { if (Lighting.phase() === 'day') Lighting.skipToNight(); };
     
+    // Menu button
+    document.getElementById('menu-btn').onclick = () => { returnToMenu(); };
+    
     // Give starting resources message
     Audio.init();
     
@@ -218,6 +221,7 @@ const Game = (() => {
     if (!running || gameOver) return;
     if (UI.isInventoryOpen() && key !== 'tab') return;
     
+    if (key === 'escape') { returnToMenu(); return; }
     if (key === 'tab') { e.preventDefault(); UI.toggleInventory(); }
     else if (key === 'b') { UI.toggleBuildMode(); }
     else if (key === ' ') { e.preventDefault(); Player.dodge(keys); }
@@ -298,6 +302,13 @@ const Game = (() => {
   });
   
   document.addEventListener('mouseup', () => { mouse.down = false; });
+  
+  function returnToMenu() {
+    running = false;
+    gameOver = true;
+    document.getElementById('splash-screen').classList.remove('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+  }
   
   // Splash screen buttons
   document.getElementById('start-btn').addEventListener('click', () => init('normal'));
