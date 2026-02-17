@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainSmacks — Games that hit different</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0e0e12;--surface:#1a1a24;--text:#f0f0f0;--muted:#888}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{text-decoration:none;color:inherit}
+
+/* HERO */
+.hero{text-align:center;padding:5rem 1.5rem 3rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,92,246,.15),transparent 70%);pointer-events:none}
+.logo{font-size:clamp(3rem,8vw,5.5rem);font-weight:700;letter-spacing:-.03em;background:linear-gradient(135deg,#a78bfa,#f472b6,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:fadeUp .8s ease}
+.tagline{font-size:1.4rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .8s ease .1s both}
+.subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
+
+/* GRID */
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;max-width:1100px;margin:2rem auto 4rem;padding:0 1.5rem}
+
+/* CARD */
+.card{background:var(--surface);border-radius:16px;overflow:hidden;transition:transform .25s,box-shadow .25s;animation:fadeUp .6s ease both;cursor:pointer;display:flex;flex-direction:column}
+.card:nth-child(1){animation-delay:.15s}.card:nth-child(2){animation-delay:.25s}.card:nth-child(3){animation-delay:.35s}
+.card:nth-child(4){animation-delay:.45s}.card:nth-child(5){animation-delay:.55s}.card:nth-child(6){animation-delay:.65s}
+.card:hover{transform:translateY(-6px) scale(1.02)}
+.card:hover .thumb{filter:brightness(1.15)}
+
+.thumb{height:180px;display:flex;align-items:center;justify-content:center;transition:filter .3s}
+.card-body{padding:1.25rem;flex:1;display:flex;flex-direction:column}
+.card-title{font-size:1.3rem;font-weight:700;margin-bottom:.4rem}
+.card-desc{color:var(--muted);font-size:.95rem;flex:1;line-height:1.5}
+.play-btn{display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;border-radius:10px;font-weight:600;font-size:.95rem;text-align:center;transition:filter .2s,transform .15s}
+.play-btn:hover{filter:brightness(1.2);transform:scale(1.05)}
+
+/* CARD COLORS */
+.card--heavyeye .thumb{background:linear-gradient(135deg,#78350f,#f59e0b)}
+.card--heavyeye .play-btn{background:#f59e0b;color:#1a1a24}
+.card--heavyeye:hover{box-shadow:0 8px 30px rgba(245,158,11,.25)}
+
+.card--fill .thumb{background:linear-gradient(135deg,#0c4a6e,#22d3ee)}
+.card--fill .play-btn{background:#22d3ee;color:#1a1a24}
+.card--fill:hover{box-shadow:0 8px 30px rgba(34,211,238,.25)}
+
+.card--zoom .thumb{background:linear-gradient(135deg,#14532d,#4ade80)}
+.card--zoom .play-btn{background:#4ade80;color:#1a1a24}
+.card--zoom:hover{box-shadow:0 8px 30px rgba(74,222,128,.25)}
+
+.card--circle .thumb{background:linear-gradient(135deg,#334155,#e2e8f0)}
+.card--circle .play-btn{background:#e2e8f0;color:#1a1a24}
+.card--circle:hover{box-shadow:0 8px 30px rgba(226,232,240,.2)}
+
+.card--magnitude .thumb{background:linear-gradient(135deg,#0f172a,#06b6d4)}
+.card--magnitude .play-btn{background:#06b6d4;color:#1a1a24}
+.card--magnitude:hover{box-shadow:0 8px 30px rgba(6,182,212,.25)}
+
+.card--breakpoint .thumb{background:linear-gradient(135deg,#7f1d1d,#ef4444,#166534)}
+.card--breakpoint .play-btn{background:linear-gradient(135deg,#ef4444,#22c55e);color:#fff}
+.card--breakpoint:hover{box-shadow:0 8px 30px rgba(239,68,68,.25)}
+
+/* FOOTER */
+footer{text-align:center;padding:2rem 1rem 3rem;color:var(--muted);font-size:.9rem}
+footer p+p{margin-top:.3rem}
+
+/* ANIM */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* SVG thumb styles */
+.thumb svg{width:120px;height:120px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.3))}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="logo">BrainSmacks</div>
+  <p class="tagline">Games that hit different</p>
+  <p class="subtitle">Free browser games. No downloads. No ads. Just play.</p>
+</section>
+
+<section class="games">
+
+  <!-- HeavyEye -->
+  <a href="/heavyeye/" class="card card--heavyeye">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><line x1="60" y1="15" x2="60" y2="40" stroke="#fff" stroke-width="3"/><line x1="30" y1="40" x2="90" y2="40" stroke="#fff" stroke-width="3"/><line x1="30" y1="40" x2="15" y2="75" stroke="#fff" stroke-width="2.5"/><line x1="90" y1="40" x2="105" y2="75" stroke="#fff" stroke-width="2.5"/><path d="M5 75 Q15 85 25 75" stroke="#fff" stroke-width="2.5" fill="none"/><circle cx="15" cy="78" r="12" stroke="#fff" stroke-width="2" fill="rgba(255,255,255,.1)"/><path d="M95 75 Q105 65 115 75" stroke="#fff" stroke-width="2.5" fill="none"/><circle cx="105" cy="72" r="12" stroke="#fff" stroke-width="2" fill="rgba(255,255,255,.1)"/><circle cx="60" cy="15" r="5" fill="#fff"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">HeavyEye</div>
+      <p class="card-desc">Which one's heavier? Trust your eyes... or get crushed.</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+  <!-- Fill Or Spill -->
+  <a href="/fillOrSpill/" class="card card--fill">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><path d="M35 30 L30 100 Q30 110 45 110 L75 110 Q90 110 90 100 L85 30 Z" stroke="#fff" stroke-width="2.5" fill="rgba(255,255,255,.08)"/><rect x="33" y="60" width="54" height="48" rx="4" fill="rgba(34,211,238,.4)"/><path d="M33 60 Q60 52 87 60" fill="rgba(34,211,238,.5)"/><circle cx="50" cy="80" r="2" fill="rgba(255,255,255,.3)"/><circle cx="70" cy="90" r="1.5" fill="rgba(255,255,255,.3)"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Fill Or Spill</div>
+      <p class="card-desc">Pour carefully. One drop too many and it's game over.</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+  <!-- ZoomOut -->
+  <a href="/zoomout/" class="card card--zoom">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><circle cx="52" cy="52" r="30" stroke="#fff" stroke-width="3" fill="rgba(255,255,255,.06)"/><line x1="73" y1="73" x2="105" y2="105" stroke="#fff" stroke-width="4" stroke-linecap="round"/><line x1="40" y1="52" x2="64" y2="52" stroke="#fff" stroke-width="2" opacity=".5"/><line x1="52" y1="40" x2="52" y2="64" stroke="#fff" stroke-width="2" opacity=".5"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">ZoomOut</div>
+      <p class="card-desc">It's zoomed in. Way in. Can you guess what it is?</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+  <!-- Circle -->
+  <a href="/circle/" class="card card--circle">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><path d="M60 20 C85 18, 108 40, 105 65 C102 90, 80 108, 55 105 C30 102, 12 82, 15 57 C18 32, 35 22, 60 20" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 2"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Circle</div>
+      <p class="card-desc">Draw a perfect circle. Spoiler: you can't.</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+  <!-- Magnitude -->
+  <a href="/magnitude/" class="card card--magnitude">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><rect x="45" y="35" width="30" height="75" stroke="#fff" stroke-width="2.5" fill="rgba(255,255,255,.08)"/><rect x="50" y="45" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><rect x="62" y="45" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><rect x="50" y="58" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><rect x="62" y="58" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><rect x="50" y="71" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><rect x="62" y="71" width="8" height="8" rx="1" fill="rgba(6,182,212,.5)"/><line x1="20" y1="110" x2="100" y2="110" stroke="#fff" stroke-width="2"/><path d="M30 110 L35 105 L40 110 L45 107 L50 110" stroke="rgba(239,68,68,.6)" stroke-width="1.5" fill="none"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Magnitude</div>
+      <p class="card-desc">Build it strong. The earthquake will test everything.</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+  <!-- BreakPoint -->
+  <a href="/breakpoint/" class="card card--breakpoint">
+    <div class="thumb">
+      <svg viewBox="0 0 120 120" fill="none"><g transform="translate(60,60)"><rect x="-15" y="-30" width="28" height="40" rx="3" fill="rgba(239,68,68,.3)" stroke="#fff" stroke-width="2" transform="rotate(-15)"/><rect x="-14" y="-30" width="28" height="40" rx="3" fill="rgba(34,197,94,.3)" stroke="#fff" stroke-width="2" transform="rotate(5)"/><rect x="-13" y="-30" width="28" height="40" rx="3" fill="rgba(255,255,255,.1)" stroke="#fff" stroke-width="2" transform="rotate(25)"/></g><text x="47" y="62" font-size="14" fill="#ef4444" font-family="serif">♠</text><text x="63" y="55" font-size="14" fill="#22c55e" font-family="serif">♦</text><text x="78" y="60" font-size="14" fill="#fff" font-family="serif">♥</text></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">BreakPoint</div>
+      <p class="card-desc">Every card is a weapon. Every turn is a gamble.</p>
+      <span class="play-btn">Play →</span>
+    </div>
+  </a>
+
+</section>
+
+<footer>
+  <p>Made with 🧠 by BrainSmacks</p>
+  <p>© 2026 BrainSmacks. All games free to play.</p>
+</footer>
+
+</body>
+</html>
