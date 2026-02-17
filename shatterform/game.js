@@ -8,16 +8,21 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let W, H, cx, cy;
+let WORLD_W, WORLD_H;
+let camX = 0, camY = 0;
+const CAM_LERP = 4; // camera smoothing factor
 
 function resize() {
     W = canvas.width = window.innerWidth * devicePixelRatio;
     H = canvas.height = window.innerHeight * devicePixelRatio;
     cx = W / 2;
     cy = H / 2;
-    // Clamp player to new bounds
+    WORLD_W = W * 2;
+    WORLD_H = H * 2;
+    // Clamp player to world bounds
     if (typeof playerX !== 'undefined') {
-        playerX = Math.max(playerSize + 10, Math.min(W - playerSize - 10, playerX));
-        playerY = Math.max(playerSize + 10, Math.min(H - playerSize - 10, playerY));
+        playerX = Math.max(playerSize + 10, Math.min(WORLD_W - playerSize - 10, playerX));
+        playerY = Math.max(playerSize + 10, Math.min(WORLD_H - playerSize - 10, playerY));
     }
     ctx.scale(1, 1);
 }
@@ -221,8 +226,10 @@ function resetGame() {
     playerSize = MIN_SIZE;
     playerMaxSize = MAX_SIZE;
     playerAngle = 0;
-    playerX = cx;
-    playerY = cy;
+    playerX = WORLD_W / 2;
+    playerY = WORLD_H / 2;
+    camX = playerX - W / 2;
+    camY = playerY - H / 2;
     playerVX = 0;
     playerVY = 0;
     enemies = [];
@@ -333,9 +340,14 @@ function spawnEnemy() {
 
     const hp = getEnemyHP(type, wave);
 
-    // Spawn relative to screen center (edges of screen)
-    const spawnX = cx + Math.cos(angle) * dist;
-    const spawnY = cy + Math.sin(angle) * dist;
+    // Spawn relative to camera view center (edges of visible screen)
+    const viewCX = camX + W / 2;
+    const viewCY = camY + H / 2;
+    let spawnX = viewCX + Math.cos(angle) * dist;
+    let spawnY = viewCY + Math.sin(angle) * dist;
+    // Clamp to world bounds
+    spawnX = Math.max(size + 5, Math.min(WORLD_W - size - 5, spawnX));
+    spawnY = Math.max(size + 5, Math.min(WORLD_H - size - 5, spawnY));
 
     const baseEnemy = {
         x: spawnX,
@@ -378,8 +390,8 @@ function spawnEnemy() {
             const offsetDist = dist + (Math.random() - 0.5) * 60;
             enemies.push({
                 ...baseEnemy,
-                x: cx + Math.cos(offsetAngle) * offsetDist,
-                y: cy + Math.sin(offsetAngle) * offsetDist,
+                x: Math.max(size + 5, Math.min(WORLD_W - size - 5, viewCX + Math.cos(offsetAngle) * offsetDist)),
+                y: Math.max(size + 5, Math.min(WORLD_H - size - 5, viewCY + Math.sin(offsetAngle) * offsetDist)),
                 speed: baseEnemy.speed * (0.9 + Math.random() * 0.2),
             });
         }
@@ -392,8 +404,8 @@ function spawnOrb() {
     const angle = Math.random() * Math.PI * 2;
     const d = 100 + Math.random() * Math.min(W, H) * 0.3;
     orbs.push({
-        x: cx + Math.cos(angle) * d,
-        y: cy + Math.sin(angle) * d,
+        x: Math.max(10, Math.min(WORLD_W - 10, playerX + Math.cos(angle) * d)),
+        y: Math.max(10, Math.min(WORLD_H - 10, playerY + Math.sin(angle) * d)),
         size: 8,
         pulse: Math.random() * Math.PI * 2,
         life: 8,
@@ -404,8 +416,8 @@ function spawnHealOrb() {
     const angle = Math.random() * Math.PI * 2;
     const d = 80 + Math.random() * Math.min(W, H) * 0.3;
     healOrbs.push({
-        x: cx + Math.cos(angle) * d,
-        y: cy + Math.sin(angle) * d,
+        x: Math.max(10, Math.min(WORLD_W - 10, playerX + Math.cos(angle) * d)),
+        y: Math.max(10, Math.min(WORLD_H - 10, playerY + Math.sin(angle) * d)),
         size: 10,
         pulse: Math.random() * Math.PI * 2,
         life: 10,
@@ -691,10 +703,19 @@ function update(dt) {
     playerVY += (targetVY - playerVY) * Math.min(1, PLAYER_FRICTION * dt);
     playerX += playerVX * dt;
     playerY += playerVY * dt;
-    // Clamp to screen bounds
+    // Clamp to world bounds
     const margin = playerSize + 5;
-    playerX = Math.max(margin, Math.min(W - margin, playerX));
-    playerY = Math.max(margin, Math.min(H - margin, playerY));
+    playerX = Math.max(margin, Math.min(WORLD_W - margin, playerX));
+    playerY = Math.max(margin, Math.min(WORLD_H - margin, playerY));
+
+    // Camera follows player with smooth lerp
+    const targetCamX = playerX - W / 2;
+    const targetCamY = playerY - H / 2;
+    camX += (targetCamX - camX) * Math.min(1, CAM_LERP * dt);
+    camY += (targetCamY - camY) * Math.min(1, CAM_LERP * dt);
+    // Clamp camera to world
+    camX = Math.max(0, Math.min(WORLD_W - W, camX));
+    camY = Math.max(0, Math.min(WORLD_H - H, camY));
 
     // Player grows
     const growRate = (8 + wave * 0.5) * diff.growRate;
@@ -1032,8 +1053,8 @@ function update(dt) {
             if (p.trail[t].life <= 0) p.trail.splice(t, 1);
         }
 
-        // Off-screen or expired
-        if (p.life <= 0 || p.x < -50 || p.x > W + 50 || p.y < -50 || p.y > H + 50) {
+        // Off-world or expired
+        if (p.life <= 0 || p.x < -50 || p.x > WORLD_W + 50 || p.y < -50 || p.y > WORLD_H + 50) {
             enemyProjectiles.splice(i, 1);
             continue;
         }
@@ -1207,8 +1228,8 @@ function killEnemy(e, index) {
 
 // ============ RENDER ============
 function drawPlayer() {
-    const x = playerX + shakeX;
-    const y = playerY + shakeY;
+    const x = playerX;
+    const y = playerY;
     const s = playerSize;
     const sizeRatio = (s - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
 
@@ -1314,7 +1335,7 @@ function drawAimIndicator(px, py, size) {
 
 function drawEnemy(e) {
     ctx.save();
-    ctx.translate(e.x + shakeX, e.y + shakeY);
+    ctx.translate(e.x, e.y);
     ctx.rotate(e.angle);
 
     const color = e.flashTimer > 0 ? '#fff' : e.color;
@@ -1383,7 +1404,7 @@ function drawEnemy(e) {
         ctx.fill();
         ctx.restore();
         ctx.save();
-        ctx.translate(e.x + shakeX, e.y + shakeY);
+        ctx.translate(e.x, e.y);
         const shieldDist = e.size + 4;
         const shieldArc = Math.PI / 3 * 2;
         ctx.strokeStyle = e.flashTimer > 0 ? '#fff' : '#00eeff';
@@ -1441,9 +1462,9 @@ function drawEnemy(e) {
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
         ctx.beginPath();
-        ctx.moveTo(e.x + shakeX, e.y + shakeY);
+        ctx.moveTo(e.x, e.y);
         const len = Math.max(W, H);
-        ctx.lineTo(e.x + Math.cos(e.telegraphAngle) * len + shakeX, e.y + Math.sin(e.telegraphAngle) * len + shakeY);
+        ctx.lineTo(e.x + Math.cos(e.telegraphAngle) * len, e.y + Math.sin(e.telegraphAngle) * len);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
@@ -1458,8 +1479,8 @@ function drawEnemy(e) {
 function drawHPBar(e) {
     const barWidth = e.size * 2;
     const barHeight = 3;
-    const barY = e.y + shakeY - e.size - 8;
-    const barX = e.x + shakeX - barWidth / 2;
+    const barY = e.y - e.size - 8;
+    const barX = e.x - barWidth / 2;
 
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(barX, barY, barWidth, barHeight);
@@ -1482,7 +1503,7 @@ function drawEnemyProjectile(p) {
         ctx.globalAlpha = ta * alpha;
         ctx.fillStyle = p.type === 'sniper' ? '#ff4444' : '#44ff44';
         ctx.beginPath();
-        ctx.arc(t.x + shakeX, t.y + shakeY, p.size * 0.6, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, p.size * 0.6, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1494,12 +1515,12 @@ function drawEnemyProjectile(p) {
     ctx.shadowBlur = 8;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(p.x + shakeX, p.y + shakeY, p.size, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
     // Bright core
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(p.x + shakeX, p.y + shakeY, p.size * 0.4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
@@ -1510,7 +1531,7 @@ function drawFragment(f) {
     const alpha = f.life / f.maxLife;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(f.x + shakeX, f.y + shakeY);
+    ctx.translate(f.x, f.y);
     ctx.rotate(f.angle);
     ctx.fillStyle = f.color;
 
@@ -1530,7 +1551,7 @@ function drawFragment(f) {
 function drawBeam(b) {
     const alpha = b.life / b.maxLife;
     ctx.save();
-    ctx.translate(playerX + shakeX, playerY + shakeY);
+    ctx.translate(playerX, playerY);
     ctx.rotate(b.angle);
     ctx.globalAlpha = alpha;
 
@@ -1577,7 +1598,7 @@ function drawParticle(p) {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = p.color;
     ctx.beginPath();
-    ctx.arc(p.x + shakeX, p.y + shakeY, p.size * alpha, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 }
@@ -1589,7 +1610,7 @@ function drawOrb(o) {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(o.x + shakeX, o.y + shakeY);
+    ctx.translate(o.x, o.y);
 
     const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3);
     glow.addColorStop(0, 'rgba(0, 255, 170, 0.4)');
@@ -1614,7 +1635,7 @@ function drawHealOrb(o) {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(o.x + shakeX, o.y + shakeY);
+    ctx.translate(o.x, o.y);
 
     const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3);
     glow.addColorStop(0, 'rgba(0, 255, 80, 0.5)');
@@ -1643,7 +1664,7 @@ function drawScorePopup(p) {
     ctx.fillStyle = p.color;
     ctx.font = `bold ${14 * devicePixelRatio}px Orbitron, sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(p.text, p.x + shakeX, p.y + shakeY);
+    ctx.fillText(p.text, p.x, p.y);
     ctx.restore();
 }
 
@@ -1663,22 +1684,22 @@ function drawBarrier(b) {
     ctx.lineWidth = b.thickness;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(b.x - dx + shakeX, b.y - dy + shakeY);
-    ctx.lineTo(b.x + dx + shakeX, b.y + dy + shakeY);
+    ctx.moveTo(b.x - dx, b.y - dy);
+    ctx.lineTo(b.x + dx, b.y + dy);
     ctx.stroke();
 
     ctx.strokeStyle = `rgba(150, 255, 230, ${0.6 * alpha})`;
     ctx.lineWidth = b.thickness * 0.4;
     ctx.beginPath();
-    ctx.moveTo(b.x - dx + shakeX, b.y - dy + shakeY);
-    ctx.lineTo(b.x + dx + shakeX, b.y + dy + shakeY);
+    ctx.moveTo(b.x - dx, b.y - dy);
+    ctx.lineTo(b.x + dx, b.y + dy);
     ctx.stroke();
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = `rgba(0, 255, 200, ${alpha})`;
     for (const sign of [-1, 1]) {
-        const ex = b.x + dx * sign + shakeX;
-        const ey = b.y + dy * sign + shakeY;
+        const ex = b.x + dx * sign;
+        const ey = b.y + dy * sign;
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             const a = Math.PI * 2 * i / 6;
@@ -1695,7 +1716,7 @@ function drawBarrier(b) {
         const flashAlpha = 0.3 + Math.sin(gameTime * flashRate) * 0.3;
         ctx.fillStyle = `rgba(255, 100, 100, ${flashAlpha})`;
         ctx.beginPath();
-        ctx.arc(b.x + shakeX, b.y + shakeY, 4, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1705,19 +1726,115 @@ function drawBarrier(b) {
 function drawBackground() {
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, W, H);
+}
 
+function drawWorldGrid() {
+    // Draw grid in world space (called inside camera transform)
     ctx.strokeStyle = 'rgba(0, 200, 255, 0.03)';
     ctx.lineWidth = 1;
     const gridSize = 60;
-    const offsetX = (shakeX * 0.3) % gridSize;
-    const offsetY = (shakeY * 0.3) % gridSize;
-    for (let x = offsetX; x < W; x += gridSize) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    // Only draw visible grid lines
+    const startX = Math.floor(camX / gridSize) * gridSize;
+    const startY = Math.floor(camY / gridSize) * gridSize;
+    for (let x = startX; x < camX + W + gridSize; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, camY); ctx.lineTo(x, camY + H); ctx.stroke();
     }
-    for (let y = offsetY; y < H; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    for (let y = startY; y < camY + H + gridSize; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(camX, y); ctx.lineTo(camX + W, y); ctx.stroke();
+    }
+}
+
+function drawWorldBoundary() {
+    // Draw world border in world space
+    const borderWidth = 4;
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(borderWidth / 2, borderWidth / 2, WORLD_W - borderWidth, WORLD_H - borderWidth);
+
+    // Edge glow when player is near boundary
+    const edgeDist = 150;
+    const glowAlpha = 0.4;
+    // Left
+    if (playerX < edgeDist) {
+        const a = glowAlpha * (1 - playerX / edgeDist);
+        const g = ctx.createLinearGradient(0, camY, edgeDist, camY);
+        g.addColorStop(0, `rgba(0, 200, 255, ${a})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, camY, edgeDist, H);
+    }
+    // Right
+    if (playerX > WORLD_W - edgeDist) {
+        const a = glowAlpha * (1 - (WORLD_W - playerX) / edgeDist);
+        const g = ctx.createLinearGradient(WORLD_W, camY, WORLD_W - edgeDist, camY);
+        g.addColorStop(0, `rgba(0, 200, 255, ${a})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(WORLD_W - edgeDist, camY, edgeDist, H);
+    }
+    // Top
+    if (playerY < edgeDist) {
+        const a = glowAlpha * (1 - playerY / edgeDist);
+        const g = ctx.createLinearGradient(camX, 0, camX, edgeDist);
+        g.addColorStop(0, `rgba(0, 200, 255, ${a})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(camX, 0, W, edgeDist);
+    }
+    // Bottom
+    if (playerY > WORLD_H - edgeDist) {
+        const a = glowAlpha * (1 - (WORLD_H - playerY) / edgeDist);
+        const g = ctx.createLinearGradient(camX, WORLD_H, camX, WORLD_H - edgeDist);
+        g.addColorStop(0, `rgba(0, 200, 255, ${a})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(camX, WORLD_H - edgeDist, W, edgeDist);
+    }
+}
+
+function drawMinimap() {
+    const mmW = 120;
+    const mmH = 120;
+    const mmX = W - mmW - 10;
+    const mmY = 10;
+    const scaleX = mmW / WORLD_W;
+    const scaleY = mmH / WORLD_H;
+
+    ctx.save();
+    // Draw in screen space (no camera transform)
+    ctx.fillStyle = 'rgba(0, 0, 20, 0.6)';
+    ctx.fillRect(mmX, mmY, mmW, mmH);
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mmX, mmY, mmW, mmH);
+
+    // Camera viewport
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeRect(mmX + camX * scaleX, mmY + camY * scaleY, W * scaleX, H * scaleY);
+
+    // Enemies
+    ctx.fillStyle = '#ff3366';
+    for (const e of enemies) {
+        ctx.fillRect(mmX + e.x * scaleX - 1, mmY + e.y * scaleY - 1, 2, 2);
     }
 
+    // Orbs
+    ctx.fillStyle = '#00ffaa';
+    for (const o of orbs) {
+        ctx.fillRect(mmX + o.x * scaleX - 1, mmY + o.y * scaleY - 1, 2, 2);
+    }
+
+    // Player
+    ctx.fillStyle = '#00c8ff';
+    ctx.beginPath();
+    ctx.arc(mmX + playerX * scaleX, mmY + playerY * scaleY, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawOverlayEffects() {
+    // Vignette (screen space)
     const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
     vig.addColorStop(0, 'transparent');
     vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
@@ -1764,6 +1881,12 @@ function render() {
     drawBackground();
 
     if (state === 'playing' || state === 'gameover') {
+        // World-space rendering with camera offset
+        ctx.save();
+        ctx.translate(-camX + shakeX, -camY + shakeY);
+
+        drawWorldGrid();
+        drawWorldBoundary();
         orbs.forEach(drawOrb);
         healOrbs.forEach(drawHealOrb);
         barriers.forEach(drawBarrier);
@@ -1773,15 +1896,6 @@ function render() {
         fragments.forEach(drawFragment);
         particles.forEach(drawParticle);
         scorePopups.forEach(drawScorePopup);
-
-        // Screen flash overlay
-        if (screenFlashAlpha > 0) {
-            ctx.save();
-            ctx.globalAlpha = screenFlashAlpha;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, W, H);
-            ctx.restore();
-        }
 
         if (state === 'playing') {
             drawPlayer();
@@ -1809,6 +1923,21 @@ function render() {
             }
         }
 
+        ctx.restore();
+        // End world-space rendering
+
+        // Screen-space overlays
+        drawOverlayEffects();
+
+        // Screen flash overlay
+        if (screenFlashAlpha > 0) {
+            ctx.save();
+            ctx.globalAlpha = screenFlashAlpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+        }
+
         if (waveTimer > 0 && wave > 1) {
             ctx.save();
             const alpha = Math.min(waveTimer, 1);
@@ -1818,6 +1947,10 @@ function render() {
             ctx.textAlign = 'center';
             ctx.fillText(`WAVE ${wave}`, cx, cy - 80 * devicePixelRatio);
             ctx.restore();
+        }
+
+        if (state === 'playing') {
+            drawMinimap();
         }
     }
 
@@ -1979,11 +2112,16 @@ function updateMenuHighScore() {
 }
 
 // ============ INPUT ============
-function getAimAngle(clientX, clientY) {
+function screenToWorld(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    const px = (clientX - rect.left) * devicePixelRatio;
-    const py = (clientY - rect.top) * devicePixelRatio;
-    return Math.atan2(py - playerY, px - playerX);
+    const sx = (clientX - rect.left) * devicePixelRatio;
+    const sy = (clientY - rect.top) * devicePixelRatio;
+    return { x: sx + camX, y: sy + camY };
+}
+
+function getAimAngle(clientX, clientY) {
+    const w = screenToWorld(clientX, clientY);
+    return Math.atan2(w.y - playerY, w.x - playerX);
 }
 
 function handleShoot(e) {
@@ -2027,10 +2165,8 @@ canvas.addEventListener('mousedown', (e) => {
     if (e.button === 2) return;
     if (barrierPlaceMode && state === 'playing') {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const wx = (e.clientX - rect.left) * devicePixelRatio;
-        const wy = (e.clientY - rect.top) * devicePixelRatio;
-        placeBarrier(wx, wy);
+        const wc = screenToWorld(e.clientX, e.clientY);
+        placeBarrier(wc.x, wc.y);
         barrierPlaceMode = false;
         updateBarrierUI();
         return;
@@ -2042,10 +2178,8 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     if (state !== 'playing') return;
-    const rect = canvas.getBoundingClientRect();
-    const wx = (e.clientX - rect.left) * devicePixelRatio;
-    const wy = (e.clientY - rect.top) * devicePixelRatio;
-    placeBarrier(wx, wy);
+    const wc = screenToWorld(e.clientX, e.clientY);
+    placeBarrier(wc.x, wc.y);
 });
 
 // Mobile: long-press to place barrier
@@ -2057,10 +2191,8 @@ canvas.addEventListener('touchstart', (e) => {
         const touch = e.touches[0];
         longPressTimer = setTimeout(() => {
             longPressTriggered = true;
-            const rect = canvas.getBoundingClientRect();
-            const wx = (touch.clientX - rect.left) * devicePixelRatio;
-            const wy = (touch.clientY - rect.top) * devicePixelRatio;
-            placeBarrier(wx, wy);
+            const wc = screenToWorld(touch.clientX, touch.clientY);
+            placeBarrier(wc.x, wc.y);
         }, 400);
     }
 }, { passive: false });
@@ -2069,11 +2201,8 @@ canvas.addEventListener('touchend', (e) => {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     if (longPressTriggered) { longPressTriggered = false; return; }
     if (barrierPlaceMode && state === 'playing' && e.changedTouches.length > 0) {
-        const touch = e.changedTouches[0];
-        const rect = canvas.getBoundingClientRect();
-        const wx = (touch.clientX - rect.left) * devicePixelRatio;
-        const wy = (touch.clientY - rect.top) * devicePixelRatio;
-        placeBarrier(wx, wy);
+        const wc = screenToWorld(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        placeBarrier(wc.x, wc.y);
         barrierPlaceMode = false;
         updateBarrierUI();
         return;
@@ -2093,14 +2222,14 @@ document.addEventListener('keydown', e => {
         if (state === 'playing') handleShoot();
         else if (state === 'menu') startGame();
     }
-    if ((e.code === 'KeyQ' || e.code === 'KeyE') && state === 'playing') {
+    if (e.code === 'KeyQ' && state === 'playing') {
         toggleMode();
     }
     // W key: only toggle barrier mode if NOT currently moving (i.e. not WASD movement)
-    // We use a dedicated key for barriers now: B key or the HUD button
+    // We use a dedicated key for barriers now: E key or the HUD button
     // But keep W for barrier if player is not pressing other movement keys — actually
-    // W is now movement. Use B for barriers via keyboard.
-    if (e.code === 'KeyB' && state === 'playing') {
+    // W is now movement. Use E for barriers via keyboard.
+    if (e.code === 'KeyE' && state === 'playing') {
         barrierPlaceMode = !barrierPlaceMode;
         updateBarrierUI();
     }
