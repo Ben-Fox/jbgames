@@ -54,8 +54,14 @@ const Building = (() => {
   function place(type, tx, ty) {
     const t = TYPES[type];
     if (!t) return false;
-    if (!canPlace(tx, ty)) return false;
-    if (!Player.hasResources(t.cost)) return false;
+    if (!canPlace(tx, ty)) {
+      if (typeof Effects !== 'undefined' && Effects.announce) Effects.announce('❌ Can\'t place here!');
+      return false;
+    }
+    if (!Player.hasResources(t.cost)) {
+      if (typeof Effects !== 'undefined' && Effects.announce) Effects.announce('❌ Not enough resources!');
+      return false;
+    }
     
     Player.spendResources(t.cost);
     GameMap.removeEnvAt(tx, ty);
@@ -244,9 +250,21 @@ const Building = (() => {
       ctx.fillStyle = t.color;
       
       if (t.blocking) {
-        ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+        // Draw wall with connections to adjacent walls
+        ctx.fillRect(sx + 2, sy + 2, TILE - 4, TILE - 4);
+        // Check neighbors for wall connections
+        const hasLeft = buildings.some(bb => TYPES[bb.type]?.blocking && bb.tx === b.tx - 1 && bb.ty === b.ty);
+        const hasRight = buildings.some(bb => TYPES[bb.type]?.blocking && bb.tx === b.tx + 1 && bb.ty === b.ty);
+        const hasUp = buildings.some(bb => TYPES[bb.type]?.blocking && bb.tx === b.tx && bb.ty === b.ty - 1);
+        const hasDown = buildings.some(bb => TYPES[bb.type]?.blocking && bb.tx === b.tx && bb.ty === b.ty + 1);
+        // Extend to connect with neighbors
+        if (hasLeft) ctx.fillRect(sx, sy + 4, 4, TILE - 8);
+        if (hasRight) ctx.fillRect(sx + TILE - 4, sy + 4, 4, TILE - 8);
+        if (hasUp) ctx.fillRect(sx + 4, sy, TILE - 8, 4);
+        if (hasDown) ctx.fillRect(sx + 4, sy + TILE - 4, TILE - 8, 4);
+        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.fillRect(sx + 1, sy + TILE - 6, TILE - 2, 5);
+        ctx.fillRect(sx + 2, sy + TILE - 6, TILE - 4, 4);
       } else if (t.gateBlock) {
         ctx.fillRect(sx + 1, sy + 1, TILE - 2, 6);
         ctx.fillRect(sx + 1, sy + TILE - 7, TILE - 2, 6);

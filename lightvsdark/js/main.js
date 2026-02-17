@@ -342,7 +342,7 @@ const Game = (() => {
     if (key === 'escape') { returnToMenu(); return; }
     if (key === 'tab') { e.preventDefault(); UI.toggleInventory(); }
     else if (key === 'b') { if (Defenders.defendMode()) UI.toggleDefendMode(); UI.toggleBuildMode(); }
-    else if (key === 'd' && !Building.buildMode()) { UI.toggleDefendMode(); }
+    else if (key === 'f' && !Building.buildMode()) { UI.toggleDefendMode(); }
     else if (key === ' ') { e.preventDefault(); Player.dodge(keys); }
     else if (key === 'e') { /* pickup handled automatically */ }
     else if (key === 'r') { Building.repair(Player.state().x, Player.state().y); }
@@ -378,7 +378,7 @@ const Game = (() => {
   
   document.addEventListener('mousedown', e => {
     if (!running || gameOver) return;
-    if (e.target.closest('#hud') || e.target.closest('#inventory-screen') || e.target.closest('#build-menu') || e.target.closest('#minimap-container')) return;
+    if (e.target.closest('#hud') || e.target.closest('#inventory-screen') || e.target.closest('#build-menu') || e.target.closest('#defend-menu') || e.target.closest('#minimap-container')) return;
     
     mouse.down = true;
     
