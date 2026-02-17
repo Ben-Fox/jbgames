@@ -31,24 +31,24 @@ const CAMPAIGN_ROUNDS = [
             ratio: 0.04
         },
         {
-            a: { name: "A Hippo", detail: "Adult male", emoji: "🦛", weight_lbs: 4000, fun_fact: "Hippos can hold their breath underwater for up to 5 minutes" },
-            b: { name: "A Hummingbird", detail: "Ruby-throated", emoji: "🐦", weight_lbs: 0.011, fun_fact: "Hummingbirds can fly backwards and upside down" },
-            ratio: 0.000003
+            a: { name: "A Washing Machine", detail: "Front-loading, standard", emoji: "🧺", weight_lbs: 170, fun_fact: "The first electric washing machine was invented in 1908 by Alva J. Fisher" },
+            b: { name: "A Watermelon", detail: "Large, ripe", emoji: "🍉", weight_lbs: 20, fun_fact: "Watermelons are 92% water and were first cultivated in Africa over 4,000 years ago" },
+            ratio: 0.12
         },
         {
             a: { name: "A King-Size Mattress", detail: "Memory foam", emoji: "🛏️", weight_lbs: 130, fun_fact: "The average person spends 26 years of their life sleeping" },
-            b: { name: "A Hamster", detail: "Syrian hamster", emoji: "🐹", weight_lbs: 0.35, fun_fact: "Hamsters can run up to 8 miles per night on their wheel" },
-            ratio: 0.003
+            b: { name: "A Dachshund", detail: "Standard size adult", emoji: "🐕", weight_lbs: 25, fun_fact: "Dachshunds were originally bred to hunt badgers — their name means 'badger dog' in German" },
+            ratio: 0.19
         },
         {
-            a: { name: "A Giraffe", detail: "Adult male", emoji: "🦒", weight_lbs: 2800, fun_fact: "A giraffe's neck contains the same number of vertebrae as a human's — just seven" },
-            b: { name: "A Basketball", detail: "Official NBA size", emoji: "🏀", weight_lbs: 1.4, fun_fact: "An NBA basketball must bounce to 52-56 inches when dropped from 6 feet" },
-            ratio: 0.0005
+            a: { name: "A Motorcycle", detail: "Standard street bike", emoji: "🏍️", weight_lbs: 450, fun_fact: "The first motorcycle was built in 1885 by Gottlieb Daimler using a wooden frame" },
+            b: { name: "A Fire Extinguisher", detail: "Standard commercial ABC", emoji: "🧯", weight_lbs: 20, fun_fact: "The modern fire extinguisher was patented in 1818 by British Captain George Manby" },
+            ratio: 0.04
         },
         {
             a: { name: "A Refrigerator", detail: "Standard side-by-side", emoji: "🧊", weight_lbs: 300, fun_fact: "The first household refrigerator cost $714 in 1913 — about $22,000 today" },
-            b: { name: "A Loaf of Bread", detail: "Sliced white bread", emoji: "🍞", weight_lbs: 1.3, fun_fact: "Sliced bread was first sold in 1928 in Chillicothe, Missouri" },
-            ratio: 0.004
+            b: { name: "A Car Battery", detail: "Standard lead-acid", emoji: "🔋", weight_lbs: 40, fun_fact: "A car battery can deliver 500+ amps for a few seconds during engine cranking" },
+            ratio: 0.13
         },
         {
             a: { name: "A Grand Piano", detail: "Steinway Model D", emoji: "🎹", weight_lbs: 990, fun_fact: "A Steinway grand piano has over 12,000 individual parts" },
@@ -62,8 +62,8 @@ const CAMPAIGN_ROUNDS = [
         },
         {
             a: { name: "A Canoe", detail: "16-foot aluminum", emoji: "🛶", weight_lbs: 70, fun_fact: "The oldest known canoe is over 8,000 years old, found in the Netherlands" },
-            b: { name: "A Smartphone", detail: "iPhone 15 Pro", emoji: "📱", weight_lbs: 0.44, fun_fact: "The average person touches their phone over 2,600 times a day" },
-            ratio: 0.006
+            b: { name: "A College Textbook", detail: "Organic chemistry, hardcover", emoji: "📚", weight_lbs: 5, fun_fact: "The average college student spends over $1,200 per year on textbooks" },
+            ratio: 0.07
         },
         {
             a: { name: "A Polar Bear", detail: "Adult male", emoji: "🐻‍❄️", weight_lbs: 1200, fun_fact: "Polar bear fur is actually transparent, not white — it reflects light" },
@@ -72,189 +72,188 @@ const CAMPAIGN_ROUNDS = [
         },
         {
             a: { name: "A Bathtub Full of Water", detail: "Standard 60-gallon tub", emoji: "🛁", weight_lbs: 500, fun_fact: "Archimedes discovered buoyancy while getting into a bath" },
-            b: { name: "A Chicken Egg", detail: "Large egg", emoji: "🥚", weight_lbs: 0.14, fun_fact: "A hen turns her egg about 50 times per day to prevent the yolk from sticking" },
-            ratio: 0.0003
+            b: { name: "A Microwave Oven", detail: "Countertop model", emoji: "📦", weight_lbs: 30, fun_fact: "The microwave oven was invented by accident when a radar engineer's chocolate bar melted" },
+            ratio: 0.06
         },
         {
             a: { name: "A Vending Machine", detail: "Fully stocked", emoji: "🏧", weight_lbs: 900, fun_fact: "Vending machines kill about 2 people per year — more than sharks in some years" },
-            b: { name: "A Pineapple", detail: "Large Hawaiian", emoji: "🍍", weight_lbs: 4, fun_fact: "A pineapple takes about 2-3 years to grow" },
-            ratio: 0.004
+            b: { name: "A Mountain Bike", detail: "Full suspension", emoji: "🚲", weight_lbs: 29, fun_fact: "Mountain biking became an Olympic sport in 1996 at the Atlanta Games" },
+            ratio: 0.03
         },
-        // === NEW TIER 1 ENTRIES ===
         {
-            a: { name: "A Redwood Tree", detail: "Giant sequoia, mature", emoji: "🌲", weight_lbs: 4000000, fun_fact: "The General Sherman tree is the largest living organism by volume on Earth" },
-            b: { name: "A Goldfish", detail: "Common pet goldfish", emoji: "🐟", weight_lbs: 0.02, fun_fact: "Goldfish can live over 40 years with proper care" },
-            ratio: 0.000000005
+            a: { name: "A Horse", detail: "Average adult Thoroughbred", emoji: "🐴", weight_lbs: 1100, fun_fact: "Horses can sleep both standing up and lying down thanks to a special locking leg mechanism" },
+            b: { name: "A Backpack Full of Books", detail: "College student's daily load", emoji: "🎒", weight_lbs: 25, fun_fact: "The average student carries 12-20% of their body weight in their backpack daily" },
+            ratio: 0.02
         },
         {
             a: { name: "The Liberty Bell", detail: "Philadelphia landmark", emoji: "🔔", weight_lbs: 2080, fun_fact: "The Liberty Bell cracked the first time it was rung after arrival in Philadelphia" },
-            b: { name: "A Pencil", detail: "Standard #2 pencil", emoji: "✏️", weight_lbs: 0.025, fun_fact: "A single pencil can draw a line 35 miles long" },
-            ratio: 0.00001
+            b: { name: "A German Shepherd", detail: "Adult male", emoji: "🐕", weight_lbs: 75, fun_fact: "German Shepherds are the most common police dog breed in the world" },
+            ratio: 0.04
         },
         {
             a: { name: "A Wrecking Ball", detail: "Standard demolition ball", emoji: "⚫", weight_lbs: 3000, fun_fact: "Wrecking balls are being replaced by hydraulic excavators in most demolition" },
-            b: { name: "A Guinea Pig", detail: "Adult pet", emoji: "🐹", weight_lbs: 2.2, fun_fact: "Guinea pigs 'popcorn' — they jump and twist when happy" },
-            ratio: 0.0007
+            b: { name: "A Labrador Retriever", detail: "Adult male", emoji: "🐕", weight_lbs: 70, fun_fact: "Labradors have been the most popular dog breed in America for over 30 years" },
+            ratio: 0.02
         },
         {
-            a: { name: "A Cement Mixer Truck", detail: "Loaded with concrete", emoji: "🚛", weight_lbs: 66000, fun_fact: "A cement mixer drum rotates to keep concrete from hardening during transport" },
-            b: { name: "A Frisbee", detail: "Official Ultimate disc", emoji: "🥏", weight_lbs: 0.39, fun_fact: "Frisbees were inspired by pie tins from the Frisbie Pie Company" },
-            ratio: 0.000006
+            a: { name: "A Hot Tub", detail: "Filled with water, 6-person", emoji: "🛁", weight_lbs: 2500, fun_fact: "The ancient Romans were the first to build public heated baths over 2,000 years ago" },
+            b: { name: "A Sandbag", detail: "Military-grade, filled", emoji: "💰", weight_lbs: 50, fun_fact: "Sandbags have been used for flood defense since at least the early 1800s" },
+            ratio: 0.02
         },
         {
-            a: { name: "An Anchor", detail: "Large ship anchor", emoji: "⚓", weight_lbs: 30000, fun_fact: "The Titanic's anchor required 20 horses to transport it to the shipyard" },
-            b: { name: "A Rubber Duck", detail: "Classic bath toy", emoji: "🦆", weight_lbs: 0.15, fun_fact: "In 1992, 28,800 rubber ducks fell off a cargo ship and are still washing ashore" },
-            ratio: 0.000005
+            a: { name: "A Riding Lawn Mower", detail: "Standard residential", emoji: "🚜", weight_lbs: 500, fun_fact: "The first lawn mower was invented in 1830 by Edwin Budding in England" },
+            b: { name: "A Pug", detail: "Adult, well-fed", emoji: "🐕", weight_lbs: 15, fun_fact: "Pugs were the official dog of the House of Orange after one saved a prince's life in 1572" },
+            ratio: 0.03
         },
         {
-            a: { name: "A Hippopotamus Tooth", detail: "Lower canine tusk", emoji: "🦷", weight_lbs: 6.6, fun_fact: "Hippo tusks can grow up to 20 inches long and were once used as ivory" },
-            b: { name: "A Marble", detail: "Standard glass marble", emoji: "🔮", weight_lbs: 0.018, fun_fact: "The first marbles were made of clay and date back to ancient Rome" },
-            ratio: 0.003
+            a: { name: "A Cast Iron Clawfoot Bathtub", detail: "Victorian style, empty", emoji: "🛁", weight_lbs: 300, fun_fact: "Cast iron clawfoot tubs were a status symbol in Victorian-era homes" },
+            b: { name: "A Cinder Block", detail: "Standard 8-inch CMU", emoji: "🧱", weight_lbs: 35, fun_fact: "About 4 billion concrete masonry units are produced in the US each year" },
+            ratio: 0.12
         },
         {
             a: { name: "A Server Rack", detail: "Fully loaded 42U rack", emoji: "🖥️", weight_lbs: 2500, fun_fact: "Google has over 4 million servers running at any given time" },
-            b: { name: "A USB Flash Drive", detail: "Standard thumb drive", emoji: "💾", weight_lbs: 0.04, fun_fact: "The first USB flash drive held only 8 MB — today they hold 2 TB" },
-            ratio: 0.00002
-        },
-        {
-            a: { name: "A Grand Piano", detail: "Bösendorfer Imperial", emoji: "🎹", weight_lbs: 1320, fun_fact: "The Bösendorfer Imperial has 97 keys instead of the standard 88" },
-            b: { name: "A Harmonica", detail: "Standard diatonic", emoji: "🎵", weight_lbs: 0.2, fun_fact: "The harmonica is the world's best-selling musical instrument" },
-            ratio: 0.0002
-        },
-        {
-            a: { name: "A Bulldozer", detail: "Caterpillar D9", emoji: "🚜", weight_lbs: 108000, fun_fact: "The Caterpillar D9 was originally designed for construction but has been used in military operations" },
-            b: { name: "A Tennis Racket", detail: "Professional grade", emoji: "🎾", weight_lbs: 0.7, fun_fact: "Tennis racket strings were once made from cat intestines (called 'catgut')" },
-            ratio: 0.000006
-        },
-        {
-            a: { name: "A Saltwater Crocodile", detail: "Large adult male", emoji: "🐊", weight_lbs: 2200, fun_fact: "Saltwater crocodiles have the strongest bite ever measured at 3,700 PSI" },
-            b: { name: "A Stick of Butter", detail: "Standard half-cup stick", emoji: "🧈", weight_lbs: 0.25, fun_fact: "Butter was first made about 10,000 years ago from sheep and goat milk" },
-            ratio: 0.0001
-        },
-        {
-            a: { name: "A Rosetta Stone", detail: "The actual artifact", emoji: "🪨", weight_lbs: 1680, fun_fact: "The Rosetta Stone was discovered by Napoleon's soldiers in 1799 in Egypt" },
-            b: { name: "A Baseball Cap", detail: "Fitted wool cap", emoji: "🧢", weight_lbs: 0.22, fun_fact: "The Brooklyn Excelsiors were the first baseball team to wear caps in 1860" },
-            ratio: 0.0001
-        },
-        {
-            a: { name: "An African Elephant", detail: "Adult bull", emoji: "🐘", weight_lbs: 14000, fun_fact: "Elephants are the only animals that can't jump" },
-            b: { name: "A Banana", detail: "Single ripe banana", emoji: "🍌", weight_lbs: 0.27, fun_fact: "Bananas are technically berries, but strawberries are not" },
-            ratio: 0.00002
-        },
-        {
-            a: { name: "A Tank", detail: "M1 Abrams battle tank", emoji: "🪖", weight_lbs: 136000, fun_fact: "The M1 Abrams gets about 0.6 miles per gallon and holds 500 gallons of fuel" },
-            b: { name: "A Ping Pong Ball", detail: "Official 40mm ball", emoji: "🏓", weight_lbs: 0.006, fun_fact: "Table tennis balls travel at speeds over 60 mph in professional play" },
-            ratio: 0.00000004
-        },
-        {
-            a: { name: "A Monster Truck", detail: "Grave Digger", emoji: "🛻", weight_lbs: 10000, fun_fact: "Monster truck tires are over 5.5 feet tall and cost about $2,500 each" },
-            b: { name: "A Coffee Mug", detail: "Ceramic mug, empty", emoji: "☕", weight_lbs: 0.75, fun_fact: "Americans drink about 400 million cups of coffee per day" },
-            ratio: 0.00008
-        },
-        {
-            a: { name: "A Subway Car", detail: "NYC R179 car", emoji: "🚇", weight_lbs: 84000, fun_fact: "The NYC subway runs 245 miles of routes and serves 3.5 million riders daily" },
-            b: { name: "A Guinea Hen Egg", detail: "Single egg", emoji: "🥚", weight_lbs: 0.09, fun_fact: "Guinea hen eggs have a thicker shell than chicken eggs, making them harder to crack" },
-            ratio: 0.000001
-        },
-        {
-            a: { name: "A Locomotive", detail: "GE Evolution series", emoji: "🚂", weight_lbs: 432000, fun_fact: "A single freight locomotive can pull a train weighing 6,000 tons" },
-            b: { name: "A Ladybug", detail: "Seven-spotted ladybug", emoji: "🐞", weight_lbs: 0.00077, fun_fact: "A ladybug can eat up to 5,000 aphids in its lifetime" },
-            ratio: 0.000000002
-        },
-        {
-            a: { name: "A Church Bell", detail: "Large bronze bell", emoji: "🔔", weight_lbs: 5000, fun_fact: "The largest church bell in the world is the Tsar Bell in Moscow, weighing 445,000 lbs" },
-            b: { name: "A Paper Clip", detail: "Standard steel clip", emoji: "📎", weight_lbs: 0.0022, fun_fact: "The paper clip became a symbol of Norwegian resistance during WWII" },
-            ratio: 0.0000004
-        },
-        {
-            a: { name: "A Hot Air Balloon", detail: "Envelope + basket + burner", emoji: "🎈", weight_lbs: 550, fun_fact: "The first hot air balloon passengers were a sheep, a duck, and a rooster in 1783" },
-            b: { name: "A Postage Stamp", detail: "Standard first-class", emoji: "📮", weight_lbs: 0.002, fun_fact: "The most expensive stamp ever sold was the British Guiana 1c Magenta for $9.5 million" },
-            ratio: 0.000004
-        },
-        {
-            a: { name: "A Walrus", detail: "Adult Pacific walrus", emoji: "🦭", weight_lbs: 2700, fun_fact: "Walruses can slow their heartbeat to withstand freezing Arctic water" },
-            b: { name: "A Deck of Cards", detail: "Standard 52-card deck", emoji: "🃏", weight_lbs: 0.22, fun_fact: "There are more possible shuffled deck arrangements than atoms on Earth" },
-            ratio: 0.00008
-        },
-        {
-            a: { name: "A Shipping Container", detail: "40-foot, loaded", emoji: "📦", weight_lbs: 58000, fun_fact: "About 17 million shipping containers are in use worldwide at any given time" },
-            b: { name: "A Canned Tuna", detail: "Standard 5 oz can", emoji: "🐟", weight_lbs: 0.35, fun_fact: "Americans eat about 1 billion pounds of canned tuna per year" },
-            ratio: 0.000006
-        },
-        {
-            a: { name: "A Wind Turbine Blade", detail: "Modern offshore blade", emoji: "💨", weight_lbs: 77000, fun_fact: "Offshore wind turbine blades can be longer than a football field" },
-            b: { name: "A Parakeet", detail: "Budgerigar", emoji: "🦜", weight_lbs: 0.07, fun_fact: "Budgies can learn vocabularies of over 1,700 words" },
-            ratio: 0.0000009
-        },
-        {
-            a: { name: "A Blue Whale", detail: "Adult, largest animal ever", emoji: "🐋", weight_lbs: 300000, fun_fact: "Blue whales are the loudest animals on Earth at 188 decibels" },
-            b: { name: "A Grape", detail: "Single table grape", emoji: "🍇", weight_lbs: 0.011, fun_fact: "Grapes explode when microwaved, producing plasma" },
-            ratio: 0.00000004
-        },
-        {
-            a: { name: "A Fire Truck", detail: "Ladder truck, fully equipped", emoji: "🚒", weight_lbs: 60000, fun_fact: "The first fire engine was invented by a Roman named Ctesibius around 200 BC" },
-            b: { name: "A Pair of Sunglasses", detail: "Standard plastic frame", emoji: "🕶️", weight_lbs: 0.07, fun_fact: "Chinese judges wore smoky quartz sunglasses to hide their expressions in court" },
-            ratio: 0.000001
-        },
-        {
-            a: { name: "A Sperm Whale's Brain", detail: "Largest brain of any animal", emoji: "🧠", weight_lbs: 17, fun_fact: "The sperm whale has the largest brain of any animal that has ever lived on Earth" },
-            b: { name: "A Housefly", detail: "Common housefly", emoji: "🪰", weight_lbs: 0.00003, fun_fact: "A housefly beats its wings about 200 times per second" },
-            ratio: 0.000002
+            b: { name: "A Bag of Concrete Mix", detail: "Standard bag", emoji: "🏗️", weight_lbs: 94, fun_fact: "The Romans invented concrete over 2,000 years ago and it's still in some of their buildings" },
+            ratio: 0.04
         },
         {
             a: { name: "A Pool Table", detail: "Regulation slate table", emoji: "🎱", weight_lbs: 1000, fun_fact: "Pool table slate is mined from specific quarries in Italy, Brazil, and China" },
-            b: { name: "A Golf Tee", detail: "Wooden tee", emoji: "⛳", weight_lbs: 0.007, fun_fact: "The golf tee wasn't invented until 1899 — before that golfers used small sand mounds" },
-            ratio: 0.000007
+            b: { name: "An Accordion", detail: "Full-size piano accordion", emoji: "🪗", weight_lbs: 25, fun_fact: "The accordion was invented in Vienna in 1829 and became wildly popular in just a decade" },
+            ratio: 0.025
         },
         {
             a: { name: "A Pipe Organ", detail: "Large church organ", emoji: "🎵", weight_lbs: 40000, fun_fact: "The largest pipe organ in the world at Boardwalk Hall has over 33,000 pipes" },
-            b: { name: "A Contact Lens", detail: "Single soft lens", emoji: "👁️", weight_lbs: 0.00009, fun_fact: "Leonardo da Vinci sketched the concept of contact lenses in 1508" },
-            ratio: 0.000000002
+            b: { name: "A Smart Car", detail: "Fortwo model", emoji: "🚗", weight_lbs: 1800, fun_fact: "The Smart Fortwo can park perpendicular to the curb in most parking spaces" },
+            ratio: 0.045
+        },
+        {
+            a: { name: "A Dairy Cow", detail: "Adult Holstein", emoji: "🐄", weight_lbs: 1500, fun_fact: "A dairy cow produces about 6-7 gallons of milk per day — over 2,300 gallons per year" },
+            b: { name: "A Bicycle", detail: "Standard road bike", emoji: "🚲", weight_lbs: 20, fun_fact: "There are roughly 1 billion bicycles in the world — twice the number of cars" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "A Saltwater Crocodile", detail: "Large adult male", emoji: "🐊", weight_lbs: 2200, fun_fact: "Saltwater crocodiles have the strongest bite ever measured at 3,700 PSI" },
+            b: { name: "A Car Tire", detail: "Standard passenger tire", emoji: "🔘", weight_lbs: 25, fun_fact: "About 1 billion tires are produced worldwide each year" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "The Rosetta Stone", detail: "The actual artifact", emoji: "🪨", weight_lbs: 1680, fun_fact: "The Rosetta Stone was discovered by Napoleon's soldiers in 1799 in Egypt" },
+            b: { name: "A Sledgehammer", detail: "10-pound head", emoji: "🔨", weight_lbs: 20, fun_fact: "Sledgehammers date back to the Bronze Age and were originally made of stone" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "A Baby Elephant", detail: "Newborn African elephant", emoji: "🐘", weight_lbs: 2000, fun_fact: "Baby elephants can stand within 20 minutes of being born and walk within an hour" },
+            b: { name: "A Packed Suitcase", detail: "Fully loaded checked bag", emoji: "🧳", weight_lbs: 50, fun_fact: "Airlines lose about 25 million bags per year — that's roughly 70,000 per day" },
+            ratio: 0.025
+        },
+        {
+            a: { name: "A Tank", detail: "M1 Abrams battle tank", emoji: "🪖", weight_lbs: 136000, fun_fact: "The M1 Abrams gets about 0.6 miles per gallon and holds 500 gallons of fuel" },
+            b: { name: "A Manatee", detail: "Large adult Florida manatee", emoji: "🦭", weight_lbs: 1500, fun_fact: "Manatees are the gentle giants of the sea and can hold their breath for up to 20 minutes" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "A Monster Truck", detail: "Grave Digger", emoji: "🛻", weight_lbs: 10000, fun_fact: "Monster truck tires are over 5.5 feet tall and cost about $2,500 each" },
+            b: { name: "A Leather Sofa", detail: "Three-seat sectional", emoji: "🛋️", weight_lbs: 100, fun_fact: "The oldest known sofa dates back to ancient Egypt around 2000 BC" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "A Subway Car", detail: "NYC R179 car", emoji: "🚇", weight_lbs: 84000, fun_fact: "The NYC subway runs 245 miles of routes and serves 3.5 million riders daily" },
+            b: { name: "A Hippo", detail: "Adult male", emoji: "🦛", weight_lbs: 4000, fun_fact: "Hippos can hold their breath underwater for up to 5 minutes" },
+            ratio: 0.05
+        },
+        {
+            a: { name: "A Locomotive", detail: "GE Evolution series", emoji: "🚂", weight_lbs: 432000, fun_fact: "A single freight locomotive can pull a train weighing 6,000 tons" },
+            b: { name: "An African Elephant", detail: "Adult bull", emoji: "🐘", weight_lbs: 14000, fun_fact: "Elephants are the only animals that can't jump" },
+            ratio: 0.03
+        },
+        {
+            a: { name: "A Church Bell", detail: "Large bronze bell", emoji: "🔔", weight_lbs: 5000, fun_fact: "The largest church bell in the world is the Tsar Bell in Moscow, weighing 445,000 lbs" },
+            b: { name: "A Sheep", detail: "Adult Merino sheep", emoji: "🐑", weight_lbs: 150, fun_fact: "One sheep produces enough wool for about 10 miles of yarn per year" },
+            ratio: 0.03
+        },
+        {
+            a: { name: "A Hot Air Balloon", detail: "Envelope + basket + burner", emoji: "🎈", weight_lbs: 550, fun_fact: "The first hot air balloon passengers were a sheep, a duck, and a rooster in 1783" },
+            b: { name: "A Corgi", detail: "Adult Pembroke Welsh", emoji: "🐕", weight_lbs: 28, fun_fact: "Corgis have been the preferred breed of British royalty since 1933" },
+            ratio: 0.05
+        },
+        {
+            a: { name: "A Shipping Container", detail: "40-foot, loaded", emoji: "📦", weight_lbs: 58000, fun_fact: "About 17 million shipping containers are in use worldwide at any given time" },
+            b: { name: "A Moose", detail: "Adult bull moose", emoji: "🫎", weight_lbs: 1200, fun_fact: "Moose can dive up to 20 feet underwater to eat aquatic plants" },
+            ratio: 0.02
+        },
+        {
+            a: { name: "A Wind Turbine Blade", detail: "Modern offshore blade", emoji: "💨", weight_lbs: 77000, fun_fact: "Offshore wind turbine blades can be longer than a football field" },
+            b: { name: "A Bison", detail: "Adult American bison", emoji: "🦬", weight_lbs: 2000, fun_fact: "Bison can run up to 35 mph and jump 6 feet vertically from a standstill" },
+            ratio: 0.03
+        },
+        {
+            a: { name: "A Blue Whale", detail: "Adult, largest animal ever", emoji: "🐋", weight_lbs: 300000, fun_fact: "Blue whales are the loudest animals on Earth at 188 decibels" },
+            b: { name: "An SUV", detail: "Full-size, like a Chevy Tahoe", emoji: "🚙", weight_lbs: 5500, fun_fact: "SUVs account for nearly 50% of all new car sales worldwide" },
+            ratio: 0.02
+        },
+        {
+            a: { name: "A Fire Truck", detail: "Ladder truck, fully equipped", emoji: "🚒", weight_lbs: 60000, fun_fact: "The first fire engine was invented by a Roman named Ctesibius around 200 BC" },
+            b: { name: "A Draft Horse", detail: "Adult Clydesdale", emoji: "🐴", weight_lbs: 2000, fun_fact: "Clydesdales can pull up to 8,000 lbs — four times their own body weight" },
+            ratio: 0.03
+        },
+        {
+            a: { name: "A Sperm Whale's Brain", detail: "Largest brain of any animal", emoji: "🧠", weight_lbs: 17, fun_fact: "The sperm whale has the largest brain of any animal that has ever lived on Earth" },
+            b: { name: "A Baseball", detail: "Official MLB ball", emoji: "⚾", weight_lbs: 0.33, fun_fact: "An MLB baseball has exactly 108 hand-stitched double stitches" },
+            ratio: 0.02
+        },
+        {
+            a: { name: "A Hippopotamus Tooth", detail: "Lower canine tusk", emoji: "🦷", weight_lbs: 6.6, fun_fact: "Hippo tusks can grow up to 20 inches long and were once used as ivory" },
+            b: { name: "A Golf Ball", detail: "Official tournament ball", emoji: "⛳", weight_lbs: 0.1, fun_fact: "A golf ball has between 300 and 500 dimples that help it fly farther" },
+            ratio: 0.015
         },
         {
             a: { name: "A Woolly Mammoth", detail: "Estimated adult weight", emoji: "🦣", weight_lbs: 13000, fun_fact: "Woolly mammoths were still alive when the Great Pyramid was being built" },
-            b: { name: "A Matchstick", detail: "Wooden kitchen match", emoji: "🔥", weight_lbs: 0.0044, fun_fact: "The friction match was invented by accident in 1826 by John Walker" },
-            ratio: 0.0000003
+            b: { name: "A Jet Ski", detail: "Standard personal watercraft", emoji: "🚤", weight_lbs: 800, fun_fact: "The first personal watercraft was invented by Kawasaki in 1972" },
+            ratio: 0.06
         },
         {
             a: { name: "A Combine Harvester", detail: "John Deere S780", emoji: "🚜", weight_lbs: 36000, fun_fact: "Modern combines can harvest 100 acres of wheat in a single day" },
-            b: { name: "A Teaspoon of Sugar", detail: "Granulated white", emoji: "🍬", weight_lbs: 0.009, fun_fact: "The average American consumes about 17 teaspoons of added sugar per day" },
-            ratio: 0.00000025
+            b: { name: "A Gorilla", detail: "Adult male silverback", emoji: "🦍", weight_lbs: 400, fun_fact: "Gorillas share 98.3% of their DNA with humans and can learn sign language" },
+            ratio: 0.01
         },
         {
             a: { name: "An Orca", detail: "Adult male killer whale", emoji: "🐋", weight_lbs: 12000, fun_fact: "Orcas are actually the largest member of the dolphin family, not whales" },
-            b: { name: "A Crayon", detail: "Standard Crayola crayon", emoji: "🖍️", weight_lbs: 0.016, fun_fact: "Crayola produces nearly 3 billion crayons per year" },
-            ratio: 0.0000013
+            b: { name: "A Pig", detail: "Adult domestic pig", emoji: "🐷", weight_lbs: 300, fun_fact: "Pigs are smarter than dogs and can play video games using joysticks with their snouts" },
+            ratio: 0.025
         },
         {
             a: { name: "A Forklift", detail: "Standard warehouse forklift", emoji: "🚜", weight_lbs: 9000, fun_fact: "The forklift was invented in 1917 to support the war effort in WWI" },
-            b: { name: "A Chicken Wing", detail: "Single raw wing", emoji: "🍗", weight_lbs: 0.22, fun_fact: "Americans eat 1.4 billion chicken wings during the Super Bowl alone" },
-            ratio: 0.00002
+            b: { name: "An Elk", detail: "Adult bull elk", emoji: "🫎", weight_lbs: 700, fun_fact: "Elk antlers can grow up to an inch per day — the fastest growing bone in any mammal" },
+            ratio: 0.08
         },
         {
-            a: { name: "A Colossal Squid", detail: "Largest specimen found", emoji: "🦑", weight_lbs: 1091, fun_fact: "Colossal squids have rotating hooks on their tentacles" },
-            b: { name: "A Lightbulb", detail: "Standard LED bulb", emoji: "💡", weight_lbs: 0.18, fun_fact: "LED bulbs use 75% less energy than incandescent bulbs and last 25 times longer" },
-            ratio: 0.0002
+            a: { name: "A Colossal Squid", detail: "Largest specimen found", emoji: "🦑", weight_lbs: 1091, fun_fact: "Colossal squids have rotating hooks on their tentacles and the largest eyes in the animal kingdom" },
+            b: { name: "A Toolbox", detail: "Mechanic's rolling chest, loaded", emoji: "🧰", weight_lbs: 35, fun_fact: "The oldest known toolbox, with bronze tools, was found in a 3,500-year-old Egyptian tomb" },
+            ratio: 0.03
         },
         {
             a: { name: "A Shipping Container", detail: "20-foot, empty", emoji: "📦", weight_lbs: 5070, fun_fact: "The shipping container was invented in 1956 and revolutionized global trade" },
-            b: { name: "A Strawberry", detail: "Single large strawberry", emoji: "🍓", weight_lbs: 0.044, fun_fact: "Strawberries are the only fruit with seeds on the outside — about 200 per berry" },
-            ratio: 0.000009
+            b: { name: "A Llama", detail: "Adult male llama", emoji: "🦙", weight_lbs: 300, fun_fact: "Llamas are used as therapy animals and can guard sheep from coyotes" },
+            ratio: 0.06
         },
         {
             a: { name: "A Cement Truck", detail: "Empty mixer truck", emoji: "🚛", weight_lbs: 26000, fun_fact: "A cement mixer drum rotates about 1-2 times per minute" },
-            b: { name: "A Stick of Gum", detail: "Single piece", emoji: "🍬", weight_lbs: 0.006, fun_fact: "Humans have been chewing gum for over 9,000 years — starting with birch bark tar" },
-            ratio: 0.0000002
+            b: { name: "A Lion", detail: "Adult male African lion", emoji: "🦁", weight_lbs: 420, fun_fact: "A lion's roar can be heard from 5 miles away" },
+            ratio: 0.02
         },
         {
             a: { name: "A Tractor", detail: "John Deere 6M series", emoji: "🚜", weight_lbs: 15000, fun_fact: "The first gasoline-powered tractor was built in 1892 in Iowa" },
-            b: { name: "An Apple", detail: "Medium Gala apple", emoji: "🍎", weight_lbs: 0.44, fun_fact: "There are over 7,500 varieties of apples grown worldwide" },
-            ratio: 0.00003
+            b: { name: "A Kangaroo", detail: "Adult red kangaroo", emoji: "🦘", weight_lbs: 200, fun_fact: "Kangaroos can't walk backwards and can leap 30 feet in a single bound" },
+            ratio: 0.01
         },
         {
             a: { name: "A Dump Truck Load of Gravel", detail: "Full 10-wheeler", emoji: "🚛", weight_lbs: 54000, fun_fact: "Gravel is the most mined material in the world after water" },
-            b: { name: "A Butterfly", detail: "Monarch butterfly", emoji: "🦋", weight_lbs: 0.00055, fun_fact: "Monarch butterflies migrate up to 3,000 miles from Canada to Mexico" },
-            ratio: 0.00000001
+            b: { name: "A Tiger", detail: "Adult Siberian tiger", emoji: "🐅", weight_lbs: 660, fun_fact: "Every tiger has a unique pattern of stripes — like a human fingerprint" },
+            ratio: 0.01
+        },
+        {
+            a: { name: "A Walrus", detail: "Adult Pacific walrus", emoji: "🦭", weight_lbs: 2700, fun_fact: "Walruses can slow their heartbeat to withstand freezing Arctic water" },
+            b: { name: "A Grand Piano", detail: "Steinway Model D concert grand", emoji: "🎹", weight_lbs: 990, fun_fact: "A Steinway concert grand has over 12,000 individual parts" },
+            ratio: 0.37
         }
     ],
 
