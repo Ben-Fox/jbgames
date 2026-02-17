@@ -507,8 +507,8 @@
         showScreen('game');
         setTimeout(() => startRound(), 300);
     });
-    $('home-btn').addEventListener('click', () => showScreen('start'));
-    $('exit-btn').addEventListener('click', () => showScreen('start'));
+    $('home-btn').addEventListener('click', () => window.location.href = '../');
+    $('exit-btn').addEventListener('click', () => window.location.href = '../');
 
     // ─── Init ───
     initScales();

@@ -951,7 +951,7 @@ document.addEventListener('keydown', e => {
 // UI buttons
 document.getElementById('btn-play').addEventListener('click', () => { initAudio(); startGame(); });
 document.getElementById('btn-retry').addEventListener('click', () => { initAudio(); startGame(); });
-document.getElementById('btn-menu').addEventListener('click', showMenu);
+// btn-menu replaced with direct link to home
 document.getElementById('btn-how').addEventListener('click', () => showScreen('how-screen'));
 document.getElementById('btn-back').addEventListener('click', () => showScreen('menu-screen'));
 

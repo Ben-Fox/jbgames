@@ -235,7 +235,7 @@ function showFinal() {
   if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 
-function goHome() { clearTimer(); showScreen('splash'); }
+function goHome() { clearTimer(); window.location.href = '../'; }
 
 // Init
 document.addEventListener('DOMContentLoaded', () => showScreen('splash'));

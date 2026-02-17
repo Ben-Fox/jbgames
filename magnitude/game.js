@@ -742,6 +742,13 @@ function showResult(win, mag) {
   retryBtn.onclick = () => { rs.classList.add('hidden'); loadLevel(currentLevel); };
   buttons.appendChild(retryBtn);
 
+  const homeBtn = document.createElement('a');
+  homeBtn.href = '../';
+  homeBtn.textContent = '🏠 Home';
+  homeBtn.className = 'result-btn-retry';
+  homeBtn.style.cssText = 'display:inline-block;text-decoration:none;text-align:center';
+  buttons.appendChild(homeBtn);
+
   if (win && currentLevel < LEVELS.length - 1) {
     const nextBtn = document.createElement('button');
     nextBtn.textContent = 'Next Level →';
