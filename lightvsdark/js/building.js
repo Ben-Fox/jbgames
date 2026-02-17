@@ -14,10 +14,10 @@ const Building = (() => {
     arrow_tower: { name: 'Arrow Tower', cat: 'defensive', hp: 80, cost: { wood: 10, iron: 5 }, color: '#8b7355', desc: 'Auto-shoots enemies', tower: true, towerRange: 160, towerDmg: 8, towerRate: 1.5 },
     light_turret: { name: 'Light Turret', cat: 'defensive', hp: 60, cost: { crystal: 5, iron: 3 }, color: '#66ccff', desc: 'Beam attack, strong vs dark', tower: true, towerRange: 140, towerDmg: 15, towerRate: 2, light: true, lightRadius: 80 },
     // Resource
-    woodmill: { name: 'Woodmill', cat: 'resource', hp: 60, cost: { wood: 15, stone: 5 }, color: '#6d4c1d', desc: '1 wood / 5s', produces: 'wood', rate: 5 },
-    stone_mine: { name: 'Stone Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 10 }, color: '#7a7a7a', desc: '1 stone / 8s', produces: 'stone', rate: 8 },
-    iron_mine: { name: 'Iron Mine', cat: 'resource', hp: 60, cost: { stone: 15, iron: 5 }, color: '#999', desc: '1 iron / 12s', produces: 'iron', rate: 12 },
-    crystal_extractor: { name: 'Crystal Extractor', cat: 'resource', hp: 60, cost: { iron: 10, crystal: 5 }, color: '#5dade2', desc: '1 crystal / 20s', produces: 'crystal', rate: 20 },
+    woodmill: { name: 'Woodmill', cat: 'resource', hp: 60, cost: { wood: 15, stone: 5 }, color: '#6d4c1d', desc: '1 wood / 10s', produces: 'wood', rate: 10 },
+    stone_mine: { name: 'Stone Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 10 }, color: '#7a7a7a', desc: '1 stone / 15s', produces: 'stone', rate: 15 },
+    iron_mine: { name: 'Iron Mine', cat: 'resource', hp: 60, cost: { stone: 15, iron: 5 }, color: '#999', desc: '1 iron / 20s', produces: 'iron', rate: 20 },
+    crystal_extractor: { name: 'Crystal Extractor', cat: 'resource', hp: 60, cost: { iron: 10, crystal: 5 }, color: '#5dade2', desc: '1 crystal / 30s', produces: 'crystal', rate: 30 },
     // Utility
     torch: { name: 'Torch', cat: 'utility', hp: 20, cost: { wood: 2 }, color: '#ff9900', desc: 'Small light, slows enemies', light: true, lightRadius: 64, flicker: true },
     lantern: { name: 'Lantern', cat: 'utility', hp: 40, cost: { iron: 3, crystal: 1 }, color: '#ffdd44', desc: 'Large light radius, safe zone', light: true, lightRadius: 120 },
@@ -161,6 +161,10 @@ const Building = (() => {
         if (b.produceTimer <= 0) {
           b.produceTimer = t.rate;
           Player.addResource(t.produces, 1);
+          const bx = b.tx * TILE + TILE / 2;
+          const by = b.ty * TILE + TILE / 2;
+          const resColors = { wood: '#8b6914', stone: '#888', iron: '#bbb', crystal: '#66ccff' };
+          Particles.damageNumber(bx, by - 16, '+1 ' + t.produces, resColors[t.produces] || '#2ecc71');
         }
       }
       
