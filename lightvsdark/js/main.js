@@ -60,9 +60,9 @@ const Game = (() => {
     lastTime = now;
     
     if (!gameOver) {
-      update(dt);
+      try { update(dt); } catch(err) { console.error('Update error:', err); }
     }
-    draw();
+    try { draw(); } catch(err) { console.error('Draw error:', err); }
     requestAnimationFrame(loop);
   }
   
@@ -126,30 +126,8 @@ const Game = (() => {
       }
     }
     
-    // Remove dead enemies (from tower/trap kills)
-    const enemies = Enemies.enemies();
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      if (enemies[i].hp <= 0) {
-        // manually trigger kill
-        const e = enemies[i];
-        Audio.enemyDie();
-        Particles.deathPoof(e.x, e.y, e.color);
-        ps.kills++;
-        // drops
-        const drops = e.drops || [];
-        for (const d of drops) {
-          if (chance(d.chance)) {
-            const COLORS = { shadow_dust: '#9b59b6', dark_chitin: '#2c3e50', void_shards: '#8e44ad',
-              corruption_gel: '#27ae60', shadow_silk: '#1a1a4e', dark_steel: '#555', umbra_core: '#ff6bff' };
-            Enemies.loot().push({
-              x: e.x + randFloat(-15, 15), y: e.y + randFloat(-15, 15),
-              item: d.item, amount: 1, life: 30, color: COLORS[d.item] || '#fff'
-            });
-          }
-        }
-        enemies.splice(i, 1);
-      }
-    }
+    // Clean up dead enemies (from tower/trap damage)
+    Enemies.cleanupDead();
     
     // Update player projectiles
     for (let i = playerProjectiles.length - 1; i >= 0; i--) {

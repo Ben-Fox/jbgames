@@ -177,7 +177,7 @@ const Enemies = (() => {
         e.y += Math.sin(angle) * e.speed * lightSlow * dt;
       }
       
-      // Attack
+      // Attack cooldown
       e.attackCd -= dt;
       if (e.attackCd <= 0) {
         if (dist(e, playerState) < 28 + e.size) {
@@ -197,17 +197,18 @@ const Enemies = (() => {
           e.attackCd = 1;
           if (!result) result = { type: 'crystalHit', dmg: e.dmg };
         }
-        
-        if (e.ranged) {
-          e.shootCd -= dt;
-          if (e.shootCd <= 0 && dist(e, playerState) < e.range) {
-            e.shootCd = TYPES[e.type]?.shootCd || 2;
-            const angle = angleTo(e, playerState);
-            projectiles.push({
-              x: e.x, y: e.y, vx: Math.cos(angle) * 150, vy: Math.sin(angle) * 150,
-              dmg: e.dmg, life: 3, color: '#8e44ad'
-            });
-          }
+      }
+      
+      // Ranged shooting (separate cooldown)
+      if (e.ranged) {
+        e.shootCd -= dt;
+        if (e.shootCd <= 0 && dist(e, playerState) < (e.range || 200)) {
+          e.shootCd = TYPES[e.type]?.shootCd || 2;
+          const angle = angleTo(e, playerState);
+          projectiles.push({
+            x: e.x, y: e.y, vx: Math.cos(angle) * 150, vy: Math.sin(angle) * 150,
+            dmg: e.dmg, life: 3, color: '#8e44ad'
+          });
         }
       }
     }
@@ -344,6 +345,14 @@ const Enemies = (() => {
     enemies.splice(idx, 1);
   }
   
+  function cleanupDead() {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      if (enemies[i].hp <= 0) {
+        killEnemy(i);
+      }
+    }
+  }
+  
   function retreatAll() {
     // Dawn: enemies flee to edges
     for (const e of enemies) {
@@ -466,7 +475,7 @@ const Enemies = (() => {
   }
   
   return {
-    init, update, hitEnemy, hitEnemyProjectile, spawnWave, retreatAll, draw,
+    init, update, hitEnemy, hitEnemyProjectile, spawnWave, retreatAll, cleanupDead, draw,
     enemies: () => enemies, loot: () => loot,
     waveActive: () => waveActive || enemies.length > 0,
     enemyCount: () => enemies.length
