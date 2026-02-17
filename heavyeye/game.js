@@ -71,17 +71,12 @@
         Object.entries({ cx: 200, cy: 290, rx: 60, ry: 14, fill: '#2a2a4a', stroke: '#d4a843', 'stroke-width': 1.5 }).forEach(([k,v]) => base.setAttribute(k,v));
         svg.appendChild(base);
 
-        // Pole
+        // Pole (extends up to pivot center at y=105)
         const pole = document.createElementNS(ns, 'rect');
-        Object.entries({ x: 194, y: 100, width: 12, height: 195, rx: 4, fill: `url(#${poleGrad.id})` }).forEach(([k,v]) => pole.setAttribute(k,v));
+        Object.entries({ x: 194, y: 95, width: 12, height: 200, rx: 4, fill: `url(#${poleGrad.id})` }).forEach(([k,v]) => pole.setAttribute(k,v));
         svg.appendChild(pole);
 
-        // Pivot ornament
-        const pivot = document.createElementNS(ns, 'circle');
-        Object.entries({ cx: 200, cy: 105, r: 10, fill: '#d4a843', stroke: '#f0d078', 'stroke-width': 1.5 }).forEach(([k,v]) => pivot.setAttribute(k,v));
-        svg.appendChild(pivot);
-
-        // Beam group (rotates)
+        // Beam group (rotates around pivot point)
         const beamG = document.createElementNS(ns, 'g');
         beamG.classList.add('scale-beam');
         beamG.setAttribute('transform-origin', '200 105');
@@ -124,6 +119,12 @@
         });
 
         svg.appendChild(beamG);
+
+        // Pivot ornament (drawn on top of beam so it always covers the connection point)
+        const pivot = document.createElementNS(ns, 'circle');
+        Object.entries({ cx: 200, cy: 105, r: 10, fill: '#d4a843', stroke: '#f0d078', 'stroke-width': 1.5 }).forEach(([k,v]) => pivot.setAttribute(k,v));
+        svg.appendChild(pivot);
+
         svg._panGroups = panGroups;
         return beamG;
     }
