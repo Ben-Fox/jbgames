@@ -9,10 +9,8 @@ const UI = (() => {
     currentCraftTier = 0;
     currentBuildCat = 'defensive';
     
-    // Hotbar
     updateHotbar();
     
-    // Build menu categories
     document.querySelectorAll('.build-cat').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.build-cat').forEach(b => b.classList.remove('active'));
@@ -22,7 +20,6 @@ const UI = (() => {
       });
     });
     
-    // Craft tier tabs
     document.querySelectorAll('.craft-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         const tier = parseInt(btn.dataset.tier);
@@ -49,12 +46,10 @@ const UI = (() => {
   function updateHUD() {
     const ps = Player.state();
     
-    // HP
     const hpPct = (ps.hp / ps.maxHp) * 100;
     document.getElementById('hp-bar').style.width = hpPct + '%';
     document.getElementById('hp-text').textContent = `${Math.ceil(ps.hp)}/${ps.maxHp}`;
     
-    // Day/time
     const night = Lighting.nightCount();
     document.getElementById('day-display').textContent = `Day ${night + 1}`;
     
@@ -72,17 +67,32 @@ const UI = (() => {
       nightTimer.classList.add('hidden');
     }
     
-    // Skip to Night button
     const skipBtn = document.getElementById('skip-night-btn');
     if (phase === 'day') { skipBtn.classList.remove('hidden'); } else { skipBtn.classList.add('hidden'); }
     
-    // Resources
+    // HUD resources — show primary 4 on bar
     document.getElementById('res-wood').textContent = `🪵 ${ps.resources.wood}`;
     document.getElementById('res-stone').textContent = `🪨 ${ps.resources.stone}`;
     document.getElementById('res-iron').textContent = `⛏️ ${ps.resources.iron}`;
     document.getElementById('res-crystal').textContent = `💎 ${ps.resources.crystal}`;
     
-    // Mode
+    // Extended resource display (second row)
+    let extEl = document.getElementById('res-extended');
+    if (!extEl) {
+      extEl = document.createElement('div');
+      extEl.id = 'res-extended';
+      extEl.style.cssText = 'display:flex;gap:10px;font-size:12px;color:#ccc;margin-top:2px;flex-wrap:wrap;';
+      const resBar = document.getElementById('resources');
+      if (resBar) resBar.appendChild(extEl);
+    }
+    const extRes = [];
+    if (ps.resources.copper > 0) extRes.push(`🟤${ps.resources.copper}`);
+    if (ps.resources.tin > 0) extRes.push(`⬜${ps.resources.tin}`);
+    if (ps.resources.coal > 0) extRes.push(`⬛${ps.resources.coal}`);
+    if (ps.resources.bronze > 0) extRes.push(`🟠${ps.resources.bronze}`);
+    if (ps.resources.steel > 0) extRes.push(`⚙️${ps.resources.steel}`);
+    extEl.textContent = extRes.join('  ');
+    
     const modeDisp = document.getElementById('mode-display');
     if (Building.buildMode()) {
       modeDisp.textContent = '🔨 Build Mode';
@@ -110,9 +120,15 @@ const UI = (() => {
         const w = Player.WEAPONS[item];
         const a = Player.ARMORS[item];
         const icons = {
-          wooden_sword: '🗡️', wooden_axe: '🪓', wooden_pickaxe: '⛏️', stone_axe: '🪓',
-          iron_blade: '⚔️', crystal_sword: '💎', wooden_bow: '🏹', iron_crossbow: '🏹',
-          umbra_blade: '🔮', chitin_armor: '🛡️', dark_steel_armor: '🛡️',
+          wooden_sword: '🗡️', wooden_axe: '🪓', wooden_pickaxe: '⛏️',
+          stone_axe: '🪓', stone_pickaxe: '⛏️',
+          iron_blade: '⚔️', iron_axe: '🪓', iron_pickaxe: '⛏️',
+          bronze_sword: '⚔️', bronze_axe: '🪓', bronze_pickaxe: '⛏️',
+          steel_sword: '⚔️', steel_axe: '🪓', steel_pickaxe: '⛏️',
+          crystal_sword: '💎', wooden_bow: '🏹', iron_crossbow: '🏹',
+          umbra_blade: '🔮',
+          leather_armor: '🛡️', chitin_armor: '🛡️', bronze_armor: '🛡️',
+          steel_armor: '🛡️', dark_steel_armor: '🛡️',
           shadow_cloak: '👻', corruption_bomb: '💣'
         };
         const icon = icons[item] || '📦';
@@ -134,13 +150,11 @@ const UI = (() => {
   function updateInventory() {
     const ps = Player.state();
     
-    // Equipment
     const weaponName = Player.WEAPONS[ps.weapon]?.name || 'None';
     document.querySelector('#equip-weapon span').textContent = weaponName;
     const armorName = Player.ARMORS[ps.armor]?.name || 'None';
     document.querySelector('#equip-armor span').textContent = armorName;
     
-    // Inventory items
     const grid = document.getElementById('inv-grid');
     grid.innerHTML = '';
     for (const item of ps.inventory) {
@@ -151,21 +165,25 @@ const UI = (() => {
       grid.appendChild(div);
     }
     
-    // Resources
+    // Full resources display in inventory
     const resDiv = document.getElementById('inv-resources');
-    let html = '<b>Base:</b><br>';
+    let html = '<b>Materials:</b><br>';
+    const resNames = { wood: '🪵 Wood', stone: '🪨 Stone', iron: '⛏️ Iron', copper: '🟤 Copper', tin: '⬜ Tin', coal: '⬛ Coal', bronze: '🟠 Bronze', steel: '⚙️ Steel', crystal: '💎 Crystal' };
     for (const [k, v] of Object.entries(ps.resources)) {
-      html += `${k}: ${v}<br>`;
+      if (v > 0 || k === 'wood' || k === 'stone' || k === 'iron' || k === 'crystal') {
+        html += `${resNames[k] || k}: ${v}<br>`;
+      }
     }
     html += '<br><b>Drops:</b><br>';
+    const dropNames = { shadow_dust: '🟣 Shadow Dust', dark_chitin: '🪲 Dark Chitin', void_shards: '💜 Void Shards',
+      corruption_gel: '🟢 Corruption Gel', shadow_silk: '🕸️ Shadow Silk', dark_steel: '⚫ Dark Steel', umbra_core: '🔮 Umbra Core', leather: '🟤 Leather' };
     for (const [k, v] of Object.entries(ps.drops)) {
-      if (v > 0) html += `${k.replace(/_/g, ' ')}: ${v}<br>`;
+      if (v > 0) html += `${dropNames[k] || k.replace(/_/g, ' ')}: ${v}<br>`;
     }
-    if (ps.arrows > 0) html += `<br>Arrows: ${ps.arrows}`;
-    if (ps.voidArrows > 0) html += `<br>Void Arrows: ${ps.voidArrows}`;
+    if (ps.arrows > 0) html += `<br>🏹 Arrows: ${ps.arrows}`;
+    if (ps.voidArrows > 0) html += `<br>💜 Void Arrows: ${ps.voidArrows}`;
     resDiv.innerHTML = html;
     
-    // Update craft tab availability
     const maxTier = Building.getMaxCraftTier();
     document.querySelectorAll('.craft-tab').forEach(btn => {
       const tier = parseInt(btn.dataset.tier);
@@ -191,7 +209,14 @@ const UI = (() => {
         costHtml += `<span class="${cls}">${k.replace(/_/g, ' ')}: ${have}/${v}</span> `;
       }
       
-      div.innerHTML = `<div class="recipe-name">${r.name}</div><div class="recipe-cost">${costHtml}</div><div style="color:#888;font-size:11px">${r.desc}</div>`;
+      // Show station requirement for smelting
+      let extra = r.desc;
+      if (r.station) {
+        const hasStation = Building.buildings().some(b => b.type === r.station);
+        extra += hasStation ? ' ✅' : ' ❌ (need building)';
+      }
+      
+      div.innerHTML = `<div class="recipe-name">${r.name}</div><div class="recipe-cost">${costHtml}</div><div style="color:#888;font-size:11px">${extra}</div>`;
       div.addEventListener('click', () => {
         if (Crafting.craft(r)) {
           updateInventory();
@@ -216,7 +241,6 @@ const UI = (() => {
       
       let costHtml = '';
       for (const [k, v] of Object.entries(t.cost)) {
-        const have = ps.resources[k] !== undefined ? ps.resources[k] : (ps.drops[k] || 0);
         costHtml += `${k}: ${v} `;
       }
       
@@ -244,24 +268,20 @@ const UI = (() => {
     const sx = canvas.width / MAP_PX_W;
     const sy = canvas.height / MAP_PX_H;
     
-    // Buildings
     for (const b of Building.buildings()) {
       const t = Building.TYPES[b.type];
       ctx.fillStyle = t.color;
       ctx.fillRect(b.tx * TILE * sx, b.ty * TILE * sy, Math.max(2, TILE * sx), Math.max(2, TILE * sy));
     }
     
-    // Crystal
     ctx.fillStyle = '#66ccff';
     ctx.fillRect(MAP_PX_W / 2 * sx - 3, MAP_PX_H / 2 * sy - 3, 6, 6);
     
-    // Enemies
     ctx.fillStyle = '#e74c3c';
     for (const e of Enemies.enemies()) {
       ctx.fillRect(e.x * sx - 1, e.y * sy - 1, 2, 2);
     }
     
-    // Player
     ctx.fillStyle = '#3498db';
     ctx.fillRect(playerState.x * sx - 2, playerState.y * sy - 2, 4, 4);
   }

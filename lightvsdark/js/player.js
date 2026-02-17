@@ -14,7 +14,7 @@ const Player = (() => {
       w: 20, h: 20,
       hp: 100, maxHp: 100,
       speed: SPEED,
-      facing: 'right', // right, left, up, down
+      facing: 'right',
       attacking: false, attackTimer: 0, attackCd: 0,
       dodging: false, dodgeTimer: 0, dodgeCd: 0, dodgeDir: { x: 0, y: 0 },
       invincible: false, invTimer: 0,
@@ -23,9 +23,9 @@ const Player = (() => {
       armorBonus: 0,
       hotbar: ['wooden_sword', null, null, null, null, null, null, null, null],
       hotbarIdx: 0,
-      resources: { wood: 20, stone: 10, iron: 0, crystal: 0 },
-      drops: { shadow_dust: 0, dark_chitin: 0, void_shards: 0, corruption_gel: 0, shadow_silk: 0, dark_steel: 0, umbra_core: 0 },
-      inventory: [], // crafted items
+      resources: { wood: 20, stone: 10, iron: 0, copper: 0, tin: 0, coal: 0, bronze: 0, steel: 0, crystal: 0 },
+      drops: { shadow_dust: 0, dark_chitin: 0, void_shards: 0, corruption_gel: 0, shadow_silk: 0, dark_steel: 0, umbra_core: 0, leather: 0 },
+      inventory: [],
       kills: 0,
       arrows: 0,
       voidArrows: 0
@@ -33,27 +33,51 @@ const Player = (() => {
   }
   
   const WEAPONS = {
-    wooden_sword: { name: 'Wooden Sword', dmg: 5, speed: 0.35, range: 36, type: 'melee', color: '#a0522d' },
-    wooden_axe: { name: 'Wooden Axe', dmg: 4, speed: 0.5, range: 34, type: 'melee', color: '#8b6914', gather: 'wood' },
-    wooden_pickaxe: { name: 'Wooden Pickaxe', dmg: 3, speed: 0.55, range: 34, type: 'melee', color: '#8b6914', gather: 'stone' },
-    stone_axe: { name: 'Stone Axe', dmg: 8, speed: 0.5, range: 38, type: 'melee', color: '#888' },
-    iron_blade: { name: 'Iron Blade', dmg: 15, speed: 0.45, range: 42, type: 'melee', color: '#b0b0b0' },
-    crystal_sword: { name: 'Crystal Sword', dmg: 25, speed: 0.3, range: 44, type: 'melee', color: '#66ccff' },
-    wooden_bow: { name: 'Wooden Bow', dmg: 7, speed: 0.8, range: 250, type: 'ranged', color: '#8b6914', ammo: 'arrows' },
-    iron_crossbow: { name: 'Iron Crossbow', dmg: 18, speed: 0.6, range: 300, type: 'ranged', color: '#777', ammo: 'arrows' },
-    umbra_blade: { name: 'Umbra Blade', dmg: 35, speed: 0.25, range: 48, type: 'melee', color: '#9b59b6' }
+    wooden_sword: { name: 'Wooden Sword', dmg: 5, speed: 0.35, range: 36, type: 'melee', color: '#a0522d', tier: 0 },
+    wooden_axe: { name: 'Wooden Axe', dmg: 4, speed: 0.5, range: 34, type: 'melee', color: '#8b6914', gather: 'wood', gatherTier: 1, tier: 0 },
+    wooden_pickaxe: { name: 'Wooden Pickaxe', dmg: 3, speed: 0.55, range: 34, type: 'melee', color: '#8b6914', gather: 'stone', gatherTier: 1, tier: 0 },
+    stone_axe: { name: 'Stone Axe', dmg: 8, speed: 0.5, range: 38, type: 'melee', color: '#888', gather: 'wood', gatherTier: 2, tier: 1 },
+    stone_pickaxe: { name: 'Stone Pickaxe', dmg: 6, speed: 0.55, range: 36, type: 'melee', color: '#999', gather: 'stone', gatherTier: 2, tier: 1 },
+    iron_blade: { name: 'Iron Blade', dmg: 15, speed: 0.45, range: 42, type: 'melee', color: '#b0b0b0', tier: 2 },
+    iron_axe: { name: 'Iron Axe', dmg: 10, speed: 0.45, range: 38, type: 'melee', color: '#aaa', gather: 'wood', gatherTier: 3, tier: 2 },
+    iron_pickaxe: { name: 'Iron Pickaxe', dmg: 8, speed: 0.5, range: 38, type: 'melee', color: '#aaa', gather: 'stone', gatherTier: 3, tier: 2 },
+    bronze_sword: { name: 'Bronze Sword', dmg: 12, speed: 0.4, range: 40, type: 'melee', color: '#cd7f32', tier: 3 },
+    bronze_axe: { name: 'Bronze Axe', dmg: 9, speed: 0.45, range: 38, type: 'melee', color: '#cd7f32', gather: 'wood', gatherTier: 4, tier: 3 },
+    bronze_pickaxe: { name: 'Bronze Pickaxe', dmg: 7, speed: 0.5, range: 38, type: 'melee', color: '#cd7f32', gather: 'stone', gatherTier: 4, tier: 3 },
+    steel_sword: { name: 'Steel Sword', dmg: 20, speed: 0.35, range: 44, type: 'melee', color: '#d0d0d0', tier: 4 },
+    steel_axe: { name: 'Steel Axe', dmg: 14, speed: 0.4, range: 40, type: 'melee', color: '#d0d0d0', gather: 'wood', gatherTier: 5, tier: 4 },
+    steel_pickaxe: { name: 'Steel Pickaxe', dmg: 12, speed: 0.45, range: 40, type: 'melee', color: '#d0d0d0', gather: 'stone', gatherTier: 5, tier: 4 },
+    crystal_sword: { name: 'Crystal Sword', dmg: 25, speed: 0.3, range: 44, type: 'melee', color: '#66ccff', tier: 5 },
+    wooden_bow: { name: 'Wooden Bow', dmg: 7, speed: 0.8, range: 250, type: 'ranged', color: '#8b6914', ammo: 'arrows', tier: 1 },
+    iron_crossbow: { name: 'Iron Crossbow', dmg: 18, speed: 0.6, range: 300, type: 'ranged', color: '#777', ammo: 'arrows', tier: 2 },
+    umbra_blade: { name: 'Umbra Blade', dmg: 35, speed: 0.25, range: 48, type: 'melee', color: '#9b59b6', tier: 5 }
+  };
+  
+  // Tool tier requirements for gathering different resource types
+  // gatherTier on tool must be >= required tier for the resource
+  const GATHER_REQUIREMENTS = {
+    // resource node type -> { minTier, toolType, needMessage }
+    wood: { minTier: 0, toolType: 'wood', need: null }, // bare hands or any axe
+    stone: { minTier: 1, toolType: 'stone', need: 'Wooden Pickaxe' },
+    iron_ore: { minTier: 2, toolType: 'stone', need: 'Stone Pickaxe' },
+    copper_ore: { minTier: 2, toolType: 'stone', need: 'Stone Pickaxe' },
+    tin_ore: { minTier: 2, toolType: 'stone', need: 'Stone Pickaxe' },
+    coal: { minTier: 3, toolType: 'stone', need: 'Iron Pickaxe' },
+    crystal: { minTier: 4, toolType: 'stone', need: 'Bronze Pickaxe' }
   };
   
   const ARMORS = {
     none: { name: 'None', bonus: 0 },
+    leather_armor: { name: 'Leather Armor', bonus: 10 },
     chitin_armor: { name: 'Chitin Armor', bonus: 30 },
+    bronze_armor: { name: 'Bronze Armor', bonus: 25, speedMult: 0.95 },
+    steel_armor: { name: 'Steel Armor', bonus: 45, speedMult: 0.9 },
     dark_steel_armor: { name: 'Dark Steel Armor', bonus: 60, speedMult: 0.8 }
   };
   
   function equip(itemId) {
     if (WEAPONS[itemId]) {
       state.weapon = itemId;
-      // Add to hotbar if not there
       if (!state.hotbar.includes(itemId)) {
         const empty = state.hotbar.indexOf(null);
         if (empty >= 0) state.hotbar[empty] = itemId;
@@ -92,8 +116,35 @@ const Player = (() => {
     }
   }
   
+  // Check if current tool can gather a resource type, returns { canGather, bonusMultiplier, needMessage }
+  function canGatherResource(resourceType) {
+    const req = GATHER_REQUIREMENTS[resourceType];
+    if (!req) return { canGather: true, bonus: 1, need: null };
+    
+    const w = WEAPONS[state.weapon];
+    if (!w) return { canGather: resourceType === 'wood', bonus: 1, need: req.need };
+    
+    // Check tool type matches
+    if (req.toolType === 'wood' && w.gather !== 'wood') {
+      // Any weapon can hit trees for wood, but axes are better
+      return { canGather: true, bonus: w.gather === 'wood' ? 1 : 0.5, need: null };
+    }
+    if (req.toolType === 'stone' && w.gather !== 'stone') {
+      return { canGather: false, bonus: 0, need: req.need };
+    }
+    
+    // Check tier
+    const toolTier = w.gatherTier || 0;
+    if (toolTier < req.minTier) {
+      return { canGather: false, bonus: 0, need: req.need };
+    }
+    
+    // Steel pickaxe gets 2x bonus
+    const bonus = (toolTier >= 5) ? 2 : 1;
+    return { canGather: true, bonus, need: null };
+  }
+  
   function update(dt, keys, mouseWorld) {
-    // Dodge
     if (state.dodging) {
       state.dodgeTimer -= dt;
       state.x += state.dodgeDir.x * DODGE_SPEED * dt;
@@ -103,7 +154,6 @@ const Player = (() => {
         state.invincible = false;
       }
     } else {
-      // Movement
       let dx = 0, dy = 0;
       if (keys['w'] || keys['arrowup']) dy = -1;
       if (keys['s'] || keys['arrowdown']) dy = 1;
@@ -113,42 +163,29 @@ const Player = (() => {
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);
         dx /= len; dy /= len;
-        const nx = state.x + dx * state.speed * dt;
-        const ny = state.y + dy * state.speed * dt;
-        
-        // Collision check
-        const ntx = Math.floor(nx / TILE);
-        const nty = Math.floor(ny / TILE);
         
         const canMoveX = canWalk(state.x + dx * state.speed * dt, state.y);
         const canMoveY = canWalk(state.x, state.y + dy * state.speed * dt);
         
         if (canMoveX) state.x += dx * state.speed * dt;
         if (canMoveY) state.y += dy * state.speed * dt;
-        
       }
     }
     
     state.x = clamp(state.x, 10, MAP_PX_W - 10);
     state.y = clamp(state.y, 10, MAP_PX_H - 10);
     
-    // Dodge cooldown
     if (state.dodgeCd > 0) state.dodgeCd -= dt;
-    
-    // Attack cooldown
     if (state.attackCd > 0) state.attackCd -= dt;
     if (state.attacking) {
       state.attackTimer -= dt;
       if (state.attackTimer <= 0) state.attacking = false;
     }
-    
-    // Invincibility
     if (state.invTimer > 0) {
       state.invTimer -= dt;
       if (state.invTimer <= 0) state.invincible = false;
     }
     
-    // Face mouse (4 directions)
     if (mouseWorld) {
       const dx = mouseWorld.x - state.x;
       const dy = mouseWorld.y - state.y;
@@ -159,7 +196,6 @@ const Player = (() => {
       }
     }
     
-    // Heal near crystal during day
     if (!Lighting.isNight()) {
       const crystalDist = dist(state, { x: MAP_PX_W / 2, y: MAP_PX_H / 2 });
       if (crystalDist < 100) {
@@ -170,7 +206,6 @@ const Player = (() => {
   
   function canWalk(nx, ny) {
     const margin = 8;
-    // Check corners
     const points = [
       { x: nx - margin, y: ny - margin },
       { x: nx + margin, y: ny - margin },
@@ -213,7 +248,6 @@ const Player = (() => {
   function attack(mouseWorld) {
     if (state.attackCd > 0 || state.attacking) return null;
     let w = WEAPONS[state.weapon];
-    // If current weapon is invalid, try to find any weapon we have
     if (!w) {
       const fallback = state.hotbar.find(h => h && WEAPONS[h]);
       if (fallback) { state.weapon = fallback; w = WEAPONS[fallback]; }
@@ -235,7 +269,6 @@ const Player = (() => {
       return { type: 'projectile', x: state.x, y: state.y, angle, dmg: w.dmg, range: w.range, speed: 400, color: w.color };
     }
     
-    // Melee hit zone
     const angle = angleTo(state, mouseWorld);
     return { type: 'melee', x: state.x + Math.cos(angle) * 20, y: state.y + Math.sin(angle) * 20, radius: w.range, dmg: w.dmg, angle, knockback: 5 };
   }
@@ -255,7 +288,6 @@ const Player = (() => {
     const sx = state.x - cam.x;
     const sy = state.y - cam.y;
     
-    // Dodge trail
     if (state.dodging) {
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#4af';
@@ -263,7 +295,6 @@ const Player = (() => {
       ctx.globalAlpha = 1;
     }
     
-    // Blink when invincible
     if (state.invincible && !state.dodging && Math.floor(Date.now() / 80) % 2) return;
     
     const f = state.facing;
@@ -278,7 +309,6 @@ const Player = (() => {
     ctx.fillStyle = '#f5c890';
     if (f === 'up') {
       ctx.fillRect(sx - 5, sy - 16, 10, 8);
-      // Back of head, no eyes
     } else if (f === 'down') {
       ctx.fillRect(sx - 5, sy - 16, 10, 8);
       ctx.fillStyle = '#333';
@@ -294,16 +324,11 @@ const Player = (() => {
     const w = WEAPONS[state.weapon];
     if (w) {
       ctx.fillStyle = w.color;
-      // Weapon offset based on facing
-      let wx, wy, ww, wh, swingDir;
-      if (f === 'up') { wx = sx + 8; wy = sy - 14; ww = 3; wh = -14; swingDir = 1; }
-      else if (f === 'down') { wx = sx - 8; wy = sy + 2; ww = 3; wh = 14; swingDir = -1; }
-      else { wx = sx + fx * 8; wy = sy - 4; ww = fx * 14; wh = 3; swingDir = fx; }
-      
       if (state.attacking) {
         ctx.save();
         ctx.translate(sx, sy);
         if (f === 'up' || f === 'down') {
+          const swingDir = f === 'up' ? 1 : -1;
           const swingAngle = (state.attackTimer / 0.15) * Math.PI * 0.5 * swingDir;
           ctx.rotate(swingAngle);
           ctx.fillRect(-1, fy * 8, 3, fy * 16);
@@ -324,7 +349,14 @@ const Player = (() => {
     
     // Armor indicator
     if (state.armor !== 'none') {
-      ctx.strokeStyle = state.armor === 'dark_steel_armor' ? '#555' : '#8b6914';
+      const armorColors = {
+        leather_armor: '#8b6914',
+        chitin_armor: '#8b6914',
+        bronze_armor: '#cd7f32',
+        steel_armor: '#d0d0d0',
+        dark_steel_armor: '#555'
+      };
+      ctx.strokeStyle = armorColors[state.armor] || '#8b6914';
       ctx.lineWidth = 2;
       ctx.strokeRect(sx - 9, sy - 11, 18, 22);
     }
@@ -332,8 +364,8 @@ const Player = (() => {
   
   return {
     init, update, dodge, attack, takeDamage, draw, equip, addToInventory,
-    addResource, hasResources, spendResources, canWalk,
+    addResource, hasResources, spendResources, canWalk, canGatherResource,
     state: () => state,
-    WEAPONS, ARMORS
+    WEAPONS, ARMORS, GATHER_REQUIREMENTS
   };
 })();

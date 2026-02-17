@@ -289,7 +289,7 @@ const Game = (() => {
                     Audio.pickup();
                     Particles.damageNumber(res.x, res.y - 16, '+' + res.amount + ' ' + res.resource, '#2ecc71');
                   }
-                  // Hit but not destroyed — HP bar shows automatically
+                  // blocked or hit-not-destroyed handled in gatherHit
                 }
               }
             }

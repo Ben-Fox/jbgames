@@ -1,6 +1,6 @@
 // building.js — Grid placement, structures, resource generation
 const Building = (() => {
-  let buildings = []; // { type, tx, ty, hp, maxHp }
+  let buildings = [];
   let selectedBuilding = null;
   let buildMode = false;
   
@@ -12,17 +12,22 @@ const Building = (() => {
     wood_gate: { name: 'Wood Gate', cat: 'defensive', hp: 40, cost: { wood: 8 }, color: '#a07020', desc: 'Player walks through, blocks enemies', blocking: false, gateBlock: true },
     spike_trap: { name: 'Spike Trap', cat: 'defensive', hp: Infinity, cost: { wood: 3, iron: 2 }, color: '#666', desc: '10 dmg to enemies', trap: true, trapDmg: 10 },
     arrow_tower: { name: 'Arrow Tower', cat: 'defensive', hp: 80, cost: { wood: 10, iron: 5 }, color: '#8b7355', desc: 'Auto-shoots enemies', tower: true, towerRange: 160, towerDmg: 8, towerRate: 1.5 },
-    light_turret: { name: 'Light Turret', cat: 'defensive', hp: 60, cost: { crystal: 5, iron: 3 }, color: '#66ccff', desc: 'Beam attack, strong vs dark', tower: true, towerRange: 140, towerDmg: 15, towerRate: 2, light: true, lightRadius: 80 },
+    light_turret: { name: 'Light Turret', cat: 'defensive', hp: 60, cost: { crystal: 5, steel: 3 }, color: '#66ccff', desc: 'Beam attack, strong vs dark', tower: true, towerRange: 140, towerDmg: 15, towerRate: 2, light: true, lightRadius: 80 },
     // Resource
     woodmill: { name: 'Woodmill', cat: 'resource', hp: 60, cost: { wood: 15, stone: 5 }, color: '#6d4c1d', desc: '1 wood / 10s', produces: 'wood', rate: 10 },
     stone_mine: { name: 'Stone Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 10 }, color: '#7a7a7a', desc: '1 stone / 15s', produces: 'stone', rate: 15 },
-    iron_mine: { name: 'Iron Mine', cat: 'resource', hp: 60, cost: { stone: 15, iron: 5 }, color: '#999', desc: '1 iron / 20s', produces: 'iron', rate: 20 },
-    crystal_extractor: { name: 'Crystal Extractor', cat: 'resource', hp: 60, cost: { iron: 10, crystal: 5 }, color: '#5dade2', desc: '1 crystal / 30s', produces: 'crystal', rate: 30 },
+    copper_mine: { name: 'Copper Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 8 }, color: '#b87333', desc: '1 copper / 20s', produces: 'copper', rate: 20 },
+    tin_mine: { name: 'Tin Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 8 }, color: '#c0c0c0', desc: '1 tin / 20s', produces: 'tin', rate: 20 },
+    iron_mine: { name: 'Iron Mine', cat: 'resource', hp: 60, cost: { stone: 15, iron: 5 }, color: '#999', desc: '1 iron / 25s', produces: 'iron', rate: 25 },
+    coal_mine: { name: 'Coal Mine', cat: 'resource', hp: 60, cost: { stone: 10, iron: 5 }, color: '#333', desc: '1 coal / 30s', produces: 'coal', rate: 30 },
+    crystal_extractor: { name: 'Crystal Extractor', cat: 'resource', hp: 60, cost: { steel: 5, crystal: 5 }, color: '#5dade2', desc: '1 crystal / 40s', produces: 'crystal', rate: 40 },
     // Utility
     torch: { name: 'Torch', cat: 'utility', hp: 20, cost: { wood: 2 }, color: '#ff9900', desc: 'Small light, slows enemies', light: true, lightRadius: 64, flicker: true },
     lantern: { name: 'Lantern', cat: 'utility', hp: 40, cost: { iron: 3, crystal: 1 }, color: '#ffdd44', desc: 'Large light radius, safe zone', light: true, lightRadius: 120 },
     workbench: { name: 'Workbench', cat: 'utility', hp: 50, cost: { wood: 10, stone: 5 }, color: '#a0845c', desc: 'Unlocks Tier 1 crafting', station: 1 },
+    smelter: { name: 'Smelter', cat: 'utility', hp: 60, cost: { stone: 10, wood: 5 }, color: '#d35400', desc: 'Smelt ores into alloys', station: 0 },
     forge: { name: 'Forge', cat: 'utility', hp: 70, cost: { stone: 10, iron: 10 }, color: '#c0392b', desc: 'Unlocks Tier 2 crafting', station: 2 },
+    advanced_forge: { name: 'Advanced Forge', cat: 'utility', hp: 80, cost: { iron: 10, bronze: 5 }, color: '#8b0000', desc: 'Unlocks steel smelting', station: 3 },
     crystal_altar: { name: 'Crystal Altar', cat: 'utility', hp: 80, cost: { iron: 10, crystal: 10 }, color: '#3498db', desc: 'Unlocks Tier 3 crafting', station: 3 },
     healing_fountain: { name: 'Healing Fountain', cat: 'utility', hp: 60, cost: { crystal: 5, stone: 5 }, color: '#2ecc71', desc: 'Heals 2 HP/s nearby', heals: true, healRange: 80, healRate: 2 }
   };
@@ -35,12 +40,9 @@ const Building = (() => {
   
   function canPlace(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
-    // Can't place on center crystal (3x3 area)
     const cx = Math.floor(MAP_W / 2), cy = Math.floor(MAP_H / 2);
     if (Math.abs(tx - cx) <= 1 && Math.abs(ty - cy) <= 1) return false;
-    // Can't overlap existing buildings
     if (buildings.some(b => b.tx === tx && b.ty === ty)) return false;
-    // Can't place on env blocking objects
     if (GameMap.isEnvBlocking(tx, ty)) return false;
     return true;
   }
@@ -52,7 +54,7 @@ const Building = (() => {
     if (!Player.hasResources(t.cost)) return false;
     
     Player.spendResources(t.cost);
-    GameMap.removeEnvAt(tx, ty); // Clear any non-blocking env objects
+    GameMap.removeEnvAt(tx, ty);
     
     buildings.push({
       type, tx, ty,
@@ -121,7 +123,6 @@ const Building = (() => {
   
   function getLightSources() {
     const sources = [];
-    // Crystal always glows
     sources.push({
       x: MAP_PX_W / 2, y: MAP_PX_H / 2,
       radius: 100 + Math.sin(Date.now() * 0.002) * 10,
@@ -152,10 +153,11 @@ const Building = (() => {
   
   function update(dt) {
     const ps = Player.state();
+    const resColors = { wood: '#8b6914', stone: '#888', iron: '#bbb', copper: '#b87333', tin: '#c0c0c0', coal: '#555', crystal: '#66ccff' };
+    
     for (const b of buildings) {
       const t = TYPES[b.type];
       
-      // Resource production
       if (t.produces) {
         b.produceTimer -= dt;
         if (b.produceTimer <= 0) {
@@ -163,12 +165,10 @@ const Building = (() => {
           Player.addResource(t.produces, 1);
           const bx = b.tx * TILE + TILE / 2;
           const by = b.ty * TILE + TILE / 2;
-          const resColors = { wood: '#8b6914', stone: '#888', iron: '#bbb', crystal: '#66ccff' };
           Particles.damageNumber(bx, by - 16, '+1 ' + t.produces, resColors[t.produces] || '#2ecc71');
         }
       }
       
-      // Tower shooting
       if (t.tower) {
         b.towerTimer -= dt;
         if (b.towerTimer <= 0) {
@@ -180,14 +180,10 @@ const Building = (() => {
             target.hp -= t.towerDmg;
             Particles.hitSparks(target.x, target.y);
             Particles.damageNumber(target.x, target.y - 10, t.towerDmg, '#ffa500');
-            if (target.hp <= 0) {
-              // Let enemies module handle death
-            }
           }
         }
       }
       
-      // Spike traps
       if (t.trap) {
         const bx = b.tx * TILE + TILE / 2;
         const by = b.ty * TILE + TILE / 2;
@@ -199,7 +195,6 @@ const Building = (() => {
         }
       }
       
-      // Healing fountain
       if (t.heals) {
         const bx = b.tx * TILE + TILE / 2;
         const by = b.ty * TILE + TILE / 2;
@@ -229,18 +224,15 @@ const Building = (() => {
       ctx.fillStyle = t.color;
       
       if (t.blocking) {
-        // Walls — full tile with border
         ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.fillRect(sx + 1, sy + TILE - 6, TILE - 2, 5);
       } else if (t.gateBlock) {
-        // Gate — opening in middle
         ctx.fillRect(sx + 1, sy + 1, TILE - 2, 6);
         ctx.fillRect(sx + 1, sy + TILE - 7, TILE - 2, 6);
         ctx.fillRect(sx + 1, sy + 1, 6, TILE - 2);
         ctx.fillRect(sx + TILE - 7, sy + 1, 6, TILE - 2);
       } else if (t.trap) {
-        // Spikes
         ctx.fillStyle = '#555';
         for (let i = 0; i < 4; i++) {
           for (let j = 0; j < 4; j++) {
@@ -248,13 +240,10 @@ const Building = (() => {
           }
         }
       } else if (t.tower) {
-        // Tower base
         ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
         ctx.fillStyle = t.light ? '#88ddff' : '#666';
         ctx.fillRect(sx + 10, sy + 2, TILE - 20, 6);
-        // Tower range indicator during build mode
       } else if (t.light) {
-        // Torch/lantern
         const flicker = t.flicker ? Math.sin(Date.now() * 0.01 + b.flickerPhase) * 2 : 0;
         ctx.fillStyle = '#444';
         ctx.fillRect(sx + 14, sy + 12, 4, 18);
@@ -262,7 +251,6 @@ const Building = (() => {
         ctx.beginPath();
         ctx.arc(sx + 16, sy + 10 + flicker, 6, 0, Math.PI * 2);
         ctx.fill();
-        // Glow effect
         if (Lighting.nightAmount() > 0.1) {
           ctx.fillStyle = `rgba(255,200,50,${0.1 * Lighting.nightAmount()})`;
           ctx.beginPath();
@@ -270,7 +258,6 @@ const Building = (() => {
           ctx.fill();
         }
       } else if (t.heals) {
-        // Fountain
         ctx.fillStyle = '#5dade2';
         ctx.beginPath();
         ctx.arc(sx + TILE / 2, sy + TILE / 2, 10, 0, Math.PI * 2);
@@ -281,19 +268,22 @@ const Building = (() => {
         ctx.arc(sx + TILE / 2, sy + TILE / 2 - 4 + bob, 5, 0, Math.PI * 2);
         ctx.fill();
       } else if (t.station) {
-        // Crafting station
         ctx.fillRect(sx + 3, sy + 8, TILE - 6, TILE - 10);
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.fillRect(sx + 5, sy + 10, TILE - 10, 4);
+        // Smelter/forge glow
+        if (b.type === 'smelter' || b.type === 'advanced_forge' || b.type === 'forge') {
+          ctx.fillStyle = 'rgba(255,100,0,0.3)';
+          ctx.beginPath();
+          ctx.arc(sx + TILE / 2, sy + TILE / 2, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else if (t.produces) {
-        // Resource building
         ctx.fillRect(sx + 2, sy + 6, TILE - 4, TILE - 8);
-        // Chimney / details
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.fillRect(sx + TILE - 10, sy + 2, 6, 8);
       }
       
-      // HP bar for damaged buildings
       if (b.hp !== Infinity && b.hp < b.maxHp) {
         const pct = b.hp / b.maxHp;
         ctx.fillStyle = '#333';
@@ -317,7 +307,6 @@ const Building = (() => {
     ctx.fillRect(sx, sy, TILE, TILE);
     ctx.globalAlpha = 1;
     
-    // Show range for towers
     if (t.tower && ok) {
       ctx.strokeStyle = 'rgba(255,165,0,0.3)';
       ctx.lineWidth = 1;
@@ -339,7 +328,6 @@ const Building = (() => {
     const cy = MAP_PX_H / 2 - cam.y;
     const pulse = Math.sin(Date.now() * 0.003) * 3;
     
-    // Glow
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40 + pulse);
     grad.addColorStop(0, 'rgba(100,200,255,0.4)');
     grad.addColorStop(1, 'rgba(100,200,255,0)');
@@ -348,7 +336,6 @@ const Building = (() => {
     ctx.arc(cx, cy, 40 + pulse, 0, Math.PI * 2);
     ctx.fill();
     
-    // Crystal shape
     ctx.fillStyle = '#66ccff';
     ctx.beginPath();
     ctx.moveTo(cx, cy - 20 - pulse);

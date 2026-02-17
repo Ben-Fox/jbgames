@@ -11,9 +11,9 @@ const Enemies = (() => {
   
   const TYPES = {
     shadow_wisp: { name: 'Shadow Wisp', hp: 15, dmg: 5, speed: 90, color: '#9b59b6', size: 10, xp: 1,
-      drops: [{ item: 'shadow_dust', chance: 0.7 }, { item: 'shadow_dust', chance: 0.3 }] },
+      drops: [{ item: 'shadow_dust', chance: 0.7 }, { item: 'shadow_dust', chance: 0.3 }, { item: 'leather', chance: 0.25 }] },
     dark_crawler: { name: 'Dark Crawler', hp: 30, dmg: 10, speed: 60, color: '#2c3e50', size: 14, xp: 2,
-      drops: [{ item: 'dark_chitin', chance: 0.5 }, { item: 'dark_chitin', chance: 0.15 }], targetBuildings: true },
+      drops: [{ item: 'dark_chitin', chance: 0.5 }, { item: 'dark_chitin', chance: 0.15 }, { item: 'leather', chance: 0.35 }], targetBuildings: true },
     void_archer: { name: 'Void Archer', hp: 20, dmg: 12, speed: 40, color: '#8e44ad', size: 12, xp: 2,
       drops: [{ item: 'void_shards', chance: 0.5 }, { item: 'void_shards', chance: 0.15 }], ranged: true, range: 200, shootCd: 2 },
     corruption_blob: { name: 'Corruption Blob', hp: 50, dmg: 8, speed: 35, color: '#27ae60', size: 16, xp: 3,
@@ -330,7 +330,7 @@ const Enemies = (() => {
     for (const d of drops) {
       if (chance(d.chance)) {
         const COLORS = { shadow_dust: '#9b59b6', dark_chitin: '#2c3e50', void_shards: '#8e44ad',
-          corruption_gel: '#27ae60', shadow_silk: '#1a1a4e', dark_steel: '#555', umbra_core: '#ff6bff' };
+          corruption_gel: '#27ae60', shadow_silk: '#1a1a4e', dark_steel: '#555', umbra_core: '#ff6bff', leather: '#8b6914' };
         loot.push({
           x: e.x + randFloat(-15, 15), y: e.y + randFloat(-15, 15),
           item: d.item, amount: 1, life: 30, color: COLORS[d.item] || '#fff'
