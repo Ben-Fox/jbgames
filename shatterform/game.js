@@ -76,10 +76,37 @@ function sfxHit() {
     playNoise(0.15, 0.1);
 }
 
-function sfxKill(combo) {
+function sfxKill(combo, enemyType) {
     const base = 400 + combo * 80;
-    playTone(base, 0.12, 'sine', 0.1);
-    playTone(base * 1.5, 0.08, 'sine', 0.06, 10);
+    // Vary pitch/tone by combo and enemy type
+    if (enemyType === 'diamond' || enemyType === 'shielded') {
+        // Tanky enemies: deep satisfying BOOM
+        playTone(120 + combo * 20, 0.3, 'sawtooth', 0.15);
+        playNoise(0.2, 0.12);
+        playTone(80, 0.4, 'sine', 0.1);
+    } else if (enemyType === 'dasher') {
+        // Quick sharp kill
+        playTone(base * 1.2, 0.1, 'square', 0.08, 20);
+        playTone(base * 2, 0.06, 'sine', 0.05);
+    } else {
+        playTone(base, 0.12, 'sine', 0.1);
+        playTone(base * 1.5, 0.08, 'sine', 0.06, 10 + combo * 5);
+    }
+    // Rising pitch with combo for satisfaction
+    if (combo > 5) {
+        playTone(600 + combo * 40, 0.06, 'sine', 0.04);
+    }
+}
+
+function sfxHeal() {
+    playTone(500, 0.15, 'sine', 0.1);
+    playTone(700, 0.12, 'sine', 0.08);
+    playTone(900, 0.1, 'sine', 0.06);
+}
+
+function sfxChainExplosion() {
+    playTone(150, 0.15, 'sawtooth', 0.08);
+    playNoise(0.1, 0.06);
 }
 
 function sfxOrb() {
@@ -144,6 +171,10 @@ let shootCooldown; // seconds remaining
 let aimAngle; // current mouse/touch aim angle
 let barriers; // barrier array
 let barrierPlaceMode; // true when waiting for click to place
+let scorePopups; // floating score text
+let screenFlashAlpha; // white flash overlay for multi-kills
+let recentKillTimes; // timestamps for multi-kill detection
+let healOrbs; // healing orb array
 const SHOOT_COOLDOWN = 0.4; // minimum time between shots
 const MIN_SHOOT_SIZE = 20; // minimum size to fire
 const SCATTER_CONE = Math.PI * 2 / 3; // ~120 degrees
@@ -194,6 +225,10 @@ function resetGame() {
     aimAngle = 0;
     barriers = [];
     barrierPlaceMode = false;
+    scorePopups = [];
+    screenFlashAlpha = 0;
+    recentKillTimes = [];
+    healOrbs = [];
     updateModeUI();
     updateBarrierUI();
 }
@@ -225,15 +260,25 @@ function spawnEnemy() {
     const speed = (40 + Math.random() * 30 + wave * 3) * diff.enemySpeedMult;
     const size = 10 + Math.random() * 12;
 
-    // Type weights shift with waves
+    // Type weights shift with waves — balanced progression:
+    // W1-3: circles + swarmlings, light triangles. Easy scatter targets.
+    // W4-6: diamonds + first dashers appear. Beam becomes necessary.
+    // W7-10: shielded enemies, all types. Barrier management needed.
+    // W11+: dense mix of everything.
     let type;
     const r = Math.random();
-    if (wave < 3) {
-        type = r < 0.5 ? 'circle' : r < 0.75 ? 'swarmling' : 'triangle';
-    } else if (wave < 6) {
-        type = r < 0.35 ? 'circle' : r < 0.55 ? 'swarmling' : r < 0.75 ? 'triangle' : r < 0.9 ? 'diamond' : 'shielded';
+    if (wave <= 3) {
+        // Early: mostly 1HP fodder, occasional triangle to teach beam
+        type = r < 0.45 ? 'circle' : r < 0.75 ? 'swarmling' : 'triangle';
+    } else if (wave <= 6) {
+        // Mid-early: diamonds appear, first dashers for surprise
+        type = r < 0.25 ? 'circle' : r < 0.45 ? 'swarmling' : r < 0.6 ? 'triangle' : r < 0.8 ? 'diamond' : 'dasher';
+    } else if (wave <= 10) {
+        // Mid: shielded enemies join, balanced mix
+        type = r < 0.15 ? 'circle' : r < 0.3 ? 'swarmling' : r < 0.45 ? 'triangle' : r < 0.6 ? 'diamond' : r < 0.8 ? 'dasher' : 'shielded';
     } else {
-        type = r < 0.2 ? 'circle' : r < 0.35 ? 'swarmling' : r < 0.5 ? 'triangle' : r < 0.65 ? 'diamond' : r < 0.8 ? 'dasher' : 'shielded';
+        // Late: heavy mix, more tanks and shielded
+        type = r < 0.1 ? 'circle' : r < 0.25 ? 'swarmling' : r < 0.4 ? 'triangle' : r < 0.55 ? 'diamond' : r < 0.75 ? 'dasher' : 'shielded';
     }
 
     const colors = {
@@ -302,6 +347,43 @@ function spawnOrb() {
         pulse: Math.random() * Math.PI * 2,
         life: 8,
     });
+}
+
+function spawnHealOrb() {
+    const angle = Math.random() * Math.PI * 2;
+    const d = 80 + Math.random() * Math.min(W, H) * 0.3;
+    healOrbs.push({
+        x: cx + Math.cos(angle) * d,
+        y: cy + Math.sin(angle) * d,
+        size: 10,
+        pulse: Math.random() * Math.PI * 2,
+        life: 10,
+    });
+}
+
+function addScorePopup(x, y, text, color) {
+    scorePopups.push({
+        x, y,
+        text,
+        color: color || '#fff',
+        life: 1.0,
+        maxLife: 1.0,
+        vy: -60,
+    });
+}
+
+function healPlayer() {
+    const maxLives = DIFF_SETTINGS[difficulty].lives;
+    if (lives < maxLives) {
+        lives++;
+        sfxHeal();
+        // Green pulse particles at player
+        for (let i = 0; i < 20; i++) {
+            addParticle(cx, cy, '#00ff66', 120, 0.5, 4);
+        }
+        addScorePopup(cx, cy - 40, '+1 ♥', '#00ff66');
+        screenFlashAlpha = 0.1; // subtle green-ish flash handled in render
+    }
 }
 
 function addFragment(x, y, angle, speed, size, color, damage, fragType) {
@@ -566,16 +648,29 @@ function update(dt) {
 
         if (waveEnemiesSpawned >= waveEnemies && enemies.length === 0) {
             wave++;
+            // Balance: enemy count scales steadily but not overwhelmingly
+            // Wave 2: 11, Wave 5: 27, Wave 10: 65, Wave 15: 117, Wave 20: 183
             waveEnemies = Math.floor(5 + wave * 3 + wave * wave * 0.3);
             waveEnemiesSpawned = 0;
             waveTimer = 2;
             sfxWave();
             for (let i = 0; i < 2 + Math.floor(wave / 3); i++) spawnOrb();
+            // Spawn a heal orb between waves starting wave 5, if player is hurt
+            if (wave >= 5 && lives < DIFF_SETTINGS[difficulty].lives) {
+                spawnHealOrb();
+            }
         }
     }
 
     // Random orb spawns
     if (Math.random() < 0.005 * dt * 60) spawnOrb();
+
+    // Heal orb spawns — rare, more common in later waves when attrition is a concern
+    // ~1 per 30-40 seconds base, slightly more frequent after wave 7
+    const healOrbChance = wave >= 7 ? 0.0015 : 0.0008;
+    if (Math.random() < healOrbChance * dt * 60 && lives < DIFF_SETTINGS[difficulty].lives) {
+        spawnHealOrb();
+    }
 
     // Update enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -792,6 +887,32 @@ function update(dt) {
         }
     }
 
+    // Update heal orbs
+    for (let i = healOrbs.length - 1; i >= 0; i--) {
+        const o = healOrbs[i];
+        o.pulse += dt * 3;
+        o.life -= dt;
+        if (o.life <= 0) { healOrbs.splice(i, 1); continue; }
+        if (distFn(o.x, o.y, cx, cy) < playerSize + o.size + 5) {
+            healPlayer();
+            healOrbs.splice(i, 1);
+        }
+    }
+
+    // Update score popups
+    for (let i = scorePopups.length - 1; i >= 0; i--) {
+        const p = scorePopups[i];
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) scorePopups.splice(i, 1);
+    }
+
+    // Screen flash decay
+    if (screenFlashAlpha > 0) {
+        screenFlashAlpha -= dt * 2; // fades in ~0.12s
+        if (screenFlashAlpha < 0) screenFlashAlpha = 0;
+    }
+
     // Screen shake
     if (shakeDur > 0) {
         shakeDur -= dt;
@@ -807,8 +928,15 @@ function update(dt) {
 }
 
 function killEnemy(e, index) {
-    for (let k = 0; k < 8; k++) {
-        addParticle(e.x, e.y, e.color, 150, 0.3, 3);
+    // Bigger, more satisfying explosion particles — more count, varied size/color
+    const isTanky = e.type === 'diamond' || e.type === 'shielded';
+    const particleCount = isTanky ? 20 : 14;
+    const particleSpeed = isTanky ? 250 : 180;
+    for (let k = 0; k < particleCount; k++) {
+        const hue = parseInt(e.color.match(/\d+/)?.[0] || '0');
+        const pColor = `hsl(${hue + Math.random() * 40 - 20}, 100%, ${60 + Math.random() * 30}%)`;
+        addParticle(e.x, e.y, k % 3 === 0 ? '#fff' : (k % 3 === 1 ? pColor : e.color),
+            particleSpeed * (0.5 + Math.random()), 0.3 + Math.random() * 0.3, 2 + Math.random() * 4);
     }
 
     enemies.splice(index, 1);
@@ -819,8 +947,48 @@ function killEnemy(e, index) {
     comboMultiplier = 1 + Math.floor(comboCount / 3) * 0.5;
     bestCombo = Math.max(bestCombo, comboCount);
 
-    score += Math.floor((25 + wave * 5) * comboMultiplier);
-    sfxKill(comboCount);
+    const killScore = Math.floor((25 + wave * 5) * comboMultiplier);
+    score += killScore;
+    sfxKill(comboCount, e.type);
+
+    // Score popup at kill location
+    const popupText = comboMultiplier > 1 ? `+${killScore} x${comboMultiplier.toFixed(1)}` : `+${killScore}`;
+    const popupColor = comboMultiplier >= 2 ? '#ffdd00' : comboMultiplier > 1 ? '#00ddff' : '#ffffff';
+    addScorePopup(e.x, e.y, popupText, popupColor);
+
+    // Chain explosion: small chance to splash 1 HP to nearby enemies (~50px)
+    // Chance increases with combo for more satisfying chains
+    const chainChance = 0.15 + Math.min(comboCount * 0.02, 0.25);
+    if (Math.random() < chainChance) {
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const nearby = enemies[j];
+            if (distFn(e.x, e.y, nearby.x, nearby.y) < 50 + e.size) {
+                nearby.hp -= 1;
+                nearby.flashTimer = 0.15;
+                sfxChainExplosion();
+                // Chain explosion particles
+                for (let k = 0; k < 5; k++) {
+                    addParticle(nearby.x, nearby.y, '#ffaa00', 100, 0.2, 3);
+                }
+                if (nearby.hp <= 0) {
+                    killEnemy(nearby, j);
+                }
+            }
+        }
+    }
+
+    // Multi-kill detection: 3+ kills in <0.5s triggers screen flash
+    const now = performance.now();
+    recentKillTimes.push(now);
+    recentKillTimes = recentKillTimes.filter(t => now - t < 500);
+    if (recentKillTimes.length >= 3) {
+        screenFlashAlpha = 0.25;
+    }
+
+    // Combo heal: every 10 kills in a combo chain, heal 1 life
+    if (comboCount > 0 && comboCount % 10 === 0) {
+        healPlayer();
+    }
 }
 
 // ============ RENDER ============
@@ -1152,6 +1320,49 @@ function drawOrb(o) {
     ctx.restore();
 }
 
+function drawHealOrb(o) {
+    const alpha = o.life < 2 ? o.life / 2 : 1;
+    const pulse = 1 + Math.sin(o.pulse) * 0.25;
+    const r = o.size * pulse;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(o.x + shakeX, o.y + shakeY);
+
+    // Green glow
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3);
+    glow.addColorStop(0, 'rgba(0, 255, 80, 0.5)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Green circle
+    ctx.fillStyle = '#00ff55';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White + symbol
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-r * 0.5, -r * 0.15, r, r * 0.3);
+    ctx.fillRect(-r * 0.15, -r * 0.5, r * 0.3, r);
+
+    ctx.restore();
+}
+
+function drawScorePopup(p) {
+    const alpha = p.life / p.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.font = `bold ${14 * devicePixelRatio}px Orbitron, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.text, p.x + shakeX, p.y + shakeY);
+    ctx.restore();
+}
+
 function drawBarrier(b) {
     const alpha = Math.min(b.life / 1.5, 1); // fade in last 1.5s
     const hw = b.width / 2;
@@ -1275,11 +1486,22 @@ function render() {
 
     if (state === 'playing' || state === 'gameover') {
         orbs.forEach(drawOrb);
+        healOrbs.forEach(drawHealOrb);
         barriers.forEach(drawBarrier);
         enemies.forEach(drawEnemy);
         beams.forEach(drawBeam);
         fragments.forEach(drawFragment);
         particles.forEach(drawParticle);
+        scorePopups.forEach(drawScorePopup);
+
+        // Screen flash overlay (white for multi-kill)
+        if (screenFlashAlpha > 0) {
+            ctx.save();
+            ctx.globalAlpha = screenFlashAlpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+        }
 
         if (state === 'playing') {
             drawPlayer();
@@ -1597,7 +1819,7 @@ document.addEventListener('keydown', e => {
     if ((e.code === 'KeyQ' || e.code === 'KeyE') && state === 'playing') {
         toggleMode();
     }
-    if (e.code === 'KeyF' && state === 'playing') {
+    if (e.code === 'KeyW' && state === 'playing') {
         barrierPlaceMode = !barrierPlaceMode;
         updateBarrierUI();
     }
