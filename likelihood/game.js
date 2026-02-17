@@ -202,14 +202,19 @@ function selectAnswer(idx) {
   document.getElementById('result-fact').textContent = q.fact;
   document.getElementById('score-label').textContent = `Score: ${score}`;
 
-  setTimeout(() => {
+  // Show next/finish button
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.textContent = roundIndex < ROUNDS - 1 ? 'Next Question →' : 'See Results 🏆';
+  nextBtn.classList.remove('hidden');
+  nextBtn.onclick = () => {
+    nextBtn.classList.add('hidden');
     roundIndex++;
     if (roundIndex < ROUNDS) {
       showRound();
     } else {
       showFinal();
     }
-  }, 3000);
+  };
 }
 
 function showFinal() {
