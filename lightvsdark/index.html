@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light vs Dark</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">
+    <div id="hud-left">
+      <div id="hp-bar-container"><div id="hp-bar"></div><span id="hp-text">100/100</span></div>
+      <div id="day-display">Day 1</div>
+      <div id="time-display">☀️ Day</div>
+      <div id="night-timer" class="hidden"></div>
+    </div>
+    <div id="hud-center">
+      <div id="hotbar"></div>
+    </div>
+    <div id="hud-right">
+      <div id="resources">
+        <span class="res" id="res-wood">🪵 0</span>
+        <span class="res" id="res-stone">🪨 0</span>
+        <span class="res" id="res-iron">⛏️ 0</span>
+        <span class="res" id="res-crystal">💎 0</span>
+      </div>
+      <div id="mode-display">Combat Mode</div>
+    </div>
+  </div>
+  <div id="minimap-container"><canvas id="minimap" width="180" height="135"></canvas></div>
+  <div id="inventory-screen" class="hidden">
+    <div id="inv-panel">
+      <h2>Inventory & Crafting</h2>
+      <div id="inv-layout">
+        <div id="inv-left">
+          <h3>Equipment</h3>
+          <div id="equip-slots">
+            <div class="equip-slot" id="equip-weapon">Weapon: <span>Wooden Sword</span></div>
+            <div class="equip-slot" id="equip-armor">Armor: <span>None</span></div>
+          </div>
+          <h3>Inventory</h3>
+          <div id="inv-grid"></div>
+          <h3>Resources</h3>
+          <div id="inv-resources"></div>
+        </div>
+        <div id="inv-right">
+          <h3>Crafting</h3>
+          <div id="craft-tier-tabs">
+            <button class="craft-tab active" data-tier="0">Basic</button>
+            <button class="craft-tab" data-tier="1">Workbench</button>
+            <button class="craft-tab" data-tier="2">Forge</button>
+            <button class="craft-tab" data-tier="3">Altar</button>
+          </div>
+          <div id="craft-list"></div>
+        </div>
+      </div>
+      <button id="inv-close">Close (Tab)</button>
+    </div>
+  </div>
+  <div id="build-menu" class="hidden">
+    <h3>Build Mode (B to close)</h3>
+    <div id="build-categories">
+      <button class="build-cat active" data-cat="defensive">Defensive</button>
+      <button class="build-cat" data-cat="resource">Resource</button>
+      <button class="build-cat" data-cat="utility">Utility</button>
+    </div>
+    <div id="build-list"></div>
+  </div>
+  <div id="splash-screen">
+    <div id="splash-content">
+      <h1>⚔️ Light vs Dark 🌓</h1>
+      <p>Defend the Light Crystal against waves of darkness.</p>
+      <p>Build by day. Survive by night.</p>
+      <div id="how-to-play">
+        <h3>Controls</h3>
+        <ul>
+          <li><b>WASD</b> — Move</li>
+          <li><b>Click</b> — Attack / Place building</li>
+          <li><b>Space</b> — Dodge roll</li>
+          <li><b>B</b> — Build mode</li>
+          <li><b>Tab</b> — Inventory & Crafting</li>
+          <li><b>1-9</b> — Hotbar</li>
+          <li><b>E</b> — Pick up items</li>
+          <li><b>R</b> — Repair nearby building</li>
+        </ul>
+        <h3>Tips</h3>
+        <ul>
+          <li>Protect the Light Crystal at the center!</li>
+          <li>Build walls and torches before night falls</li>
+          <li>Kill enemies for rare crafting materials</li>
+          <li>Light sources slow nearby enemies</li>
+        </ul>
+      </div>
+      <button id="start-btn">Start Game</button>
+      <button id="endless-btn">Endless Mode</button>
+    </div>
+  </div>
+  <div id="game-over-screen" class="hidden">
+    <div id="gameover-content">
+      <h1 id="gameover-title">Game Over</h1>
+      <p id="gameover-reason"></p>
+      <div id="gameover-stats"></div>
+      <button id="restart-btn">Play Again</button>
+    </div>
+  </div>
+  <div id="tooltip" class="hidden"></div>
+</div>
+<script src="js/utils.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/map.js"></script>
+<script src="js/lighting.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/player.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/building.js"></script>
+<script src="js/crafting.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

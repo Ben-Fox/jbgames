@@ -1,0 +1,376 @@
+// building.js — Grid placement, structures, resource generation
+const Building = (() => {
+  let buildings = []; // { type, tx, ty, hp, maxHp }
+  let selectedBuilding = null;
+  let buildMode = false;
+  
+  const TYPES = {
+    // Defensive
+    wood_wall: { name: 'Wood Wall', cat: 'defensive', hp: 50, cost: { wood: 5 }, color: '#8b6914', desc: 'Basic barrier', blocking: true },
+    stone_wall: { name: 'Stone Wall', cat: 'defensive', hp: 120, cost: { stone: 8 }, color: '#888', desc: 'Strong barrier', blocking: true },
+    iron_wall: { name: 'Iron Wall', cat: 'defensive', hp: 200, cost: { iron: 5, stone: 3 }, color: '#aaa', desc: 'Heavy barrier', blocking: true },
+    wood_gate: { name: 'Wood Gate', cat: 'defensive', hp: 40, cost: { wood: 8 }, color: '#a07020', desc: 'Player walks through, blocks enemies', blocking: false, gateBlock: true },
+    spike_trap: { name: 'Spike Trap', cat: 'defensive', hp: Infinity, cost: { wood: 3, iron: 2 }, color: '#666', desc: '10 dmg to enemies', trap: true, trapDmg: 10 },
+    arrow_tower: { name: 'Arrow Tower', cat: 'defensive', hp: 80, cost: { wood: 10, iron: 5 }, color: '#8b7355', desc: 'Auto-shoots enemies', tower: true, towerRange: 160, towerDmg: 8, towerRate: 1.5 },
+    light_turret: { name: 'Light Turret', cat: 'defensive', hp: 60, cost: { crystal: 5, iron: 3 }, color: '#66ccff', desc: 'Beam attack, strong vs dark', tower: true, towerRange: 140, towerDmg: 15, towerRate: 2, light: true, lightRadius: 80 },
+    // Resource
+    woodmill: { name: 'Woodmill', cat: 'resource', hp: 60, cost: { wood: 15, stone: 5 }, color: '#6d4c1d', desc: '1 wood / 5s', produces: 'wood', rate: 5 },
+    stone_mine: { name: 'Stone Mine', cat: 'resource', hp: 60, cost: { wood: 10, stone: 10 }, color: '#7a7a7a', desc: '1 stone / 8s', produces: 'stone', rate: 8 },
+    iron_mine: { name: 'Iron Mine', cat: 'resource', hp: 60, cost: { stone: 15, iron: 5 }, color: '#999', desc: '1 iron / 12s', produces: 'iron', rate: 12 },
+    crystal_extractor: { name: 'Crystal Extractor', cat: 'resource', hp: 60, cost: { iron: 10, crystal: 5 }, color: '#5dade2', desc: '1 crystal / 20s', produces: 'crystal', rate: 20 },
+    // Utility
+    torch: { name: 'Torch', cat: 'utility', hp: 20, cost: { wood: 2 }, color: '#ff9900', desc: 'Small light, slows enemies', light: true, lightRadius: 64, flicker: true },
+    lantern: { name: 'Lantern', cat: 'utility', hp: 40, cost: { iron: 3, crystal: 1 }, color: '#ffdd44', desc: 'Large light radius, safe zone', light: true, lightRadius: 120 },
+    workbench: { name: 'Workbench', cat: 'utility', hp: 50, cost: { wood: 10, stone: 5 }, color: '#a0845c', desc: 'Unlocks Tier 1 crafting', station: 1 },
+    forge: { name: 'Forge', cat: 'utility', hp: 70, cost: { stone: 10, iron: 10 }, color: '#c0392b', desc: 'Unlocks Tier 2 crafting', station: 2 },
+    crystal_altar: { name: 'Crystal Altar', cat: 'utility', hp: 80, cost: { iron: 10, crystal: 10 }, color: '#3498db', desc: 'Unlocks Tier 3 crafting', station: 3 },
+    healing_fountain: { name: 'Healing Fountain', cat: 'utility', hp: 60, cost: { crystal: 5, stone: 5 }, color: '#2ecc71', desc: 'Heals 2 HP/s nearby', heals: true, healRange: 80, healRate: 2 }
+  };
+  
+  function init() {
+    buildings = [];
+    selectedBuilding = null;
+    buildMode = false;
+  }
+  
+  function canPlace(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+    // Can't place on center crystal (3x3 area)
+    const cx = Math.floor(MAP_W / 2), cy = Math.floor(MAP_H / 2);
+    if (Math.abs(tx - cx) <= 1 && Math.abs(ty - cy) <= 1) return false;
+    // Can't overlap existing buildings
+    if (buildings.some(b => b.tx === tx && b.ty === ty)) return false;
+    // Can't place on env blocking objects
+    if (GameMap.isEnvBlocking(tx, ty)) return false;
+    return true;
+  }
+  
+  function place(type, tx, ty) {
+    const t = TYPES[type];
+    if (!t) return false;
+    if (!canPlace(tx, ty)) return false;
+    if (!Player.hasResources(t.cost)) return false;
+    
+    Player.spendResources(t.cost);
+    GameMap.removeEnvAt(tx, ty); // Clear any non-blocking env objects
+    
+    buildings.push({
+      type, tx, ty,
+      hp: t.hp, maxHp: t.hp,
+      produceTimer: t.rate || 0,
+      towerTimer: 0,
+      flickerPhase: Math.random() * Math.PI * 2
+    });
+    
+    Audio.build();
+    Particles.buildDust(tx * TILE + TILE / 2, ty * TILE + TILE / 2);
+    return true;
+  }
+  
+  function isBlocking(tx, ty) {
+    return buildings.some(b => b.tx === tx && b.ty === ty && (TYPES[b.type].blocking));
+  }
+  
+  function isGateBlocking(tx, ty) {
+    return buildings.some(b => b.tx === tx && b.ty === ty && TYPES[b.type].gateBlock);
+  }
+  
+  function damage(tx, ty, dmg) {
+    const b = buildings.find(b => b.tx === tx && b.ty === ty);
+    if (!b) return;
+    if (b.hp === Infinity) return;
+    b.hp -= dmg;
+    Particles.hitSparks(tx * TILE + TILE / 2, ty * TILE + TILE / 2);
+    if (b.hp <= 0) {
+      Particles.deathPoof(tx * TILE + TILE / 2, ty * TILE + TILE / 2, '#8b6914');
+      buildings = buildings.filter(bb => bb !== b);
+    }
+  }
+  
+  function repair(playerX, playerY) {
+    const px = Math.floor(playerX / TILE);
+    const py = Math.floor(playerY / TILE);
+    for (const b of buildings) {
+      if (Math.abs(b.tx - px) <= 1 && Math.abs(b.ty - py) <= 1 && b.hp < b.maxHp && b.hp !== Infinity) {
+        const t = TYPES[b.type];
+        const repairCost = {};
+        for (const [k, v] of Object.entries(t.cost)) repairCost[k] = Math.ceil(v / 2);
+        if (Player.hasResources(repairCost)) {
+          Player.spendResources(repairCost);
+          b.hp = b.maxHp;
+          Audio.repair();
+          Particles.buildDust(b.tx * TILE + TILE / 2, b.ty * TILE + TILE / 2);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  function getNearestDamageable(x, y) {
+    let nearest = null, minD = Infinity;
+    for (const b of buildings) {
+      if (b.hp === Infinity) continue;
+      const bx = b.tx * TILE + TILE / 2;
+      const by = b.ty * TILE + TILE / 2;
+      const d = dist({ x, y }, { x: bx, y: by });
+      if (d < minD) { minD = d; nearest = { ...b, x: bx, y: by }; }
+    }
+    return nearest;
+  }
+  
+  function getLightSources() {
+    const sources = [];
+    // Crystal always glows
+    sources.push({
+      x: MAP_PX_W / 2, y: MAP_PX_H / 2,
+      radius: 100 + Math.sin(Date.now() * 0.002) * 10,
+      intensity: 1, flicker: false, flickerPhase: 0
+    });
+    
+    for (const b of buildings) {
+      const t = TYPES[b.type];
+      if (t.light) {
+        sources.push({
+          x: b.tx * TILE + TILE / 2, y: b.ty * TILE + TILE / 2,
+          radius: t.lightRadius, intensity: 0.85,
+          flicker: t.flicker || false, flickerPhase: b.flickerPhase
+        });
+      }
+    }
+    return sources;
+  }
+  
+  function getMaxCraftTier() {
+    let tier = 0;
+    for (const b of buildings) {
+      const t = TYPES[b.type];
+      if (t.station && t.station > tier) tier = t.station;
+    }
+    return tier;
+  }
+  
+  function update(dt) {
+    const ps = Player.state();
+    for (const b of buildings) {
+      const t = TYPES[b.type];
+      
+      // Resource production
+      if (t.produces) {
+        b.produceTimer -= dt;
+        if (b.produceTimer <= 0) {
+          b.produceTimer = t.rate;
+          Player.addResource(t.produces, 1);
+        }
+      }
+      
+      // Tower shooting
+      if (t.tower) {
+        b.towerTimer -= dt;
+        if (b.towerTimer <= 0) {
+          const bx = b.tx * TILE + TILE / 2;
+          const by = b.ty * TILE + TILE / 2;
+          const target = findNearestEnemy(bx, by, t.towerRange);
+          if (target) {
+            b.towerTimer = t.towerRate;
+            target.hp -= t.towerDmg;
+            Particles.hitSparks(target.x, target.y);
+            Particles.damageNumber(target.x, target.y - 10, t.towerDmg, '#ffa500');
+            if (target.hp <= 0) {
+              // Let enemies module handle death
+            }
+          }
+        }
+      }
+      
+      // Spike traps
+      if (t.trap) {
+        const bx = b.tx * TILE + TILE / 2;
+        const by = b.ty * TILE + TILE / 2;
+        for (const e of Enemies.enemies()) {
+          if (dist(e, { x: bx, y: by }) < 18) {
+            e.hp -= t.trapDmg * dt;
+            if (Math.random() < 0.05) Particles.hitSparks(e.x, e.y);
+          }
+        }
+      }
+      
+      // Healing fountain
+      if (t.heals) {
+        const bx = b.tx * TILE + TILE / 2;
+        const by = b.ty * TILE + TILE / 2;
+        if (dist(ps, { x: bx, y: by }) < t.healRange) {
+          ps.hp = Math.min(ps.maxHp, ps.hp + t.healRate * dt);
+        }
+      }
+    }
+  }
+  
+  function findNearestEnemy(x, y, range) {
+    let nearest = null, minD = range;
+    for (const e of Enemies.enemies()) {
+      const d = dist({ x, y }, e);
+      if (d < minD) { minD = d; nearest = e; }
+    }
+    return nearest;
+  }
+  
+  function draw(ctx, cam) {
+    for (const b of buildings) {
+      const t = TYPES[b.type];
+      const sx = b.tx * TILE - cam.x;
+      const sy = b.ty * TILE - cam.y;
+      if (sx < -TILE || sy < -TILE || sx > ctx.canvas.width + TILE || sy > ctx.canvas.height + TILE) continue;
+      
+      ctx.fillStyle = t.color;
+      
+      if (t.blocking) {
+        // Walls — full tile with border
+        ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(sx + 1, sy + TILE - 6, TILE - 2, 5);
+      } else if (t.gateBlock) {
+        // Gate — opening in middle
+        ctx.fillRect(sx + 1, sy + 1, TILE - 2, 6);
+        ctx.fillRect(sx + 1, sy + TILE - 7, TILE - 2, 6);
+        ctx.fillRect(sx + 1, sy + 1, 6, TILE - 2);
+        ctx.fillRect(sx + TILE - 7, sy + 1, 6, TILE - 2);
+      } else if (t.trap) {
+        // Spikes
+        ctx.fillStyle = '#555';
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) {
+            ctx.fillRect(sx + 4 + i * 7, sy + 4 + j * 7, 3, 3);
+          }
+        }
+      } else if (t.tower) {
+        // Tower base
+        ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+        ctx.fillStyle = t.light ? '#88ddff' : '#666';
+        ctx.fillRect(sx + 10, sy + 2, TILE - 20, 6);
+        // Tower range indicator during build mode
+      } else if (t.light) {
+        // Torch/lantern
+        const flicker = t.flicker ? Math.sin(Date.now() * 0.01 + b.flickerPhase) * 2 : 0;
+        ctx.fillStyle = '#444';
+        ctx.fillRect(sx + 14, sy + 12, 4, 18);
+        ctx.fillStyle = t.color;
+        ctx.beginPath();
+        ctx.arc(sx + 16, sy + 10 + flicker, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Glow effect
+        if (Lighting.nightAmount() > 0.1) {
+          ctx.fillStyle = `rgba(255,200,50,${0.1 * Lighting.nightAmount()})`;
+          ctx.beginPath();
+          ctx.arc(sx + 16, sy + 10, t.lightRadius * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (t.heals) {
+        // Fountain
+        ctx.fillStyle = '#5dade2';
+        ctx.beginPath();
+        ctx.arc(sx + TILE / 2, sy + TILE / 2, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#85c1e9';
+        const bob = Math.sin(Date.now() * 0.003) * 2;
+        ctx.beginPath();
+        ctx.arc(sx + TILE / 2, sy + TILE / 2 - 4 + bob, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (t.station) {
+        // Crafting station
+        ctx.fillRect(sx + 3, sy + 8, TILE - 6, TILE - 10);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(sx + 5, sy + 10, TILE - 10, 4);
+      } else if (t.produces) {
+        // Resource building
+        ctx.fillRect(sx + 2, sy + 6, TILE - 4, TILE - 8);
+        // Chimney / details
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(sx + TILE - 10, sy + 2, 6, 8);
+      }
+      
+      // HP bar for damaged buildings
+      if (b.hp !== Infinity && b.hp < b.maxHp) {
+        const pct = b.hp / b.maxHp;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(sx, sy - 5, TILE, 3);
+        ctx.fillStyle = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
+        ctx.fillRect(sx, sy - 5, TILE * pct, 3);
+      }
+    }
+  }
+  
+  function drawGhost(ctx, cam, tx, ty) {
+    if (!selectedBuilding) return;
+    const t = TYPES[selectedBuilding];
+    if (!t) return;
+    const sx = tx * TILE - cam.x;
+    const sy = ty * TILE - cam.y;
+    const ok = canPlace(tx, ty) && Player.hasResources(t.cost);
+    
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = ok ? '#2ecc71' : '#e74c3c';
+    ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.globalAlpha = 1;
+    
+    // Show range for towers
+    if (t.tower && ok) {
+      ctx.strokeStyle = 'rgba(255,165,0,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, t.towerRange, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (t.light && ok) {
+      ctx.strokeStyle = 'rgba(255,200,50,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, t.lightRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  
+  function drawCrystal(ctx, cam) {
+    const cx = MAP_PX_W / 2 - cam.x;
+    const cy = MAP_PX_H / 2 - cam.y;
+    const pulse = Math.sin(Date.now() * 0.003) * 3;
+    
+    // Glow
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40 + pulse);
+    grad.addColorStop(0, 'rgba(100,200,255,0.4)');
+    grad.addColorStop(1, 'rgba(100,200,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 40 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Crystal shape
+    ctx.fillStyle = '#66ccff';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 20 - pulse);
+    ctx.lineTo(cx + 12, cy);
+    ctx.lineTo(cx, cy + 14);
+    ctx.lineTo(cx - 12, cy);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = '#aaddff';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 20 - pulse);
+    ctx.lineTo(cx + 6, cy - 5);
+    ctx.lineTo(cx, cy + 14);
+    ctx.closePath();
+    ctx.fill();
+  }
+  
+  return {
+    TYPES, init, canPlace, place, isBlocking, isGateBlocking, damage, repair,
+    getNearestDamageable, getLightSources, getMaxCraftTier, update, draw, drawGhost, drawCrystal,
+    buildings: () => buildings,
+    buildMode: () => buildMode,
+    setBuildMode(v) { buildMode = v; },
+    selectedBuilding: () => selectedBuilding,
+    setSelected(v) { selectedBuilding = v; },
+    buildingCount: () => buildings.length
+  };
+})();

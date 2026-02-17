@@ -1,0 +1,96 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #eee; }
+#game-container { position: relative; width: 100vw; height: 100vh; }
+#gameCanvas { display: block; width: 100%; height: 100%; }
+
+#hud { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 10px; pointer-events: none; z-index: 10; }
+#hud > div { pointer-events: auto; }
+
+#hp-bar-container { width: 200px; height: 24px; background: #333; border: 2px solid #555; border-radius: 4px; position: relative; overflow: hidden; }
+#hp-bar { height: 100%; background: linear-gradient(to right, #e74c3c, #2ecc71); width: 100%; transition: width 0.3s; }
+#hp-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+#day-display { margin-top: 4px; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 3px #000; }
+#time-display { font-size: 14px; text-shadow: 1px 1px 3px #000; }
+#night-timer { font-size: 14px; color: #ff6b6b; font-weight: bold; }
+
+#hotbar { display: flex; gap: 4px; }
+.hotbar-slot { width: 48px; height: 48px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; text-align: center; cursor: pointer; position: relative; color: #ccc; }
+.hotbar-slot.active { border-color: #f1c40f; box-shadow: 0 0 8px rgba(241,196,15,0.5); }
+.hotbar-slot .slot-key { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #888; }
+
+#resources { text-align: right; }
+.res { display: block; font-size: 14px; text-shadow: 1px 1px 3px #000; margin: 2px 0; }
+#mode-display { margin-top: 6px; font-size: 13px; padding: 3px 8px; background: rgba(0,0,0,0.5); border-radius: 4px; text-align: center; }
+
+#minimap-container { position: absolute; bottom: 10px; right: 10px; border: 2px solid #555; border-radius: 4px; overflow: hidden; z-index: 10; opacity: 0.85; }
+#minimap { display: block; background: #111; }
+
+.hidden { display: none !important; }
+
+#inventory-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 50; display: flex; align-items: center; justify-content: center; }
+#inv-panel { background: #1a1a2e; border: 2px solid #555; border-radius: 8px; padding: 20px; width: 700px; max-height: 80vh; overflow-y: auto; }
+#inv-panel h2 { text-align: center; margin-bottom: 12px; color: #f1c40f; }
+#inv-panel h3 { margin: 8px 0 6px; color: #3498db; font-size: 14px; }
+#inv-layout { display: flex; gap: 20px; }
+#inv-left, #inv-right { flex: 1; }
+.equip-slot { background: #252545; padding: 6px 10px; border-radius: 4px; margin: 4px 0; font-size: 13px; }
+.equip-slot span { color: #2ecc71; }
+#inv-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.inv-item { width: 44px; height: 44px; background: #252545; border: 1px solid #444; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center; cursor: pointer; position: relative; }
+.inv-item:hover { border-color: #f1c40f; }
+.inv-item .item-count { position: absolute; bottom: 1px; right: 3px; font-size: 9px; color: #aaa; }
+#inv-resources { font-size: 13px; line-height: 1.8; }
+#craft-tier-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.craft-tab { background: #252545; border: 1px solid #444; color: #aaa; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.craft-tab.active { border-color: #f1c40f; color: #f1c40f; }
+.craft-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+#craft-list { max-height: 350px; overflow-y: auto; }
+.craft-recipe { background: #252545; border: 1px solid #333; border-radius: 4px; padding: 8px; margin: 4px 0; cursor: pointer; font-size: 12px; }
+.craft-recipe:hover { border-color: #3498db; }
+.craft-recipe.cant-craft { opacity: 0.5; }
+.craft-recipe .recipe-name { font-weight: bold; color: #eee; }
+.craft-recipe .recipe-cost { color: #aaa; margin-top: 2px; }
+.craft-recipe .recipe-cost .has { color: #2ecc71; }
+.craft-recipe .recipe-cost .need { color: #e74c3c; }
+#inv-close { display: block; margin: 12px auto 0; background: #e74c3c; border: none; color: #fff; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+
+#build-menu { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(26,26,46,0.95); border: 2px solid #555; border-radius: 8px; padding: 12px; width: 220px; z-index: 20; max-height: 70vh; overflow-y: auto; }
+#build-menu h3 { text-align: center; color: #f1c40f; margin-bottom: 8px; font-size: 14px; }
+#build-categories { display: flex; gap: 4px; margin-bottom: 8px; }
+.build-cat { background: #252545; border: 1px solid #444; color: #aaa; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; flex: 1; }
+.build-cat.active { border-color: #f1c40f; color: #f1c40f; }
+#build-list { }
+.build-item { background: #252545; border: 1px solid #333; border-radius: 4px; padding: 8px; margin: 4px 0; cursor: pointer; font-size: 11px; }
+.build-item:hover { border-color: #3498db; }
+.build-item.selected { border-color: #2ecc71; background: #1a3a2e; }
+.build-item.cant-afford { opacity: 0.5; }
+.build-item .bi-name { font-weight: bold; color: #eee; }
+.build-item .bi-cost { color: #aaa; margin-top: 2px; }
+.build-item .bi-desc { color: #888; font-style: italic; margin-top: 2px; }
+
+#splash-screen { position: absolute; inset: 0; background: radial-gradient(ellipse at center, #1a1a3e 0%, #000 70%); z-index: 100; display: flex; align-items: center; justify-content: center; }
+#splash-content { text-align: center; max-width: 500px; padding: 20px; }
+#splash-content h1 { font-size: 36px; margin-bottom: 10px; background: linear-gradient(to right, #f1c40f, #e67e22); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+#splash-content p { color: #aaa; margin: 6px 0; font-size: 16px; }
+#how-to-play { text-align: left; margin: 16px 0; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; }
+#how-to-play h3 { color: #3498db; margin-bottom: 6px; }
+#how-to-play ul { list-style: none; padding: 0; }
+#how-to-play li { margin: 4px 0; font-size: 13px; }
+#how-to-play li b { color: #f1c40f; }
+#start-btn, #endless-btn { background: #2ecc71; border: none; color: #fff; padding: 12px 30px; font-size: 18px; border-radius: 6px; cursor: pointer; margin: 8px; transition: transform 0.1s; }
+#start-btn:hover, #endless-btn:hover { transform: scale(1.05); }
+#endless-btn { background: #9b59b6; }
+
+#game-over-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; }
+#gameover-content { text-align: center; }
+#gameover-title { font-size: 48px; margin-bottom: 12px; }
+#gameover-title.victory { color: #f1c40f; }
+#gameover-title.defeat { color: #e74c3c; }
+#gameover-reason { font-size: 18px; color: #aaa; margin-bottom: 16px; }
+#gameover-stats { font-size: 14px; color: #ccc; margin-bottom: 20px; line-height: 2; }
+#restart-btn { background: #3498db; border: none; color: #fff; padding: 12px 30px; font-size: 18px; border-radius: 6px; cursor: pointer; }
+
+#tooltip { position: absolute; background: rgba(20,20,40,0.95); border: 1px solid #555; border-radius: 4px; padding: 6px 10px; font-size: 12px; z-index: 60; pointer-events: none; max-width: 250px; }
+
+.damage-number { position: absolute; font-weight: bold; font-size: 16px; pointer-events: none; z-index: 30; text-shadow: 1px 1px 2px #000; animation: float-up 0.8s ease-out forwards; }
+@keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
