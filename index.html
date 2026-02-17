@@ -85,10 +85,11 @@ footer p+p{margin-top:.3rem}
           <stop offset="0%" stop-color="#ff69b4" stop-opacity="0.5"/>
           <stop offset="100%" stop-color="#ff69b4" stop-opacity="0"/>
         </radialGradient>
-        <!-- Mask to cut the logo out from behind the text -->
+        <!-- Mask to cut the logo out from behind the text with buffer -->
         <mask id="textMask">
           <rect width="700" height="300" fill="white"/>
-          <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1" fill="black">BrainSmacks</text>
+          <!-- Thicker knockout for readable buffer -->
+          <text x="350" y="195" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="62" letter-spacing="-1" fill="black" stroke="black" stroke-width="16">BrainSmacks</text>
         </mask>
       </defs>
 
@@ -139,23 +140,10 @@ footer p+p{margin-top:.3rem}
           <ellipse cx="165" cy="95" rx="25" ry="15" fill="rgba(255,255,255,0.1)"/>
           <ellipse cx="220" cy="80" rx="15" ry="10" fill="rgba(255,255,255,0.08)"/>
 
-          <!-- Fun cartoon eyes -->
-          <ellipse cx="175" cy="125" rx="14" ry="16" fill="#fff"/>
-          <ellipse cx="225" cy="120" rx="14" ry="16" fill="#fff"/>
-          <circle cx="180" cy="127" r="8" fill="#1a1a2e"/>
-          <circle cx="230" cy="122" r="8" fill="#1a1a2e"/>
-          <circle cx="182" cy="124" r="3" fill="#fff"/>
-          <circle cx="232" cy="119" r="3" fill="#fff"/>
-          <!-- Raised eyebrow -->
-          <path d="M162 108 C170 102, 185 102, 192 108" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M212 104 C220 98, 235 100, 240 108" stroke="#d44a90" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-          <!-- Big grin eating the computer -->
-          <path d="M260 150 C280 145, 320 148, 340 155 C320 168, 280 170, 260 160Z" fill="#1a1a2e"/>
-          <!-- Teeth -->
-          <path d="M268 153 L275 147 L282 153 L289 147 L296 153 L303 147 L310 153 L317 147 L324 153 L331 148 L338 155" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <!-- Tongue -->
-          <ellipse cx="300" cy="163" rx="12" ry="5" fill="#ff3385" opacity="0.7"/>
+          <!-- Extra abstract folds for detail -->
+          <path d="M240 90 C260 82, 280 95, 270 110" stroke="#d44a90" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M140 170 C160 162, 180 175, 170 190" stroke="#c93d85" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+          <path d="M200 150 C220 142, 245 150, 240 168" stroke="#d44a90" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
         </g>
 
         <!-- Crunch/chomp particles -->
