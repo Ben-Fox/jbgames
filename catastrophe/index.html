@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CATASTROPHE 🐱 Maximum Chaos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka+One&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a0a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Fredoka One', cursive;
+    overflow: hidden;
+  }
+
+  #gameWrapper {
+    position: relative;
+    width: 900px;
+  }
+
+  #topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #ff6b35, #f7c59f, #ff6b35);
+    border-radius: 12px 12px 0 0;
+    border: 3px solid #ff6b35;
+    border-bottom: none;
+  }
+
+  #scoreDisplay {
+    font-family: 'Bangers', cursive;
+    font-size: 28px;
+    color: #1a0a2e;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.4);
+  }
+
+  #timerDisplay {
+    font-family: 'Bangers', cursive;
+    font-size: 36px;
+    color: #1a0a2e;
+    letter-spacing: 3px;
+  }
+
+  #timerDisplay.danger { color: #cc0000; animation: pulse 0.5s infinite; }
+
+  #chaosDisplay {
+    font-family: 'Bangers', cursive;
+    font-size: 18px;
+    color: #1a0a2e;
+    text-align: right;
+  }
+
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+  canvas {
+    display: block;
+    border: 3px solid #ff6b35;
+    border-top: none;
+    cursor: none;
+  }
+
+  #floatingScore {
+    position: absolute;
+    pointer-events: none;
+    font-family: 'Bangers', cursive;
+    font-size: 32px;
+    color: #ffdd00;
+    text-shadow: 2px 2px 0 #ff4500;
+    z-index: 10;
+    opacity: 0;
+    transition: none;
+  }
+
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 5, 30, 0.92);
+    border-radius: 0 0 12px 12px;
+    z-index: 100;
+  }
+
+  #overlay h1 {
+    font-family: 'Bangers', cursive;
+    font-size: 80px;
+    color: #ff6b35;
+    letter-spacing: 6px;
+    text-shadow: 4px 4px 0 #1a0a2e, 0 0 40px #ff4500;
+    margin-bottom: 10px;
+    animation: wobble 2s infinite;
+  }
+
+  @keyframes wobble {
+    0%,100%{transform:rotate(-2deg) scale(1)}
+    50%{transform:rotate(2deg) scale(1.05)}
+  }
+
+  #overlay p {
+    color: #f7c59f;
+    font-size: 22px;
+    margin: 6px 0;
+    letter-spacing: 1px;
+  }
+
+  #overlay .emoji-row { font-size: 50px; margin: 10px 0; }
+
+  #startBtn, #restartBtn {
+    margin-top: 20px;
+    padding: 16px 48px;
+    font-family: 'Bangers', cursive;
+    font-size: 32px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+    color: white;
+    border: 4px solid #ffdd00;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #cc3300, 0 0 30px rgba(255,100,0,0.5);
+    transition: all 0.1s;
+  }
+
+  #startBtn:hover, #restartBtn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 9px 0 #cc3300, 0 0 50px rgba(255,100,0,0.8);
+  }
+
+  #startBtn:active, #restartBtn:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #cc3300;
+  }
+
+  .control-hint {
+    display: flex;
+    gap: 20px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hint-badge {
+    background: rgba(255,107,53,0.15);
+    border: 2px solid #ff6b35;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #f7c59f;
+    font-size: 16px;
+  }
+
+  #scoreCard {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  #scoreCard .big-score {
+    font-family: 'Bangers', cursive;
+    font-size: 80px;
+    color: #ffdd00;
+    text-shadow: 3px 3px 0 #ff4500;
+  }
+
+  #scoreCard .rank {
+    font-size: 26px;
+    color: #f7c59f;
+    margin-top: -10px;
+  }
+
+  #actionLog {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .logEntry {
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    color: #ffdd00;
+    text-shadow: 1px 1px 0 #000;
+    opacity: 1;
+    transition: opacity 1s;
+    white-space: nowrap;
+  }
+
+  #controls {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-size: 13px;
+    color: rgba(247, 197, 159, 0.6);
+    text-align: right;
+    pointer-events: none;
+  }
+
+  #fireWarning {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bangers', cursive;
+    font-size: 40px;
+    color: #ff2200;
+    text-shadow: 0 0 20px #ff8800;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <div id="topBar">
+    <div id="scoreDisplay">SCORE: <span id="scoreVal">0</span></div>
+    <div id="timerDisplay"><span id="timerVal">90</span>s</div>
+    <div id="chaosDisplay">CHAOS LEVEL:<br><span id="chaosVal">😴 Sleeping</span></div>
+  </div>
+  <canvas id="gameCanvas" width="900" height="560"></canvas>
+  <div id="actionLog"></div>
+  <div id="controls">← → Move &nbsp;|&nbsp; ↑/Z Jump &nbsp;|&nbsp; E Interact/Push</div>
+  <div id="fireWarning">🔥 THE HOUSE IS ON FIRE! 🔥</div>
+  <div id="overlay">
+    <h1>🐱 CATASTROPHE</h1>
+    <div class="emoji-row">💥 🪴 🏺 🖼️ 🔥</div>
+    <p>You are a cat. Destroy EVERYTHING.</p>
+    <p>Push, knock, scratch & cause chaos!</p>
+    <p style="color:#ffdd00">90 seconds. Maximum damage. GO!</p>
+    <div class="control-hint">
+      <span class="hint-badge">← → Move</span>
+      <span class="hint-badge">↑ or Z Jump</span>
+      <span class="hint-badge">E Push/Interact</span>
+      <span class="hint-badge">Hold E on objects</span>
+    </div>
+    <button id="startBtn" onclick="startGame()">START MAYHEM 😈</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const W = 900, H = 560;
+let gameState = 'menu';
+let score = 0;
+let timeLeft = 90;
+let timerInterval;
+let animFrame;
+let fireActive = false;
+let fireSpread = 0;
+let particles = [];
+let logEntries = [];
+let floatingTexts = [];
+let hasLighter = false;
+let stoveOn = false;
+let lightUsed = false;
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Cat
+let cat = {
+  x: 80, y: 400, w: 32, h: 28,
+  vx: 0, vy: 0,
+  onGround: false,
+  facing: 1,
+  state: 'idle', // idle, walk, jump, push
+  frame: 0,
+  frameTimer: 0,
+  eHeld: 0,
+  pushCooldown: 0,
+  tail: 0
+};
+
+// Platforms / floor
+const platforms = [
+  { x: 0, y: 500, w: 900, h: 60, color: '#8B6F47' }, // floor
+  { x: 50, y: 370, w: 150, h: 16, color: '#6B4423' }, // left shelf
+  { x: 280, y: 320, w: 120, h: 16, color: '#6B4423' }, // mid shelf
+  { x: 480, y: 370, w: 140, h: 16, color: '#6B4423' }, // right shelf
+  { x: 680, y: 280, w: 120, h: 16, color: '#6B4423' }, // high shelf
+  { x: 130, y: 210, w: 180, h: 16, color: '#6B4423' }, // top left shelf
+  { x: 380, y: 180, w: 160, h: 16, color: '#6B4423' }, // top mid
+  // Kitchen counter
+  { x: 560, y: 440, w: 240, h: 20, color: '#C0A882' },
+  // sofa
+  { x: 60, y: 460, w: 160, h: 40, color: '#A0522D' },
+  // coffee table
+  { x: 320, y: 470, w: 120, h: 30, color: '#8B6914' },
+];
+
+// Destructible objects
+let objects = [];
+
+function initObjects() {
+  objects = [
+  // GLASSES / CUPS (1pt each)
+  { id:'glass1', type:'glass', x:90, y:357, w:14, h:18, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', onPlatform:1, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  { id:'glass2', type:'glass', x:130, y:357, w:14, h:18, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', onPlatform:1, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  { id:'mug', type:'glass', x:680, y:467, w:16, h:20, destroyed:false, pts:1, color:'#e07a5f', label:'Mug', onPlatform:7, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  { id:'vase', type:'vase', x:310, y:303, w:18, h:22, destroyed:false, pts:2, color:'#6a9ebc', label:'Vase', onPlatform:2, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  { id:'plant', type:'plant', x:840, y:487, w:22, h:24, destroyed:false, pts:2, color:'#4a7c59', label:'Plant', pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  { id:'plant2', type:'plant', x:490, y:357, w:22, h:24, destroyed:false, pts:2, color:'#2d6a4f', label:'Fern', onPlatform:4, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  // CURTAINS (5pts, scratching)
+  { id:'curtain1', type:'curtain', x:10, y:270, w:28, h:230, destroyed:false, pts:5, color:'#c0392b', label:'Curtains', scratchable:true, pushable:false },
+  { id:'curtain2', type:'curtain', x:862, y:270, w:28, h:230, destroyed:false, pts:5, color:'#c0392b', label:'Curtains', scratchable:true, pushable:false },
+  // BOOKS (2pts knocked off)
+  { id:'book1', type:'book', x:155, y:197, w:22, h:14, destroyed:false, pts:2, color:'#e74c3c', label:'Book', onPlatform:5, pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  { id:'book2', type:'book', x:178, y:197, w:22, h:14, destroyed:false, pts:2, color:'#3498db', label:'Book', onPlatform:5, pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  { id:'book3', type:'book', x:200, y:197, w:18, h:14, destroyed:false, pts:2, color:'#f39c12', label:'Book', onPlatform:5, pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  // FISHBOWL (special - cat interaction, 3pts)
+  { id:'fishbowl', type:'fishbowl', x:400, y:165, w:28, h:26, destroyed:false, pts:3, color:'#85c1e9', label:'Fishbowl 🐠', onPlatform:6, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  // PICTURE FRAMES (wall decor, push box to reach, 10pts)
+  { id:'painting', type:'painting', x:380, y:80, w:80, h:60, destroyed:false, pts:10, color:'#8e44ad', label:'Priceless Painting', fixed:true, wallHang:true, scratchable:false, reachable:false },
+  // LAMP (3pts, knock over)
+  { id:'lamp', type:'lamp', x:336, y:448, w:14, h:28, destroyed:false, pts:3, color:'#f9ca24', label:'Lamp', pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  // TROPHY (4pts)
+  { id:'trophy', type:'trophy', x:700, y:265, w:18, h:26, destroyed:false, pts:4, color:'#f1c40f', label:'Trophy', onPlatform:4, pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  // KEYBOARD (2pts)
+  { id:'keyboard', type:'keyboard', x:290, y:457, w:55, h:14, destroyed:false, pts:2, color:'#bdc3c7', label:'Keyboard', pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  // TOILET PAPER (1pt - unroll)
+  { id:'tp', type:'tp', x:450, y:487, w:18, h:18, destroyed:false, pts:1, color:'#ecf0f1', label:'Toilet Paper', pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  // STOVE KNOB (interaction object - must be turned on)
+  { id:'stove', type:'stove', x:580, y:370, w:80, h:70, destroyed:false, pts:0, color:'#7f8c8d', label:'Stove', fixed:true, interactive:true },
+  { id:'stoveknob', type:'stoveknob', x:600, y:378, w:14, h:14, destroyed:false, pts:5, color:'#e74c3c', label:'Turn Knob', fixed:true, interactive:true },
+  // LIGHTER (collectable on high shelf)
+  { id:'lighter', type:'lighter', x:690, y:266, w:14, h:18, destroyed:false, pts:0, color:'#e67e22', label:'🔥 Lighter!', onPlatform:4, pushable:false, collectable:true },
+  // TOASTER (3pts)
+  { id:'toaster', type:'toaster', x:640, y:422, w:36, h:26, destroyed:false, pts:3, color:'#95a5a6', label:'Toaster', pushable:true, vx:0, vy:0, onGround:false, smashable:true },
+  // CLOCK (2pts on wall)
+  { id:'clock', type:'clock', x:220, y:110, w:30, h:30, destroyed:false, pts:2, color:'#ecf0f1', label:'Clock', fixed:true, interactive:true, scratchable:true },
+  // PHOTO FRAMES
+  { id:'photo1', type:'photo', x:500, y:110, w:36, h:30, destroyed:false, pts:3, color:'#e8daef', label:'Family Photo', fixed:true, interactive:true, scratchable:true },
+  // TV (massive 8pts if knocked over)
+  { id:'tv', type:'tv', x:345, y:438, w:80, h:36, destroyed:false, pts:8, color:'#2c3e50', label:'HDTV 📺', pushable:true, vx:0, vy:0, onGround:false, smashable:true, heavy:true },
+  // Pillows on sofa (1pt each)
+  { id:'pillow1', type:'pillow', x:75, y:443, w:24, h:18, destroyed:false, pts:1, color:'#e056da', label:'Pillow', pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  { id:'pillow2', type:'pillow', x:180, y:443, w:24, h:18, destroyed:false, pts:1, color:'#fdcb6e', label:'Pillow', pushable:true, vx:0, vy:0, onGround:false, smashable:false },
+  ];
+}
+
+// Push boxes (for reaching high areas)
+let pushBoxes = [];
+function initBoxes() {
+  pushBoxes = [
+    { x:420, y:470, w:40, h:30, vx:0, vy:0, onGround:false, color:'#8B4513', label:'Box 📦' },
+    { x:200, y:470, w:36, h:36, vx:0, vy:0, onGround:false, color:'#DEB887', label:'Crate 🗃️' },
+  ];
+}
+
+function addScore(pts, label, x, y) {
+  score += pts;
+  document.getElementById('scoreVal').textContent = score;
+  updateChaosLevel();
+  // floating text
+  floatingTexts.push({ x, y: y - 10, text: `+${pts} ${label}`, life: 120, vy: -1.5 });
+  addLog(`${label}: +${pts}pts!`);
+}
+
+function addLog(msg) {
+  const log = document.getElementById('actionLog');
+  const div = document.createElement('div');
+  div.className = 'logEntry';
+  div.textContent = '😈 ' + msg;
+  log.appendChild(div);
+  if (log.children.length > 4) log.removeChild(log.firstChild);
+  setTimeout(() => {
+    div.style.opacity = '0';
+    setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 1000);
+  }, 2500);
+}
+
+function updateChaosLevel() {
+  const el = document.getElementById('chaosVal');
+  if (score < 10) el.textContent = '😴 Napping';
+  else if (score < 25) el.textContent = '😏 Mischievous';
+  else if (score < 50) el.textContent = '😼 Chaotic';
+  else if (score < 80) el.textContent = '🔥 Destructive';
+  else if (score < 120) el.textContent = '💥 CATASTROPHIC';
+  else el.textContent = '☢️ LEGENDARY';
+}
+
+// Particle system
+function spawnParticles(x, y, color, count, type='smash') {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 6 + 2;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 3,
+      color,
+      life: 40 + Math.random() * 30,
+      maxLife: 70,
+      size: type === 'smoke' ? 8 + Math.random() * 8 : 3 + Math.random() * 5,
+      type
+    });
+  }
+}
+
+function spawnFireParticles(x, y) {
+  const colors = ['#ff4500','#ff6b35','#ffdd00','#ff8c00'];
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      x: x + (Math.random()-0.5)*20,
+      y,
+      vx: (Math.random()-0.5)*2,
+      vy: -2 - Math.random()*3,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      life: 30 + Math.random()*20,
+      maxLife: 50,
+      size: 6 + Math.random()*8,
+      type: 'fire'
+    });
+  }
+}
+
+// Collision helpers
+function rectOverlap(a, b) {
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+
+function landOnPlatform(entity) {
+  entity.onGround = false;
+  const allPlatforms = [...platforms, ...pushBoxes.map(b => ({x:b.x,y:b.y,w:b.w,h:b.h}))];
+  for (const p of allPlatforms) {
+    if (entity.x + entity.w > p.x && entity.x < p.x + p.w &&
+        entity.y + entity.h <= p.y + 8 && entity.y + entity.h + entity.vy >= p.y) {
+      entity.y = p.y - entity.h;
+      entity.vy = 0;
+      entity.onGround = true;
+    }
+    // Ceiling
+    if (entity.x + entity.w > p.x && entity.x < p.x + p.w &&
+        entity.y >= p.y + p.h - 4 && entity.y + entity.vy <= p.y + p.h) {
+      entity.vy = Math.abs(entity.vy);
+    }
+    // Walls
+    if (entity.y + entity.h > p.y + 4 && entity.y < p.y + p.h) {
+      if (entity.x + entity.w > p.x && entity.x + entity.w < p.x + p.w && entity.vx > 0) {
+        entity.x = p.x - entity.w; entity.vx = 0;
+      }
+      if (entity.x < p.x + p.w && entity.x > p.x && entity.vx < 0) {
+        entity.x = p.x + p.w; entity.vx = 0;
+      }
+    }
+  }
+  // Bounds
+  if (entity.x < 0) { entity.x = 0; entity.vx = 0; }
+  if (entity.x + entity.w > W) { entity.x = W - entity.w; entity.vx = 0; }
+  if (entity.y + entity.h > H) { entity.y = H - entity.h; entity.vy = 0; entity.onGround = true; }
+}
+
+function updateCat() {
+  if (gameState !== 'playing') return;
+
+  const speed = 3.8;
+  const jumpPower = -11;
+
+  // Movement
+  if (keys['ArrowLeft'] || keys['KeyA']) {
+    cat.vx = -speed;
+    cat.facing = -1;
+    cat.state = 'walk';
+  } else if (keys['ArrowRight'] || keys['KeyD']) {
+    cat.vx = speed;
+    cat.facing = 1;
+    cat.state = 'walk';
+  } else {
+    cat.vx *= 0.7;
+    cat.state = 'idle';
+  }
+
+  // Jump
+  if ((keys['ArrowUp'] || keys['KeyZ'] || keys['KeyW'] || keys['Space']) && cat.onGround) {
+    cat.vy = jumpPower;
+    cat.onGround = false;
+    cat.state = 'jump';
+    spawnParticles(cat.x + cat.w/2, cat.y + cat.h, '#8B6F47', 5, 'dust');
+  }
+
+  // Gravity
+  cat.vy += 0.5;
+  cat.x += cat.vx;
+  cat.y += cat.vy;
+
+  if (cat.vy > 0) cat.state = 'jump';
+
+  landOnPlatform(cat);
+  if (cat.onGround && Math.abs(cat.vx) < 0.3) cat.state = 'idle';
+
+  // Interact / push
+  if (keys['KeyE'] || keys['ShiftLeft']) {
+    cat.eHeld++;
+    cat.state = 'push';
+  } else {
+    cat.eHeld = 0;
+    if (cat.onGround) cat.state = Math.abs(cat.vx) > 0.5 ? 'walk' : 'idle';
+  }
+
+  cat.tail = Math.sin(Date.now() * 0.005) * 15;
+
+  // Interact with objects
+  if (cat.pushCooldown > 0) cat.pushCooldown--;
+
+  if ((keys['KeyE'] || keys['ShiftLeft']) && cat.pushCooldown === 0) {
+    interactWithObjects();
+  }
+
+  // Cat animation
+  cat.frameTimer++;
+  if (cat.frameTimer > 8) { cat.frame = (cat.frame + 1) % 4; cat.frameTimer = 0; }
+}
+
+function interactWithObjects() {
+  const catReach = { x: cat.x + (cat.facing > 0 ? cat.w : -24), y: cat.y, w: 28, h: cat.h + 10 };
+
+  // Push boxes
+  for (const box of pushBoxes) {
+    if (rectOverlap(catReach, box)) {
+      box.vx = cat.facing * 3;
+      cat.pushCooldown = 8;
+    }
+  }
+
+  // Interact with objects
+  for (const obj of objects) {
+    if (obj.destroyed) continue;
+    const reach = { x: obj.x - 12, y: obj.y - 12, w: obj.w + 24, h: obj.h + 24 };
+    if (!rectOverlap({ x: cat.x, y: cat.y, w: cat.w, h: cat.h }, reach)) continue;
+
+    // Lighter collect
+    if (obj.type === 'lighter' && obj.collectable) {
+      hasLighter = true;
+      obj.destroyed = true;
+      addLog('🔥 Grabbed the lighter!');
+      spawnParticles(obj.x + obj.w/2, obj.y + obj.h/2, '#e67e22', 15);
+      cat.pushCooldown = 30;
+      continue;
+    }
+
+    // Stove knob
+    if (obj.type === 'stoveknob' && !stoveOn) {
+      stoveOn = true;
+      obj.color = '#2ecc71';
+      addScore(5, 'Stove On!', obj.x, obj.y);
+      addLog('💨 Gas is ON...');
+      cat.pushCooldown = 40;
+      continue;
+    }
+
+    // Light stove on fire
+    if (obj.type === 'stove' && stoveOn && hasLighter && !lightUsed) {
+      lightUsed = true;
+      triggerFire();
+      cat.pushCooldown = 40;
+      continue;
+    }
+
+    // Scratchable
+    if (obj.scratchable && cat.eHeld > 20 && !obj.destroyed) {
+      obj.destroyed = true;
+      addScore(obj.pts, `Destroyed ${obj.label}!`, obj.x, obj.y);
+      spawnParticles(obj.x + obj.w/2, obj.y + obj.h/2, obj.color, 20);
+      cat.pushCooldown = 40;
+      continue;
+    }
+
+    // Curtain scratch
+    if (obj.type === 'curtain' && !obj.destroyed && cat.eHeld > 25) {
+      obj.destroyed = true;
+      addScore(5, `Shredded ${obj.label}!`, obj.x, obj.y);
+      spawnParticles(obj.x + obj.w/2, obj.y + obj.h/2, '#c0392b', 30);
+      cat.pushCooldown = 50;
+      continue;
+    }
+
+    // Pushable
+    if (obj.pushable && !obj.destroyed) {
+      obj.vx = cat.facing * (obj.heavy ? 1.5 : 3.5);
+      cat.pushCooldown = 10;
+    }
+  }
+}
+
+function updateObjects() {
+  for (const obj of objects) {
+    if (obj.destroyed || obj.fixed || !obj.pushable) continue;
+
+    obj.vx *= 0.85;
+    obj.vy = (obj.vy || 0) + 0.5;
+    obj.x += obj.vx;
+    obj.y += obj.vy;
+
+    // Platform collisions for objects
+    let onGround = false;
+    for (const p of platforms) {
+      if (obj.x + obj.w > p.x && obj.x < p.x + p.w &&
+          obj.y + obj.h <= p.y + 8 && obj.y + obj.h + obj.vy >= p.y) {
+        obj.y = p.y - obj.h;
+        if (Math.abs(obj.vy) > 4 && obj.smashable) {
+          // SMASH on landing!
+          obj.destroyed = true;
+          addScore(obj.pts, `Smashed ${obj.label}!`, obj.x + obj.w/2, obj.y);
+          spawnParticles(obj.x + obj.w/2, obj.y, obj.color, 25);
+          break;
+        }
+        obj.vy = 0;
+        onGround = true;
+      }
+    }
+    // For boxes acting as platforms too
+    for (const box of pushBoxes) {
+      if (obj.x + obj.w > box.x && obj.x < box.x + box.w &&
+          obj.y + obj.h <= box.y + 8 && obj.y + obj.h + obj.vy >= box.y) {
+        obj.y = box.y - obj.h;
+        obj.vy = 0;
+        onGround = true;
+      }
+    }
+    if (!onGround && obj.y + obj.h >= H) {
+      obj.y = H - obj.h;
+      if (Math.abs(obj.vy) > 4 && obj.smashable) {
+        obj.destroyed = true;
+        addScore(obj.pts, `Smashed ${obj.label}!`, obj.x + obj.w/2, obj.y);
+        spawnParticles(obj.x + obj.w/2, obj.y, obj.color, 25);
+      } else {
+        obj.vy = 0;
+      }
+    }
+    if (obj.x < 0) { obj.x = 0; obj.vx = Math.abs(obj.vx); }
+    if (obj.x + obj.w > W) { obj.x = W - obj.w; obj.vx = -Math.abs(obj.vx); }
+
+    // Check if painting can be reached: if a box is under it
+    if (obj.id === 'painting') {
+      const painting = obj;
+      // Player can scratch it if they reach it
+      const catReach = { x: cat.x + (cat.facing>0?cat.w:-20), y:cat.y-10, w:30, h:cat.h+20 };
+      const paintRect = { x:painting.x-10, y:painting.y-10, w:painting.w+20, h:painting.h+20 };
+      if (!painting.destroyed && (keys['KeyE']||keys['ShiftLeft']) && rectOverlap(catReach, paintRect)) {
+        painting.destroyed = true;
+        addScore(10, '🖼️ PRICELESS PAINTING DESTROYED!!!', painting.x, painting.y);
+        spawnParticles(painting.x + painting.w/2, painting.y + painting.h/2, '#8e44ad', 50);
+        spawnParticles(painting.x + painting.w/2, painting.y + painting.h/2, '#f39c12', 30);
+      }
+    }
+  }
+}
+
+function updateBoxes() {
+  for (const box of pushBoxes) {
+    box.vx *= 0.85;
+    box.vy = (box.vy || 0) + 0.5;
+    box.x += box.vx;
+    box.y += box.vy;
+
+    box.onGround = false;
+    for (const p of platforms) {
+      if (box.x + box.w > p.x && box.x < p.x + p.w &&
+          box.y + box.h <= p.y + 8 && box.y + box.h + box.vy >= p.y - 2) {
+        box.y = p.y - box.h;
+        box.vy = 0;
+        box.onGround = true;
+      }
+    }
+    if (box.y + box.h >= H) { box.y = H - box.h; box.vy = 0; box.onGround = true; }
+    if (box.x < 0) { box.x = 0; box.vx = Math.abs(box.vx); }
+    if (box.x + box.w > W) { box.x = W - box.w; box.vx = -Math.abs(box.vx); }
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.type !== 'fire' && p.type !== 'smoke') p.vy += 0.2;
+    p.life--;
+    if (p.type === 'fire' || p.type === 'smoke') p.size *= 0.97;
+  }
+}
+
+function triggerFire() {
+  if (fireActive) return;
+  fireActive = true;
+  addScore(50, '🔥 SET THE HOUSE ON FIRE!!!', 650, 400);
+  addLog('🔥🔥🔥 MAXIMUM CHAOS! FIRE!!! 🔥🔥🔥');
+  document.getElementById('fireWarning').style.opacity = '1';
+  document.getElementById('fireWarning').style.animation = 'pulse 0.4s infinite';
+  setTimeout(() => {
+    document.getElementById('fireWarning').style.opacity = '0';
+  }, 4000);
+  // Spread bonus over time
+  let bonus = setInterval(() => {
+    if (!fireActive || gameState !== 'playing') { clearInterval(bonus); return; }
+    fireSpread++;
+    if (fireSpread % 5 === 0) {
+      addScore(5, '🔥 Fire Spreading!', 620 + Math.random()*100, 400);
+    }
+    if (fireSpread > 30) clearInterval(bonus);
+  }, 1000);
+}
+
+// ===== DRAWING =====
+function drawBackground() {
+  // Wall
+  const wallGrad = ctx.createLinearGradient(0, 0, 0, H);
+  wallGrad.addColorStop(0, '#f5e6c8');
+  wallGrad.addColorStop(1, '#e8d5a3');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Wallpaper stripes
+  ctx.strokeStyle = 'rgba(200,180,130,0.3)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 60); ctx.stroke();
+  }
+
+  // Floor
+  const floorGrad = ctx.createLinearGradient(0, 500, 0, H);
+  floorGrad.addColorStop(0, '#8B6F47');
+  floorGrad.addColorStop(1, '#6B4F37');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, 500, W, 60);
+  // Floor wood planks
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 2;
+  for (let x = 0; x < W; x += 80) {
+    ctx.beginPath(); ctx.moveTo(x, 500); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // Windows
+  drawWindow(600, 60, 160, 150);
+  drawWindow(80, 80, 130, 120);
+
+  // Baseboard
+  ctx.fillStyle = '#c8a87a';
+  ctx.fillRect(0, 492, W, 10);
+}
+
+function drawWindow(x, y, w, h) {
+  // Sky outside
+  const sky = ctx.createLinearGradient(x, y, x, y+h);
+  sky.addColorStop(0, '#87ceeb');
+  sky.addColorStop(1, '#b0e0ff');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x, y, w, h);
+  // Clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath(); ctx.ellipse(x+40, y+40, 25, 15, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+60, y+35, 20, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+100, y+55, 22, 14, 0, 0, Math.PI*2); ctx.fill();
+  // Frame
+  ctx.strokeStyle = '#8B6F47';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(x, y, w, h);
+  // Cross
+  ctx.beginPath(); ctx.moveTo(x+w/2, y); ctx.lineTo(x+w/2, y+h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y+h/2); ctx.lineTo(x+w, y+h/2); ctx.stroke();
+}
+
+function drawPlatforms() {
+  for (let i = 1; i < platforms.length; i++) {
+    const p = platforms[i];
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(p.x, p.y + p.h - 4, p.w, 4);
+    // bracket supports
+    ctx.fillStyle = '#4a3020';
+    ctx.fillRect(p.x + 10, p.y + p.h, 8, 12);
+    ctx.fillRect(p.x + p.w - 18, p.y + p.h, 8, 12);
+  }
+  // Sofa
+  ctx.fillStyle = '#A0522D';
+  ctx.fillRect(60, 460, 160, 40);
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(60, 450, 16, 50); // arm
+  ctx.fillRect(204, 450, 16, 50);
+  ctx.fillStyle = '#C0A882'; // cushion
+  ctx.fillRect(78, 458, 50, 22);
+  ctx.fillRect(132, 458, 50, 22);
+
+  // Coffee table legs
+  ctx.fillStyle = '#6B4914';
+  ctx.fillRect(322, 490, 8, 16);
+  ctx.fillRect(428, 490, 8, 16);
+
+  // Kitchen counter front
+  ctx.fillStyle = '#A0887A';
+  ctx.fillRect(560, 460, 240, 40);
+  ctx.fillStyle = '#C0A882';
+  ctx.fillRect(555, 438, 250, 8); // countertop edge
+}
+
+function drawObjects() {
+  for (const obj of objects) {
+    if (obj.destroyed) continue;
+    drawObject(obj);
+  }
+}
+
+function drawObject(obj) {
+  const { x, y, w, h, color, type } = obj;
+
+  switch(type) {
+    case 'glass':
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x+2, y+2, w-4, h*0.4);
+      break;
+
+    case 'vase':
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.3, y+h);
+      ctx.quadraticCurveTo(x, y+h*0.7, x+w*0.2, y+h*0.3);
+      ctx.quadraticCurveTo(x+w/2, y, x+w*0.8, y+h*0.3);
+      ctx.quadraticCurveTo(x+w, y+h*0.7, x+w*0.7, y+h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      break;
+
+    case 'plant':
+      // Pot
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(x+4, y+h*0.55, w-8, h*0.45);
+      // Leaves
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h*0.3, w*0.45, h*0.35, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+w/2+5, y+h*0.2, w*0.3, h*0.25, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+w/2-5, y+h*0.25, w*0.3, h*0.2, -0.4, 0, Math.PI*2); ctx.fill();
+      break;
+
+    case 'curtain':
+      if (!obj.destroyed) {
+        const curtGrad = ctx.createLinearGradient(x, y, x+w, y);
+        curtGrad.addColorStop(0, '#922b21');
+        curtGrad.addColorStop(0.5, '#c0392b');
+        curtGrad.addColorStop(1, '#922b21');
+        ctx.fillStyle = curtGrad;
+        ctx.beginPath();
+        for (let i = 0; i <= 5; i++) {
+          const cx = x + (i/5)*w;
+          const cy = y + Math.sin(i * Math.PI) * 8;
+          i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+        }
+        ctx.lineTo(x+w, y+h);
+        ctx.lineTo(x, y+h);
+        ctx.closePath();
+        ctx.fill();
+        // Curtain rod
+        ctx.fillStyle = '#7f8c8d';
+        ctx.fillRect(x-5, y-5, w+10, 8);
+      }
+      break;
+
+    case 'book':
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(x, y, 3, h);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(x+5, y+3, w-8, 1);
+      ctx.fillRect(x+5, y+5, w-8, 1);
+      break;
+
+    case 'fishbowl':
+      ctx.fillStyle = 'rgba(133,193,233,0.5)';
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#5dade2';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.stroke();
+      // Fish
+      const fishX = x+w/2 + Math.sin(Date.now()*0.003)*6;
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.ellipse(fishX, y+h/2+3, 5, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.moveTo(fishX+5, y+h/2+3);
+      ctx.lineTo(fishX+9, y+h/2);
+      ctx.lineTo(fishX+9, y+h/2+6);
+      ctx.fill();
+      break;
+
+    case 'painting':
+      ctx.fillStyle = '#5d2e8c';
+      ctx.fillRect(x-5, y-5, w+10, h+10);
+      ctx.fillStyle = '#f0d060';
+      ctx.fillRect(x-3, y-3, w+6, h+6);
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+      // Abstract art
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath(); ctx.ellipse(x+w*0.3, y+h*0.4, 20, 15, 0.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(x+w*0.5, y+h*0.2, 22, 18);
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.2, y+h*0.7);
+      ctx.lineTo(x+w*0.5, y+h*0.2);
+      ctx.lineTo(x+w*0.8, y+h*0.7);
+      ctx.fill();
+      // Gold label
+      ctx.fillStyle = '#f0d060';
+      ctx.font = '8px Fredoka One';
+      ctx.textAlign = 'center';
+      ctx.fillText('VERY EXPENSIVE', x+w/2, y+h+12);
+      break;
+
+    case 'lamp':
+      // base
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(x+3, y+h-6, w-6, 6);
+      // pole
+      ctx.fillStyle = '#95a5a6';
+      ctx.fillRect(x+w/2-2, y+4, 4, h-10);
+      // shade
+      ctx.fillStyle = obj.destroyed ? '#555' : '#f9ca24';
+      ctx.beginPath();
+      ctx.moveTo(x, y+10); ctx.lineTo(x+w, y+10);
+      ctx.lineTo(x+w-4, y); ctx.lineTo(x+4, y);
+      ctx.closePath(); ctx.fill();
+      if (!obj.destroyed) {
+        ctx.fillStyle = 'rgba(249,202,36,0.3)';
+        ctx.beginPath(); ctx.ellipse(x+w/2, y+15, w*0.8, 20, 0, 0, Math.PI*2); ctx.fill();
+      }
+      break;
+
+    case 'trophy':
+      ctx.fillStyle = color;
+      ctx.fillRect(x+4, y+h-8, w-8, 8);
+      ctx.fillRect(x+w/2-2, y+h-14, 4, 8);
+      ctx.beginPath();
+      ctx.moveTo(x, y+10);
+      ctx.quadraticCurveTo(x-8, y+h*0.5, x+w*0.2, y+h-14);
+      ctx.lineTo(x+w*0.8, y+h-14);
+      ctx.quadraticCurveTo(x+w+8, y+h*0.5, x+w, y+10);
+      ctx.lineTo(x, y+10);
+      ctx.fill();
+      ctx.fillStyle = '#f39c12';
+      ctx.font = '10px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', x+w/2, y+16);
+      break;
+
+    case 'keyboard':
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      for (let i = 0; i < 10; i++) {
+        ctx.fillRect(x+3+i*5, y+3, 4, 4);
+        ctx.fillRect(x+3+i*5, y+8, 4, 4);
+      }
+      break;
+
+    case 'tp':
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/4, h/4, 0, 0, Math.PI*2); ctx.stroke();
+      break;
+
+    case 'stove':
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(x, y, w, h);
+      // Burners
+      ctx.fillStyle = stoveOn ? '#ff4500' : '#555';
+      ctx.beginPath(); ctx.ellipse(x+20, y+20, 12, 12, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+55, y+20, 12, 12, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+20, y+50, 12, 12, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+55, y+50, 12, 12, 0, 0, Math.PI*2); ctx.fill();
+      if (stoveOn) {
+        // Gas flame animation
+        ctx.fillStyle = 'rgba(255,100,0,0.6)';
+        const flameH = 8 + Math.sin(Date.now()*0.01)*4;
+        [x+20, x+55].forEach(bx => {
+          [y+20, y+50].forEach(by => {
+            ctx.beginPath(); ctx.ellipse(bx, by-flameH/2, 6, flameH/2, 0, 0, Math.PI*2); ctx.fill();
+          });
+        });
+      }
+      // Label
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '10px Fredoka One';
+      ctx.textAlign = 'center';
+      ctx.fillText('STOVE', x+w/2, y+h-6);
+      break;
+
+    case 'stoveknob':
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(x+w/2-1, y+2, 2, h/2);
+      break;
+
+    case 'lighter':
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y+4, w, h-4);
+      ctx.fillStyle = '#f39c12';
+      ctx.fillRect(x+2, y, w-4, 8);
+      if (!obj.destroyed) {
+        ctx.fillStyle = '#ff4500';
+        ctx.font = '14px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔥', x+w/2, y);
+      }
+      break;
+
+    case 'toaster':
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y+6, w, h-6);
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(x+8, y, 8, 10);
+      ctx.fillRect(x+20, y, 8, 10);
+      ctx.fillStyle = '#555';
+      ctx.fillRect(x+4, y+6, 4, h-8);
+      ctx.fillRect(x+w-8, y+6, 4, h-8);
+      break;
+
+    case 'clock':
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2-2, h/2-2, 0, 0, Math.PI*2); ctx.stroke();
+      // Hands
+      const now = Date.now() / 1000;
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x+w/2, y+h/2);
+      ctx.lineTo(x+w/2 + Math.sin(now*0.5)*8, y+h/2 - Math.cos(now*0.5)*8);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x+w/2, y+h/2);
+      ctx.lineTo(x+w/2 + Math.sin(now*6)*6, y+h/2 - Math.cos(now*6)*6);
+      ctx.stroke();
+      break;
+
+    case 'photo':
+      ctx.fillStyle = '#7d3c98';
+      ctx.fillRect(x-3, y-3, w+6, h+6);
+      ctx.fillStyle = '#f5eef8';
+      ctx.fillRect(x, y, w, h);
+      // Simple family stick figures
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.ellipse(x+10, y+10, 4, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+20, y+10, 4, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+28, y+12, 3, 3, 0, 0, Math.PI*2); ctx.fill();
+      break;
+
+    case 'tv':
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+      const tvScreen = ctx.createLinearGradient(x+5, y+5, x+w-5, y+h-8);
+      tvScreen.addColorStop(0, '#1a1a2e');
+      tvScreen.addColorStop(1, '#16213e');
+      ctx.fillStyle = tvScreen;
+      ctx.fillRect(x+5, y+5, w-10, h-16);
+      // TV static
+      if (!obj.destroyed) {
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        for (let i = 0; i < 8; i++) {
+          ctx.fillRect(x+5+Math.random()*(w-10), y+5+Math.random()*(h-16), 6, 2);
+        }
+        ctx.fillStyle = '#4a4a8a';
+        ctx.font = '9px Fredoka One';
+        ctx.textAlign = 'center';
+        ctx.fillText('📺 CAT TV', x+w/2, y+h/2-8);
+      }
+      ctx.fillStyle = '#555';
+      ctx.fillRect(x+w/2-12, y+h-10, 24, 4);
+      ctx.fillRect(x+w/2-20, y+h-6, 40, 6);
+      break;
+
+    case 'pillow':
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x+3, y+3, w-6, h-6);
+      break;
+  }
+
+  // Label hint on hover (always show for interactive items)
+  if (obj.interactive || obj.type === 'lighter' || obj.type === 'painting') {
+    ctx.fillStyle = 'rgba(255,220,0,0.9)';
+    ctx.font = 'bold 10px Fredoka One';
+    ctx.textAlign = 'center';
+    ctx.fillText('[E] ' + obj.label, x + w/2, y - 5);
+  }
+}
+
+function drawBoxes() {
+  for (const box of pushBoxes) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(box.x+4, box.y+box.h, box.w-4, 6);
+    ctx.fillStyle = box.color;
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(box.x, box.y, box.w, box.h);
+    // Cross pattern
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(box.x, box.y); ctx.lineTo(box.x+box.w, box.y+box.h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(box.x+box.w, box.y); ctx.lineTo(box.x, box.y+box.h); ctx.stroke();
+    ctx.fillStyle = '#555';
+    ctx.font = '11px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(box.label, box.x+box.w/2, box.y+box.h/2+4);
+  }
+}
+
+function drawCat() {
+  ctx.save();
+  ctx.translate(cat.x + cat.w/2, cat.y + cat.h/2);
+  ctx.scale(cat.facing, 1);
+
+  const t = Date.now() * 0.005;
+  const bodyBob = cat.onGround ? Math.sin(t * 3) * (cat.state === 'walk' ? 2 : 0.5) : 0;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, cat.h/2 + 2, cat.w*0.4, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Tail
+  ctx.save();
+  ctx.strokeStyle = '#FF8C00';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  const tailAngle = (cat.tail * Math.PI) / 180;
+  ctx.beginPath();
+  ctx.moveTo(-cat.w/2 + 4, bodyBob + 4);
+  ctx.quadraticCurveTo(
+    -cat.w/2 - 16 + Math.cos(tailAngle) * 10,
+    bodyBob - 12 + Math.sin(tailAngle) * 8,
+    -cat.w/2 - 20,
+    bodyBob - 20 + Math.sin(tailAngle) * 15
+  );
+  ctx.stroke();
+  ctx.restore();
+
+  // Body
+  ctx.fillStyle = '#FF8C00';
+  ctx.beginPath();
+  ctx.ellipse(0, bodyBob, cat.w*0.45, cat.h*0.35, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#FFA500';
+  ctx.beginPath();
+  ctx.ellipse(cat.w*0.2, bodyBob - cat.h*0.2, cat.h*0.28, cat.h*0.28, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#FF8C00';
+  ctx.beginPath();
+  ctx.moveTo(cat.w*0.1, bodyBob - cat.h*0.42);
+  ctx.lineTo(cat.w*0.0, bodyBob - cat.h*0.62);
+  ctx.lineTo(cat.w*0.22, bodyBob - cat.h*0.42);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cat.w*0.28, bodyBob - cat.h*0.42);
+  ctx.lineTo(cat.w*0.38, bodyBob - cat.h*0.58);
+  ctx.lineTo(cat.w*0.45, bodyBob - cat.h*0.38);
+  ctx.fill();
+  // Inner ears
+  ctx.fillStyle = '#ff6b9d';
+  ctx.beginPath();
+  ctx.moveTo(cat.w*0.1, bodyBob - cat.h*0.46);
+  ctx.lineTo(cat.w*0.03, bodyBob - cat.h*0.58);
+  ctx.lineTo(cat.w*0.2, bodyBob - cat.h*0.46);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cat.w*0.30, bodyBob - cat.h*0.44);
+  ctx.lineTo(cat.w*0.37, bodyBob - cat.h*0.54);
+  ctx.lineTo(cat.w*0.43, bodyBob - cat.h*0.40);
+  ctx.fill();
+
+  // Eyes
+  const eyeX = cat.w*0.22;
+  const eyeY = bodyBob - cat.h*0.22;
+  if (cat.state === 'push') {
+    // Mischievous squint
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.ellipse(eyeX - 5, eyeY, 3, 2, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(eyeX + 5, eyeY, 3, 2, 0.3, 0, Math.PI*2); ctx.fill();
+    // Angry brows
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(eyeX-8, eyeY-5); ctx.lineTo(eyeX-2, eyeY-3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(eyeX+2, eyeY-3); ctx.lineTo(eyeX+8, eyeY-5); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath(); ctx.ellipse(eyeX - 5, eyeY, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(eyeX + 5, eyeY, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.ellipse(eyeX - 4, eyeY - 1, 1.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(eyeX + 6, eyeY - 1, 1.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Nose
+  ctx.fillStyle = '#ff9999';
+  ctx.beginPath();
+  ctx.moveTo(eyeX, eyeY + 4);
+  ctx.lineTo(eyeX - 2.5, eyeY + 7);
+  ctx.lineTo(eyeX + 2.5, eyeY + 7);
+  ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 1;
+  [[-14, -1], [-16, 1], [-14, 3], [14, -1], [16, 1], [14, 3]].forEach((w, i) => {
+    ctx.beginPath();
+    ctx.moveTo(eyeX + (i < 3 ? -2 : 2), eyeY + 6);
+    ctx.lineTo(eyeX + w[0], eyeY + w[1] * 2);
+    ctx.stroke();
+  });
+
+  // Legs (walking animation)
+  const legSwing = cat.state === 'walk' ? Math.sin(t * 8) * 8 : 0;
+  ctx.fillStyle = '#FF8C00';
+  // Front legs
+  ctx.fillRect(cat.w*0.1, bodyBob + 6, 6, 10 + Math.max(0, legSwing));
+  ctx.fillRect(cat.w*0.25, bodyBob + 6, 6, 10 + Math.max(0, -legSwing));
+  // Back legs
+  ctx.fillRect(-cat.w*0.35, bodyBob + 6, 6, 10 + Math.max(0, -legSwing));
+  ctx.fillRect(-cat.w*0.2, bodyBob + 6, 6, 10 + Math.max(0, legSwing));
+
+  // Stripes
+  ctx.strokeStyle = 'rgba(200,80,0,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-6, bodyBob-8); ctx.lineTo(-6, bodyBob+8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2, bodyBob-6); ctx.lineTo(2, bodyBob+8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10, bodyBob-4); ctx.lineTo(10, bodyBob+6); ctx.stroke();
+
+  // Lighter indicator
+  if (hasLighter) {
+    ctx.fillStyle = '#e67e22';
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔥', 0, bodyBob - cat.h*0.7);
+  }
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    if (p.type === 'fire' || p.type === 'smoke') {
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.size, p.size, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFloatingTexts() {
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life--;
+    const alpha = Math.min(1, ft.life / 40);
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 22px Bangers';
+    ctx.fillStyle = '#ffdd00';
+    ctx.strokeStyle = '#ff4500';
+    ctx.lineWidth = 3;
+    ctx.textAlign = 'center';
+    ctx.strokeText(ft.text, ft.x, ft.y);
+    ctx.fillText(ft.text, ft.x, ft.y);
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFire() {
+  if (!fireActive) return;
+  // Spreading fire at stove area
+  const baseX = 580;
+  const intensity = Math.min(fireSpread / 30, 1);
+
+  // Fire spread across the room
+  const fireWidth = 80 + fireSpread * 15;
+  for (let x = baseX; x < Math.min(baseX + fireWidth, W); x += 20) {
+    spawnFireParticles(x, 440);
+    if (fireSpread > 10) spawnFireParticles(x, 400);
+  }
+  if (fireSpread > 20) {
+    for (let x = 200; x < 600; x += 25) {
+      spawnFireParticles(x, 500);
+    }
+  }
+  // Fire glow overlay
+  const fireGlow = ctx.createRadialGradient(baseX + fireWidth/2, 440, 10, baseX + fireWidth/2, 440, 300);
+  fireGlow.addColorStop(0, `rgba(255,100,0,${0.15 * intensity})`);
+  fireGlow.addColorStop(1, 'rgba(255,0,0,0)');
+  ctx.fillStyle = fireGlow;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawHUD() {
+  // E button hint near cat
+  if (gameState === 'playing') {
+    ctx.fillStyle = 'rgba(255,220,100,0.85)';
+    ctx.font = 'bold 11px Fredoka One';
+    ctx.textAlign = 'center';
+    ctx.fillText('[E] PUSH/INTERACT', cat.x + cat.w/2, cat.y - 14);
+
+    // Items hint
+    if (hasLighter && stoveOn && !lightUsed) {
+      ctx.fillStyle = '#ff4500';
+      ctx.font = 'bold 14px Bangers';
+      ctx.fillText('🔥 Go to STOVE with lighter! [E]', W/2, 30);
+    } else if (!hasLighter && !stoveOn) {
+      // small tip
+    }
+  }
+}
+
+let lastFrame = 0;
+function gameLoop(timestamp) {
+  const dt = timestamp - lastFrame;
+  lastFrame = timestamp;
+
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawFire();
+  drawPlatforms();
+  drawBoxes();
+  drawObjects();
+  updateBoxes();
+  updateObjects();
+  updateCat();
+  updateParticles();
+  drawCat();
+  drawParticles();
+  drawFloatingTexts();
+  drawHUD();
+
+  if (gameState === 'playing') {
+    animFrame = requestAnimationFrame(gameLoop);
+  }
+}
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  score = 0;
+  timeLeft = 90;
+  fireActive = false;
+  fireSpread = 0;
+  particles = [];
+  floatingTexts = [];
+  hasLighter = false;
+  stoveOn = false;
+  lightUsed = false;
+  cat.x = 80; cat.y = 400;
+  cat.vx = 0; cat.vy = 0;
+  document.getElementById('scoreVal').textContent = '0';
+  document.getElementById('timerVal').textContent = '90';
+  document.getElementById('timerDisplay').classList.remove('danger');
+  document.getElementById('chaosVal').textContent = '😴 Napping';
+  document.getElementById('actionLog').innerHTML = '';
+  document.getElementById('fireWarning').style.opacity = '0';
+  initObjects();
+  initBoxes();
+
+  gameState = 'playing';
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('timerVal').textContent = timeLeft;
+    if (timeLeft <= 15) document.getElementById('timerDisplay').classList.add('danger');
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  gameState = 'ended';
+  cancelAnimationFrame(animFrame);
+
+  // Final fire particles burst
+  if (fireActive) {
+    for (let i = 0; i < 5; i++) spawnFireParticles(450 + Math.random()*200, 350);
+  }
+
+  let rank = '😺 Curious Kitty';
+  if (score >= 150) rank = '☢️ LEGENDARY DESTROYER';
+  else if (score >= 100) rank = '💥 CATASTROPHIC';
+  else if (score >= 70) rank = '🔥 Arsonist';
+  else if (score >= 50) rank = '😈 Demon Cat';
+  else if (score >= 30) rank = '😼 Menace';
+  else if (score >= 15) rank = '😏 Naughty Kitty';
+
+  const overlay = document.getElementById('overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div id="scoreCard">
+      <p style="color:#f7c59f;font-size:24px;margin-bottom:10px">TIME'S UP! 🐱</p>
+      <div class="big-score">${score}</div>
+      <p style="color:#ffdd00;font-size:22px">POINTS OF CHAOS</p>
+      <p class="rank">${rank}</p>
+      ${fireActive ? '<p style="color:#ff4500;font-size:20px;margin-top:8px">🔥 You burned the house down!</p>' : ''}
+      ${!fireActive && !stoveOn ? '<p style="color:#aaa;font-size:15px;margin-top:8px">Tip: Find the lighter on the high shelf & turn on the stove!</p>' : ''}
+      ${stoveOn && !lightUsed ? '<p style="color:#aaa;font-size:15px;margin-top:8px">So close! Had gas on but no fire...</p>' : ''}
+    </div>
+    <button id="restartBtn" onclick="startGame()">PLAY AGAIN 😈</button>
+    <div class="control-hint" style="margin-top:12px">
+      <span class="hint-badge">← → Move</span>
+      <span class="hint-badge">↑ or Z Jump</span>
+      <span class="hint-badge">E Push/Interact</span>
+    </div>
+  `;
+}
+
+// Start with overlay shown (do nothing, menu state)
+</script>
+</body>
+</html>
