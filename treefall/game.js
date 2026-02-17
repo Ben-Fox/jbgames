@@ -289,7 +289,7 @@ class Tree {
     this.pivotX = this.x;
     this.pivotY = this.y - this.cutY;
     this.falling = true;
-    this.angularVel = cutAngle > 0 ? 0.005 : -0.005;
+    this.angularVel = cutAngle;
     playSound('creak');
   }
   update(dt, wind) {
@@ -719,6 +719,10 @@ function drawObject(obj) {
 
 // Particles
 function spawnParticles(x, y, type, count) {
+  // Cap total particles to prevent performance issues
+  const maxParticles = 150;
+  if (particles.length > maxParticles) return;
+  count = Math.min(count, maxParticles - particles.length);
   for (let i = 0; i < count; i++) {
     const p = {
       x, y,
@@ -779,7 +783,7 @@ function drawParticles() {
 
 // Wind lines
 function updateWindLines(dt) {
-  if (Math.abs(windCurrent) > 0.3 && Math.random() < 0.1 * dt) {
+  if (Math.abs(windCurrent) > 0.3 && Math.random() < 0.05 * dt && windLines.length < 20) {
     windLines.push({
       x: windCurrent > 0 ? -20 : W + 20,
       y: Math.random() * H * 0.7,
@@ -822,7 +826,7 @@ function drawBackground() {
   // Clouds
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
   const cloudT = animFrame * 0.0002;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     const cx = ((i * 200 + cloudT * 50 * (i + 1)) % (W + 200)) - 100;
     const cy = 40 + i * 35;
     ctx.beginPath();
@@ -1261,7 +1265,7 @@ function evaluateResult() {
 
   if (success) {
     playSound('cheer');
-    spawnParticles(W / 2, H / 3, 'confetti', 50);
+    spawnParticles(W / 2, H / 3, 'confetti', 20);
   } else {
     playSound('trombone');
   }
@@ -1336,8 +1340,11 @@ function executeCut() {
   if (state !== 'cutting' || !cutLine) return;
   const tree = trees[activeTreeIndex];
   // Determine fall direction from cut angle
-  const fallAngle = cutLine.angle > -Math.PI / 2 && cutLine.angle < Math.PI / 2 ? -0.01 : 0.01;
-  tree.startFall(fallAngle);
+  // If cut angle points right (cos > 0), the wedge is on the right, tree falls RIGHT (positive angle)
+  // If cut angle points left (cos < 0), tree falls LEFT (negative angle)
+  const cosA = Math.cos(cutLine.angle);
+  const fallDir = cosA > 0 ? 0.05 : -0.05;
+  tree.startFall(fallDir);
   state = 'falling';
   fallTime = 0;
   timberBtn.style.display = 'none';
@@ -1345,7 +1352,7 @@ function executeCut() {
 
   if (levelData.slowMo) slowMoFactor = 0.3;
 
-  spawnParticles(tree.x, tree.y - tree.height * 0.15, 'sawdust', 25);
+  spawnParticles(tree.x, tree.y - tree.height * 0.15, 'sawdust', 15);
 }
 
 canvas.addEventListener('mousedown', onPointerDown);
@@ -1593,9 +1600,8 @@ function gameLoop(time) {
   lastTime = time;
   animFrame++;
 
-  resize();
-  update(dt);
-  draw();
+  try { update(dt); } catch(e) { console.error('Update error:', e); }
+  try { draw(); } catch(e) { console.error('Draw error:', e); }
   requestAnimationFrame(gameLoop);
 }
 
