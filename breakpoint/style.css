@@ -272,6 +272,8 @@ body {
   transition: all .2s;
 }
 .action-btn:hover { background: #554a30; border-color: #ff6b35; }
+.action-btn.sacrifice { background: #2a3520; border-color: #4a5; color: #8d8; }
+.action-btn.sacrifice:hover { background: #3a4530; border-color: #6c6; color: #afa; }
 
 /* ACTION LOG - collapsed by default */
 #log-toggle {
@@ -404,4 +406,26 @@ body {
   .hp-bar-container { height: 24px; }
   .hp-bar { font-size: 12px; }
   .title { font-size: 36px; }
+}
+
+/* Royal Combo animation */
+.royal-flash {
+  background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, transparent 70%) !important;
+}
+.royal-text {
+  color: #ffd700 !important;
+  text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00 !important;
+}
+
+/* Suit streak flash */
+.suit-streak-flash {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9998;
+  animation: suitFlash 0.6s ease-out forwards;
+}
+@keyframes suitFlash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
 }

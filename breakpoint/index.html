@@ -44,6 +44,10 @@
       <p>🔥 <b>Pressure:</b> Don't attack for 2 turns = +1 pressure. At 3 pressure = lose your hand + 5 HP</p>
       <p>💎 <b>Overcharge:</b> Stored charge > 12? Flip a card — black = 10 damage + lose all charge</p>
       <p>💥 <b>Momentum:</b> Deal 10+ damage in one hit = play 2 cards next turn</p>
+      <p>♠♠ <b>Suit Streaks:</b> Play same suit twice in a row: ♠♠ +2 dmg, ♥♥ heal 3, ♦♦ charge ×1.5</p>
+      <p>👑 <b>Royal Combo:</b> Play J, Q, K in any order across 3 turns = 8 unblockable damage</p>
+      <p>🩹 <b>Sacrifice:</b> Discard a card to heal HP equal to its value (uses your action, doesn't count as attack)</p>
+      <p>🩸 <b>Life Steal:</b> Ace of Spades heals 3 HP if the attack deals damage</p>
     </div>
   </div>
   <button id="deal-btn">DEAL</button>
@@ -113,6 +117,7 @@
 
   <div id="action-bar">
     <button id="play-btn" class="action-btn hidden">PLAY CARD</button>
+    <button id="sacrifice-btn" class="action-btn sacrifice hidden">🩹 SACRIFICE</button>
     <button id="pass-btn" class="action-btn hidden">END TURN</button>
     <button id="use-charge-btn" class="action-btn hidden">USE CHARGE</button>
   </div>
@@ -135,6 +140,11 @@
         <p><b>🔥 Pressure:</b> No attacks for 2 turns = +1 pressure. At 3 = discard hand + lose 5 HP.</p>
         <p><b>💎 Overcharge:</b> Charge > 12 at turn start → flip card. Black = 10 dmg + lose all charge.</p>
         <p><b>💥 Momentum:</b> 10+ damage in one hit → play 2 cards next turn.</p>
+        <hr>
+        <p><b>♠♠ Suit Streaks:</b> Same suit 2 turns in a row: ♠♠ Double Strike (+2 dmg), ♥♥ Healing Aura (+3 HP), ♦♦ Power Surge (charge ×1.5).</p>
+        <p><b>👑 Royal Combo:</b> Play J, Q, K (any order/suit) in 3 consecutive turns → 8 unblockable damage.</p>
+        <p><b>🩹 Sacrifice:</b> Discard a card to heal HP equal to its value. Uses your action; doesn't count as attack.</p>
+        <p><b>🩸 Life Steal:</b> Ace of Spades heals attacker 3 HP when damage lands.</p>
       </div>
       <button id="close-rules" class="action-btn">GOT IT</button>
     </div>
