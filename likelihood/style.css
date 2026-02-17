@@ -165,7 +165,10 @@ h1 {
   h1 { font-size: 2.5rem; }
   .question-text { font-size: 1.15rem; }
   .options { grid-template-columns: 1fr; gap: 0.75rem; }
-  .option-btn { padding: 1rem; }
+  .option-btn { padding: 1rem; min-height: 48px; }
   #game { padding: 1rem 0.75rem; }
+  .btn-play { min-height: 48px; }
+  .btn-next { min-height: 48px; }
+  .mode-btn { min-height: 44px; }
   #final-score { font-size: 2.2rem; }
 }

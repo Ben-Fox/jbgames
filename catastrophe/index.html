@@ -22,7 +22,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100vh; font-family: 'Fredoka One', cursive; overflow: hidden;
   }
-  #gameWrapper { position: relative; width: 960px; }
+  #gameWrapper { position: relative; width: 960px; max-width: 100vw; }
   #topBar {
     display: flex; justify-content: space-between; align-items: center;
     padding: 6px 16px; background: linear-gradient(90deg, #ff6b35, #f7c59f, #ff6b35);
@@ -34,7 +34,7 @@
   #chaosDisplay { font-family: 'Bangers', cursive; font-size: 16px; color: #1a0a2e; text-align: right; }
   #destructionDisplay { font-family: 'Bangers', cursive; font-size: 14px; color: #1a0a2e; }
   @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
-  canvas { display: block; border: 3px solid #ff6b35; border-top: none; cursor: none; }
+  canvas { display: block; border: 3px solid #ff6b35; border-top: none; cursor: none; width: 100%; height: auto; }
   #overlay {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -79,6 +79,18 @@
     position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
     font-family: 'Bangers', cursive; font-size: 20px; color: rgba(255,220,100,0.7);
     pointer-events: none; z-index: 5; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+  @media (max-width: 600px) {
+    #overlay h1 { font-size: 42px; letter-spacing: 3px; }
+    #overlay p { font-size: 16px; }
+    .btn { font-size: 22px; padding: 12px 32px; }
+    #topBar { padding: 4px 8px; flex-wrap: wrap; gap: 4px; }
+    #scoreDisplay { font-size: 18px; }
+    #timerDisplay { font-size: 24px; }
+    #chaosDisplay { font-size: 13px; }
+    .hint-badge { font-size: 12px; padding: 3px 8px; }
+    #warningBanner { font-size: 24px; }
+    #comboDisplay { font-size: 28px; }
   }
 </style>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -2474,7 +2486,7 @@ function endGame() {
   `;
 }
 </script>
-<div id="more-games" style="position:fixed;bottom:0;left:0;right:0;background:rgba(14,14,18,0.95);padding:8px 16px;z-index:9998;display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Space Grotesk',system-ui,sans-serif;border-top:1px solid #333">
+<div id="more-games" style="position:fixed;bottom:0;left:0;right:0;background:rgba(14,14,18,0.95);padding:8px 16px;z-index:9998;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-family:'Space Grotesk',system-ui,sans-serif;border-top:1px solid #333">
   <span style="color:#888;font-size:13px;margin-right:8px">More games →</span>
   <a href="../heavyeye/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Heavy Eye</a>
   <a href="../holdfast/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Holdfast</a>

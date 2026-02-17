@@ -56,6 +56,17 @@ body { background: #0a0a1a; color: #fff; font-family: 'Segoe UI', system-ui, san
 #share-text { font-size: 0.9rem; opacity: 0.6; margin-bottom: 2rem; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: background 0.2s; }
 #share-text:hover { background: rgba(255,255,255,0.05); }
 .end-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .title { font-size: clamp(2rem, 8vw, 4rem); }
+  .name-inputs { flex-direction: column; gap: 0.5rem; }
+  .name-inputs input { width: 180px; }
+  #start-btn { font-size: 1.1rem; padding: 0.8rem 2rem; min-height: 48px; }
+  .player-indicator { min-width: 70px; }
+  .player-name { font-size: clamp(0.85rem, 2.5vw, 1.2rem); }
+  .game-area { gap: 0.5rem; }
+  .end-buttons button { min-height: 48px; font-size: 1rem; }
+  #play-again-btn { min-height: 48px; }
+}
 .end-buttons button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.1rem; font-weight: 600; padding: 0.8rem 2rem; border-radius: 50px; cursor: pointer; transition: all 0.15s; }
 .end-buttons button:hover { background: rgba(255,255,255,0.15); transform: scale(1.03); }
 #play-again-btn { background: linear-gradient(135deg, #2980b9, #5dade2); border: none; }

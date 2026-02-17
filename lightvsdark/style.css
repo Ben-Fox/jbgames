@@ -130,3 +130,22 @@ body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
 /* Hotbar new item highlight */
 .hotbar-slot.new-item { animation: hotbar-flash 0.6s ease-out; }
 @keyframes hotbar-flash { 0% { box-shadow: 0 0 15px #f1c40f, inset 0 0 10px rgba(241,196,15,0.3); } 100% { box-shadow: none; } }
+
+@media (max-width: 600px) {
+  #hp-bar-container { width: 120px; height: 20px; }
+  #hp-text { font-size: 10px; }
+  #day-display { font-size: 14px; }
+  .hotbar-slot { width: 40px; height: 40px; font-size: 9px; }
+  .res { font-size: 12px; }
+  #splash-content h1 { font-size: 24px; }
+  #splash-content p { font-size: 13px; }
+  #how-to-play li { font-size: 11px; }
+  #start-btn, #endless-btn { padding: 10px 24px; font-size: 16px; min-height: 48px; }
+  #build-menu, #defend-menu { width: 170px; padding: 8px; font-size: 11px; }
+  #inv-panel { width: 95vw; padding: 12px; }
+  #inv-layout { flex-direction: column; }
+  .inv-item { width: 38px; height: 38px; }
+  #minimap-container { bottom: 5px; right: 5px; }
+  #combat-log { width: 200px; font-size: 11px; bottom: 100px; }
+  #restart-btn { min-height: 48px; }
+}

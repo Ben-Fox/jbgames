@@ -41,6 +41,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 #result-buttons { display: flex; justify-content: center; gap: 10px; }
 @media (max-width: 500px) {
   #menu-screen h1 { font-size: 2em; }
-  .timber-btn { font-size: 1.1em; padding: 12px 30px; }
+  .timber-btn { font-size: 1.1em; padding: 12px 30px; min-height: 48px; }
   #level-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .big-btn { min-height: 48px; }
+  .small-btn { min-height: 44px; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  .level-btn { min-height: 44px; }
 }
