@@ -33,19 +33,19 @@ const QUESTIONS = [
     category: "Everyday Life"
   },
   {
-    question: "What is the likelihood of being struck by a falling coconut?",
-    answer: "1 in 250 million",
-    options: ["1 in 50,000", "1 in 5 million", "1 in 250 million", "1 in 1 billion"],
-    correctIndex: 2,
-    fact: "Despite the urban legend, coconuts do kill about 150 people per year — more than sharks!",
+    question: "What is the likelihood of your song being played on the radio?",
+    answer: "About 1 in 10,000",
+    options: ["1 in 100", "1 in 10,000", "1 in 1 million", "1 in 50 million"],
+    correctIndex: 1,
+    fact: "Over 100,000 songs are uploaded to streaming platforms daily! Getting radio play requires luck, connections, and a genuinely catchy hook.",
     category: "Everyday Life"
   },
   {
-    question: "What is the likelihood of dying in a plane crash?",
-    answer: "1 in 11 million",
-    options: ["1 in 50,000", "1 in 500,000", "1 in 11 million", "1 in 1 billion"],
-    correctIndex: 2,
-    fact: "Flying is statistically the safest form of transportation. You're far more likely to die driving to the airport.",
+    question: "What is the likelihood of meeting someone with the same name as you?",
+    answer: "About 1 in 1,500",
+    options: ["1 in 50", "1 in 1,500", "1 in 100,000", "1 in 1 million"],
+    correctIndex: 1,
+    fact: "With thousands of unique first names in use, bumping into your name twin is rarer than you'd think — unless you're named James or Mary!",
     category: "Everyday Life"
   },
   {
@@ -163,27 +163,27 @@ const QUESTIONS = [
   },
   // NATURE & ANIMALS
   {
-    question: "What is the likelihood of being attacked by a shark?",
-    answer: "1 in 3.7 million",
-    options: ["1 in 10,000", "1 in 250,000", "1 in 3.7 million", "1 in 500 million"],
-    correctIndex: 2,
-    fact: "You're more likely to be killed by a cow than a shark. There are only about 70 unprovoked shark attacks worldwide per year.",
-    category: "Nature & Animals"
-  },
-  {
-    question: "What is the likelihood of being bitten by a snake in a given year?",
-    answer: "1 in 37,500",
-    options: ["1 in 500", "1 in 37,500", "1 in 1 million", "1 in 50 million"],
+    question: "What is the likelihood of seeing a rainbow on any given day?",
+    answer: "About 5%",
+    options: ["About 0.5%", "About 5%", "About 20%", "About 40%"],
     correctIndex: 1,
-    fact: "About 7,000-8,000 people are bitten by venomous snakes in the US annually, but only about 5 die.",
+    fact: "You need sun behind you and rain in front of you at a 42° angle. Double rainbows happen about 10% of the time you see one!",
     category: "Nature & Animals"
   },
   {
-    question: "What is the likelihood of a meteor hitting your house?",
-    answer: "1 in 182 trillion",
-    options: ["1 in 1 million", "1 in 1 billion", "1 in 182 trillion", "1 in 500,000"],
+    question: "What is the likelihood of a rattlesnake warning you before it strikes?",
+    answer: "About 70%",
+    options: ["About 20%", "About 50%", "About 70%", "About 95%"],
     correctIndex: 2,
-    fact: "In 1954, Ann Hodges of Alabama was hit by a meteorite that crashed through her roof — the only confirmed case!",
+    fact: "Rattlesnakes prefer to warn intruders with their rattle rather than waste venom. They're actually pretty polite for dangerous reptiles!",
+    category: "Nature & Animals"
+  },
+  {
+    question: "What is the likelihood of spotting a wild dolphin on a beach visit?",
+    answer: "About 15%",
+    options: ["About 2%", "About 15%", "About 40%", "About 70%"],
+    correctIndex: 1,
+    fact: "Dolphins live in every ocean and often swim close to shore. Your best odds are early morning or late afternoon!",
     category: "Nature & Animals"
   },
   {
@@ -203,11 +203,11 @@ const QUESTIONS = [
     category: "Nature & Animals"
   },
   {
-    question: "What is the likelihood of being hit by a falling meteorite?",
-    answer: "1 in 250,000",
-    options: ["1 in 2,500", "1 in 250,000", "1 in 50 million", "1 in 10 billion"],
+    question: "What is the likelihood of a butterfly landing on you?",
+    answer: "About 1 in 3,000 per outdoor hour",
+    options: ["1 in 100", "1 in 3,000", "1 in 100,000", "1 in 1 million"],
     correctIndex: 1,
-    fact: "This includes indirect hits from meteor airbursts. A meteorite landing directly on you is far less likely.",
+    fact: "Butterflies are attracted to bright colors and salt from sweat. Standing still in a garden wearing a red shirt? Your odds go way up!",
     category: "Nature & Animals"
   },
   {
@@ -228,11 +228,11 @@ const QUESTIONS = [
   },
   // SPACE & SCIENCE
   {
-    question: "What is the likelihood of Earth being hit by a civilization-ending asteroid this year?",
-    answer: "1 in 300,000",
-    options: ["1 in 1,000", "1 in 300,000", "1 in 100 million", "1 in 10 billion"],
+    question: "What is the likelihood of seeing the Northern Lights in your lifetime if you live in the US?",
+    answer: "About 30%",
+    options: ["About 5%", "About 30%", "About 60%", "About 90%"],
     correctIndex: 1,
-    fact: "NASA's Planetary Defense office tracks near-Earth objects. The last major impact was 66 million years ago — the one that killed the dinosaurs.",
+    fact: "The aurora borealis is visible from northern US states several times per solar cycle. Solar maximum years give you the best shot!",
     category: "Space & Science"
   },
   {
@@ -326,11 +326,11 @@ const QUESTIONS = [
     category: "Weird & Fun"
   },
   {
-    question: "What is the likelihood of being killed by a vending machine?",
-    answer: "1 in 112 million",
-    options: ["1 in 100,000", "1 in 5 million", "1 in 112 million", "1 in 10 billion"],
-    correctIndex: 2,
-    fact: "About 2-3 people die annually from vending machine tip-overs. That's roughly twice the number killed by sharks in the US!",
+    question: "What is the likelihood of finding money on the ground today?",
+    answer: "About 1 in 100",
+    options: ["1 in 10", "1 in 100", "1 in 1,000", "1 in 10,000"],
+    correctIndex: 1,
+    fact: "Studies show the average person finds about $3.50 on the ground per year. Parking lots and sidewalks are your best bet!",
     category: "Weird & Fun"
   },
   {
