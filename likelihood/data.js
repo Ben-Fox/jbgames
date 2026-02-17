@@ -163,11 +163,11 @@ const QUESTIONS = [
   },
   // NATURE & ANIMALS
   {
-    question: "What is the likelihood of seeing a rainbow on any given day?",
-    answer: "About 5%",
-    options: ["About 0.5%", "About 5%", "About 20%", "About 40%"],
+    question: "What is the likelihood of an octopus escaping its aquarium tank?",
+    answer: "About 30%",
+    options: ["About 2%", "About 30%", "About 60%", "About 90%"],
     correctIndex: 1,
-    fact: "You need sun behind you and rain in front of you at a 42° angle. Double rainbows happen about 10% of the time you see one!",
+    fact: "Octopuses are notorious escape artists! They can squeeze through any gap larger than their beak, open jars from the inside, and even climb out of tanks at night.",
     category: "Nature & Animals"
   },
   {
