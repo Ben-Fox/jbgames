@@ -200,8 +200,13 @@ const Player = (() => {
   
   function attack(mouseWorld) {
     if (state.attackCd > 0 || state.attacking) return null;
-    const w = WEAPONS[state.weapon];
-    if (!w) return null;
+    let w = WEAPONS[state.weapon];
+    // If current weapon is invalid, try to find any weapon we have
+    if (!w) {
+      const fallback = state.hotbar.find(h => h && WEAPONS[h]);
+      if (fallback) { state.weapon = fallback; w = WEAPONS[fallback]; }
+      else { w = WEAPONS['wooden_sword']; state.weapon = 'wooden_sword'; }
+    }
     
     state.attacking = true;
     state.attackTimer = 0.15;

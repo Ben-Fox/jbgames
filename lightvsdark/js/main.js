@@ -227,8 +227,11 @@ const Game = (() => {
       const idx = parseInt(key) - 1;
       const ps = Player.state();
       ps.hotbarIdx = idx;
-      if (ps.hotbar[idx] && Player.WEAPONS[ps.hotbar[idx]]) {
-        ps.weapon = ps.hotbar[idx];
+      const item = ps.hotbar[idx];
+      if (item && Player.WEAPONS[item]) {
+        ps.weapon = item;
+        // Exit build mode when switching to a weapon
+        if (Building.buildMode()) UI.toggleBuildMode();
       }
       UI.updateHotbar();
     }

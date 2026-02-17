@@ -180,21 +180,29 @@ const Enemies = (() => {
       // Attack cooldown
       e.attackCd -= dt;
       if (e.attackCd <= 0) {
-        if (dist(e, playerState) < 28 + e.size) {
+        let attacked = false;
+        
+        // Priority: attack player if in melee range
+        if (!attacked && dist(e, playerState) < 28 + e.size) {
           e.attackCd = 1;
+          attacked = true;
           if (!result) result = { type: 'playerHit', dmg: e.dmg };
         }
         
-        if (e.targetBuildings) {
+        // Attack buildings if targeting them
+        if (!attacked && e.targetBuildings) {
           const nearB = Building.getNearestDamageable(e.x, e.y);
           if (nearB && dist(e, nearB) < 30 + e.size) {
             e.attackCd = 1.5;
+            attacked = true;
             Building.damage(nearB.tx, nearB.ty, e.dmg);
           }
         }
         
-        if (dist(e, crystalPos) < 30 + e.size) {
+        // Attack crystal if in range (wider range since crystal is 3x3 tiles)
+        if (!attacked && dist(e, crystalPos) < 60 + e.size) {
           e.attackCd = 1;
+          attacked = true;
           if (!result) result = { type: 'crystalHit', dmg: e.dmg };
         }
       }
