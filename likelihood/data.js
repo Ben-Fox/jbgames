@@ -179,11 +179,11 @@ const QUESTIONS = [
     category: "Nature & Animals"
   },
   {
-    question: "What is the likelihood of spotting a wild dolphin on a beach visit?",
-    answer: "About 15%",
-    options: ["About 2%", "About 15%", "About 40%", "About 70%"],
+    question: "What is the likelihood of being bitten by a snake in a given year?",
+    answer: "1 in 37,500",
+    options: ["1 in 500", "1 in 37,500", "1 in 1 million", "1 in 50 million"],
     correctIndex: 1,
-    fact: "Dolphins live in every ocean and often swim close to shore. Your best odds are early morning or late afternoon!",
+    fact: "About 7,000-8,000 people are bitten by venomous snakes in the US annually, but only about 5 experience serious complications.",
     category: "Nature & Animals"
   },
   {
@@ -203,11 +203,11 @@ const QUESTIONS = [
     category: "Nature & Animals"
   },
   {
-    question: "What is the likelihood of a butterfly landing on you?",
-    answer: "About 1 in 3,000 per outdoor hour",
-    options: ["1 in 100", "1 in 3,000", "1 in 100,000", "1 in 1 million"],
+    question: "What is the likelihood of being hit by a falling meteorite?",
+    answer: "1 in 250,000",
+    options: ["1 in 2,500", "1 in 250,000", "1 in 50 million", "1 in 10 billion"],
     correctIndex: 1,
-    fact: "Butterflies are attracted to bright colors and salt from sweat. Standing still in a garden wearing a red shirt? Your odds go way up!",
+    fact: "In 1954, Ann Hodges of Alabama was hit by a meteorite that crashed through her roof — the only confirmed case!",
     category: "Nature & Animals"
   },
   {
