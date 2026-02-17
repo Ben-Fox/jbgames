@@ -419,10 +419,24 @@ function startPlayerTurn() {
 }
 
 function showActionButtons() {
-  $('play-btn').classList.remove('hidden');
-  $('pass-btn').classList.add('hidden');
   $('use-charge-btn').classList.add('hidden');
   selectedCard = null;
+
+  // Check if player has any playable cards (non-club)
+  const playable = playerHand.filter(c => c.suit !== '♣');
+  if (playable.length === 0) {
+    // No playable cards — must pass (or hand is empty)
+    $('play-btn').classList.add('hidden');
+    $('pass-btn').classList.remove('hidden');
+    if (playerHand.length > 0) {
+      log('No playable cards — only counters in hand. You must pass.');
+    } else {
+      log('No cards in hand. You must pass.');
+    }
+  } else {
+    $('play-btn').classList.remove('hidden');
+    $('pass-btn').classList.remove('hidden'); // Always allow passing
+  }
   render();
 }
 
