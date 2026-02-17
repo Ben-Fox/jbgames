@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tree Fall</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="ui-overlay">
+  <div id="menu-screen" class="screen active">
+    <h1>🌲 Tree Fall 🪓</h1>
+    <p class="subtitle">Physics-based tree chopping!</p>
+    <button id="btn-play" class="big-btn">Play</button>
+  </div>
+  <div id="level-select" class="screen">
+    <h2>Select Level</h2>
+    <div id="level-grid"></div>
+    <button id="btn-back-menu" class="small-btn">← Back</button>
+  </div>
+  <div id="hud" class="screen">
+    <div id="hud-top">
+      <button id="btn-back-levels" class="icon-btn">☰</button>
+      <div id="level-title"></div>
+      <button id="btn-restart" class="icon-btn">↻</button>
+    </div>
+    <div id="objective-text"></div>
+    <div id="wind-indicator"><span id="wind-arrow">→</span> <span id="wind-strength"></span></div>
+    <button id="btn-timber" class="timber-btn" style="display:none">🪓 TIMBER!</button>
+    <div id="result-overlay" style="display:none">
+      <div id="result-title"></div>
+      <div id="result-stars"></div>
+      <div id="result-message"></div>
+      <div id="result-buttons">
+        <button id="btn-retry" class="small-btn">Retry</button>
+        <button id="btn-next" class="small-btn">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="levels.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
