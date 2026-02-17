@@ -753,6 +753,7 @@ function showResult(win, mag) {
   rs.classList.remove('hidden');
   document.getElementById('btn-retry').classList.remove('hidden');
   if (win && currentLevel < LEVELS.length - 1) document.getElementById('btn-next').classList.remove('hidden');
+  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 
 // ── Particles ──

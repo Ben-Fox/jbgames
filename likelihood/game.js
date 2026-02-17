@@ -231,6 +231,8 @@ function showFinal() {
 
   if (ratingIdx >= 4) { playSound('fanfare'); spawnConfetti(); }
   else if (ratingIdx >= 3) playSound('correct');
+
+  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 
 function goHome() { clearTimer(); showScreen('splash'); }

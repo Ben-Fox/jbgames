@@ -908,7 +908,10 @@ function gameOver() {
     document.getElementById('go-shatter').textContent = biggestShatter + ' fragments';
     document.getElementById('new-record').classList.toggle('hidden', !isNew);
     
-    setTimeout(() => showScreen('gameover-screen'), 500);
+    setTimeout(() => {
+        showScreen('gameover-screen');
+        if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
+    }, 500);
 }
 
 function showMenu() {

@@ -2336,7 +2336,9 @@ function endGameDogCaught() {
       <span class="hint-badge">E Push/Scratch</span>
       <span class="hint-badge">Sneak past the dog!</span>
     </div>
+    <div id="end-recommendations"></div>
   `;
+  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 
 // ===== MAIN LOOP =====
@@ -2483,15 +2485,11 @@ function endGame() {
       <span class="hint-badge">Wall Jump!</span>
       <span class="hint-badge">Double-tap = Pounce</span>
     </div>
+    <div id="end-recommendations"></div>
   `;
+  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 </script>
-<div id="more-games" style="position:fixed;bottom:0;left:0;right:0;background:rgba(14,14,18,0.95);padding:8px 16px;z-index:9998;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-family:'Space Grotesk',system-ui,sans-serif;border-top:1px solid #333">
-  <span style="color:#888;font-size:13px;margin-right:8px">More games →</span>
-  <a href="../heavyeye/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Heavy Eye</a>
-  <a href="../holdfast/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Holdfast</a>
-  <a href="../lightvsdark/" style="color:#f0f0f0;text-decoration:none;font-size:13px;padding:4px 12px;background:#1a1a24;border-radius:8px;border:1px solid #333;transition:border-color 0.2s">🎮 Light vs Dark</a>
-  <span onclick="this.parentElement.style.display='none'" style="color:#666;cursor:pointer;margin-left:auto;font-size:16px;padding:0 8px">✕</span>
-</div>
+<script src="/shared/recommendations.js"></script>
 </body>
 </html>

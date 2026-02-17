@@ -246,6 +246,7 @@
     if (score > bestScore) { bestScore = score; localStorage.setItem('circle_best', bestScore); }
     state = 'result';
     gameHud.classList.add('hidden');
+    if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 
     // Draw perfect circle overlay after brief pause
     setTimeout(() => {

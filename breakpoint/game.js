@@ -1271,6 +1271,7 @@ function checkGameOver() {
         <p>Final HP: You ${Math.max(0,playerHP)} / Opp ${Math.max(0,oppHP)}</p>
       `;
       $('gameover-modal').classList.remove('hidden');
+      if (window.BrainSmacks) BrainSmacks.showRecommendations($('end-recommendations'));
     }, 500);
     return true;
   }

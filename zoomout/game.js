@@ -211,6 +211,7 @@ function showResult() {
     `;
 
     showScreen('result-screen');
+    if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
 }
 
 // --- Share ---

@@ -445,6 +445,7 @@
     // ─── End screen ───
     function showEnd() {
         showScreen('end');
+        if (window.BrainSmacks) BrainSmacks.showRecommendations($('end-recommendations'));
         const total = rounds.length;
 
         // Animate score count-up

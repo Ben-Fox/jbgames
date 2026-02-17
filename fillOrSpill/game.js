@@ -292,6 +292,7 @@
     $('share-text').textContent = `🥛 Fill Or Spill — ${winner} beat ${loser} in ${turnCount} turns! 💧`;
     showScreen('end');
     drawEndBg();
+    if (window.BrainSmacks) BrainSmacks.showRecommendations($('end-recommendations'));
   }
 
   // --- Main game loop ---
