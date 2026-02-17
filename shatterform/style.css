@@ -339,6 +339,46 @@ canvas {
     letter-spacing: 0.2em;
 }
 
+/* Mode Toggle Button */
+.mode-toggle {
+    pointer-events: auto;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-width: 110px;
+    text-align: center;
+}
+
+.mode-toggle.mode-scatter {
+    background: rgba(0, 200, 255, 0.15);
+    color: #00c8ff;
+    border-color: rgba(0, 200, 255, 0.4);
+    box-shadow: 0 0 8px rgba(0, 200, 255, 0.2);
+}
+
+.mode-toggle.mode-beam {
+    background: rgba(100, 220, 255, 0.2);
+    color: #99eeff;
+    border-color: rgba(100, 220, 255, 0.5);
+    box-shadow: 0 0 12px rgba(100, 220, 255, 0.3);
+}
+
+.mode-toggle:active {
+    transform: scale(0.92);
+}
+
+.size-bar-fill.ready {
+    box-shadow: 0 0 8px rgba(0, 200, 255, 0.5);
+}
+
 /* Game Over */
 .gameover-title {
     font-family: 'Orbitron', sans-serif;

@@ -1,5 +1,5 @@
 // SHATTERFORM - A BrainSmacks Game
-// Grow your geometric form. Shatter it to destroy enemies. Survive.
+// Grow your geometric form. Aim and shatter to destroy enemies. Survive.
 
 (() => {
 'use strict';
@@ -14,7 +14,7 @@ function resize() {
     H = canvas.height = window.innerHeight * devicePixelRatio;
     cx = W / 2;
     cy = H / 2;
-    ctx.scale(1, 1); // reset
+    ctx.scale(1, 1);
 }
 resize();
 window.addEventListener('resize', resize);
@@ -63,6 +63,13 @@ function sfxShatter(size) {
     playTone(80, 0.3, 'sine', 0.05 * intensity);
 }
 
+function sfxBeam(size) {
+    const intensity = Math.min(size / 80, 1);
+    playTone(300 + intensity * 200, 0.3, 'sawtooth', 0.1);
+    playTone(600 + intensity * 300, 0.2, 'sine', 0.06);
+    playNoise(0.15, 0.06 + intensity * 0.06);
+}
+
 function sfxHit() {
     playTone(150, 0.2, 'sawtooth', 0.12);
     playTone(80, 0.3, 'sine', 0.08);
@@ -92,6 +99,16 @@ function sfxGameOver() {
     setTimeout(() => playTone(100, 0.8, 'sawtooth', 0.12), 300);
 }
 
+function sfxModeSwitch() {
+    playTone(500, 0.08, 'sine', 0.06);
+    playTone(700, 0.06, 'sine', 0.04);
+}
+
+function sfxShieldBlock() {
+    playTone(200, 0.15, 'square', 0.08);
+    playTone(100, 0.2, 'sine', 0.06);
+}
+
 // ============ GAME STATE ============
 const DIFF_SETTINGS = [
     { name: 'CHILL', enemySpeedMult: 0.6, spawnMult: 0.6, lives: 5, growRate: 1.2 },
@@ -103,7 +120,7 @@ let difficulty = 1;
 let state = 'menu'; // menu, playing, gameover
 let score, lives, wave, enemiesKilled, bestCombo, biggestShatter;
 let playerSize, playerMaxSize, playerAngle;
-let enemies, fragments, particles, orbs;
+let enemies, fragments, particles, orbs, beams;
 let comboCount, comboTimer, comboMultiplier;
 let shakeX, shakeY, shakeDur;
 let waveTimer, waveEnemies, waveEnemiesSpawned;
@@ -111,10 +128,17 @@ let spawnTimer;
 let tutorialShown, tutorialTimer;
 let gameTime;
 let slowMoTimer, slowMoFactor;
+let shootMode; // 'scatter' or 'beam'
+let shootCooldown; // seconds remaining
+let aimAngle; // current mouse/touch aim angle
+const SHOOT_COOLDOWN = 0.4; // minimum time between shots
+const MIN_SHOOT_SIZE = 20; // minimum size to fire
+const SCATTER_CONE = Math.PI * 2 / 3; // ~120 degrees
+const BEAM_CONE = Math.PI / 6; // ~30 degrees
 
 const MIN_SIZE = 15;
 const MAX_SIZE = 120;
-const COMBO_WINDOW = 1.5; // seconds
+const COMBO_WINDOW = 1.5;
 
 function resetGame() {
     const diff = DIFF_SETTINGS[difficulty];
@@ -131,6 +155,7 @@ function resetGame() {
     fragments = [];
     particles = [];
     orbs = [];
+    beams = [];
     comboCount = 0;
     comboTimer = 0;
     comboMultiplier = 1;
@@ -146,65 +171,119 @@ function resetGame() {
     gameTime = 0;
     slowMoTimer = 0;
     slowMoFactor = 1;
+    shootMode = 'scatter';
+    shootCooldown = 0;
+    aimAngle = 0;
+    updateModeUI();
 }
 
 // ============ ENTITIES ============
+
+function getEnemyHP(type, waveNum) {
+    const baseHP = {
+        swarmling: 1,
+        circle: 1,
+        triangle: 2,
+        diamond: 3,
+        dasher: 2,
+        shielded: 2,
+    };
+    let hp = baseHP[type] || 1;
+    // Scale HP with waves
+    if (waveNum >= 8 && type === 'circle') hp = 2;
+    if (waveNum >= 10 && type === 'diamond') hp = 4;
+    if (waveNum >= 12 && type === 'triangle') hp = 3;
+    if (waveNum >= 15 && type === 'dasher') hp = 3;
+    return hp;
+}
+
 function spawnEnemy() {
     const diff = DIFF_SETTINGS[difficulty];
     const angle = Math.random() * Math.PI * 2;
     const dist = Math.max(W, H) * 0.6;
     const speed = (40 + Math.random() * 30 + wave * 3) * diff.enemySpeedMult;
     const size = 10 + Math.random() * 12;
+
     // Type weights shift with waves
     let type;
     const r = Math.random();
     if (wave < 3) {
-        type = r < 0.7 ? 'circle' : 'triangle';
+        type = r < 0.5 ? 'circle' : r < 0.75 ? 'swarmling' : 'triangle';
     } else if (wave < 6) {
-        type = r < 0.5 ? 'circle' : r < 0.8 ? 'triangle' : 'diamond';
+        type = r < 0.35 ? 'circle' : r < 0.55 ? 'swarmling' : r < 0.75 ? 'triangle' : r < 0.9 ? 'diamond' : 'shielded';
     } else {
-        type = r < 0.35 ? 'circle' : r < 0.65 ? 'triangle' : r < 0.85 ? 'diamond' : 'dasher';
+        type = r < 0.2 ? 'circle' : r < 0.35 ? 'swarmling' : r < 0.5 ? 'triangle' : r < 0.65 ? 'diamond' : r < 0.8 ? 'dasher' : 'shielded';
     }
-    
-    const colors = { circle: '#ff3366', triangle: '#ff9900', diamond: '#cc33ff', dasher: '#ff5555' };
-    
-    // Dasher behavior: pauses then dashes quickly
+
+    const colors = {
+        circle: '#ff3366',
+        triangle: '#ff9900',
+        diamond: '#cc33ff',
+        dasher: '#ff5555',
+        swarmling: '#ff6699',
+        shielded: '#33ccff',
+    };
+
     const isDasher = type === 'dasher';
-    
-    enemies.push({
+    const isSwarmling = type === 'swarmling';
+    const isShielded = type === 'shielded';
+
+    const hp = getEnemyHP(type, wave);
+
+    const baseEnemy = {
         x: cx + Math.cos(angle) * dist,
         y: cy + Math.sin(angle) * dist,
         vx: 0, vy: 0,
-        speed: isDasher ? speed * 0.3 : speed,
+        speed: isDasher ? speed * 0.3 : isSwarmling ? speed * 1.4 : speed,
         dashSpeed: speed * 2.5,
-        size: isDasher ? size * 0.8 : size,
+        size: isSwarmling ? size * 0.5 : isDasher ? size * 0.8 : size,
         type,
         color: colors[type],
         angle: Math.random() * Math.PI * 2,
         spinSpeed: (Math.random() - 0.5) * 4,
-        hp: type === 'diamond' ? 2 : 1,
+        hp,
+        maxHp: hp,
         flashTimer: 0,
         dashTimer: isDasher ? 2 + Math.random() : 0,
         isDashing: false,
         orbitAngle: Math.random() * Math.PI * 2,
-        // Triangles orbit slightly
         orbitSpeed: type === 'triangle' ? (Math.random() - 0.5) * 2 : 0,
-    });
+        // Shielded properties
+        shieldAngle: isShielded ? Math.random() * Math.PI * 2 : 0,
+        shieldRotSpeed: isShielded ? 1.2 + Math.random() * 0.8 : 0,
+    };
+
+    // Swarmlings spawn in groups
+    if (isSwarmling) {
+        const groupSize = 3 + Math.floor(Math.random() * 3); // 3-5
+        for (let g = 0; g < groupSize; g++) {
+            const offsetAngle = angle + (Math.random() - 0.5) * 0.4;
+            const offsetDist = dist + (Math.random() - 0.5) * 60;
+            enemies.push({
+                ...baseEnemy,
+                x: cx + Math.cos(offsetAngle) * offsetDist,
+                y: cy + Math.sin(offsetAngle) * offsetDist,
+                speed: baseEnemy.speed * (0.9 + Math.random() * 0.2),
+            });
+        }
+    } else {
+        enemies.push(baseEnemy);
+    }
 }
 
 function spawnOrb() {
     const angle = Math.random() * Math.PI * 2;
-    const dist = 100 + Math.random() * Math.min(W, H) * 0.3;
+    const d = 100 + Math.random() * Math.min(W, H) * 0.3;
     orbs.push({
-        x: cx + Math.cos(angle) * dist,
-        y: cy + Math.sin(angle) * dist,
+        x: cx + Math.cos(angle) * d,
+        y: cy + Math.sin(angle) * d,
         size: 8,
         pulse: Math.random() * Math.PI * 2,
-        life: 8, // seconds
+        life: 8,
     });
 }
 
-function addFragment(x, y, angle, speed, size, color) {
+function addFragment(x, y, angle, speed, size, color, damage) {
     fragments.push({
         x, y,
         vx: Math.cos(angle) * speed,
@@ -215,6 +294,7 @@ function addFragment(x, y, angle, speed, size, color) {
         maxLife: 1,
         angle: Math.random() * Math.PI * 2,
         spin: (Math.random() - 0.5) * 10,
+        damage: damage || 1,
     });
 }
 
@@ -230,87 +310,152 @@ function addParticle(x, y, color, speed, life, size) {
     });
 }
 
-function shatter() {
-    if (playerSize <= MIN_SIZE + 2) return; // too small to shatter
-    
+function addBeam(targetAngle, sizeRatio) {
+    const length = 300 + sizeRatio * 500;
+    const width = 8 + sizeRatio * 20;
+    beams.push({
+        angle: targetAngle,
+        length,
+        width,
+        life: 0.25,
+        maxLife: 0.25,
+        sizeRatio,
+        damage: Math.floor(2 + sizeRatio * 4), // beam does 2-6 damage
+    });
+}
+
+function shootScatter(targetAngle) {
+    if (playerSize <= MIN_SHOOT_SIZE) return;
+    if (shootCooldown > 0) return;
+
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
     const fragmentCount = Math.floor(8 + sizeRatio * 24);
     const fragmentSpeed = 200 + sizeRatio * 400;
     const fragmentSize = 4 + sizeRatio * 8;
-    
+
     biggestShatter = Math.max(biggestShatter, fragmentCount);
-    
     sfxShatter(playerSize);
-    
-    // Create fragments
+
+    // Scatter fragments in a cone toward target
     for (let i = 0; i < fragmentCount; i++) {
-        const angle = (Math.PI * 2 * i / fragmentCount) + (Math.random() - 0.5) * 0.3;
+        const spread = (Math.random() - 0.5) * SCATTER_CONE;
+        const a = targetAngle + spread;
         const speed = fragmentSpeed * (0.7 + Math.random() * 0.6);
         const hue = 190 + Math.random() * 40;
-        addFragment(cx, cy, angle, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`);
+        addFragment(cx, cy, a, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`, 1);
     }
-    
-    // Particle burst
+
+    // Particle burst toward aim
     for (let i = 0; i < 20; i++) {
-        addParticle(cx, cy, '#00c8ff', 300, 0.4, 2);
+        const spread = (Math.random() - 0.5) * SCATTER_CONE;
+        const a = targetAngle + spread;
+        const speed = 100 + Math.random() * 200;
+        addParticle(cx + Math.cos(a) * 10, cy + Math.sin(a) * 10, '#00c8ff', speed, 0.4, 2);
     }
-    
-    // Screen shake proportional to size
-    shakeDur = 0.1 + sizeRatio * 0.2;
-    
-    // Brief slowmo for big shatters
+
+    shakeDur = 0.1 + sizeRatio * 0.15;
     if (sizeRatio > 0.5) {
         slowMoTimer = 0.15;
         slowMoFactor = 0.3;
     }
-    
-    // Score bonus for size when shattering
+
     const sizeBonus = Math.floor(sizeRatio * 50);
     score += sizeBonus;
-    
     playerSize = MIN_SIZE;
+    shootCooldown = SHOOT_COOLDOWN;
+}
+
+function shootBeam(targetAngle) {
+    if (playerSize <= MIN_SHOOT_SIZE) return;
+    if (shootCooldown > 0) return;
+
+    const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
+
+    sfxBeam(playerSize);
+    addBeam(targetAngle, sizeRatio);
+
+    // Also spawn a few tight fragments along the beam for visual flair
+    const fragmentCount = Math.floor(3 + sizeRatio * 8);
+    const fragmentSpeed = 400 + sizeRatio * 600;
+    for (let i = 0; i < fragmentCount; i++) {
+        const spread = (Math.random() - 0.5) * BEAM_CONE * 0.5;
+        const a = targetAngle + spread;
+        const speed = fragmentSpeed * (0.8 + Math.random() * 0.4);
+        const hue = 190 + Math.random() * 30;
+        addFragment(cx, cy, a, speed, 3 + sizeRatio * 4, `hsl(${hue}, 100%, 85%)`, 1);
+    }
+
+    // Focused particle burst
+    for (let i = 0; i < 15; i++) {
+        const spread = (Math.random() - 0.5) * BEAM_CONE;
+        const a = targetAngle + spread;
+        addParticle(cx + Math.cos(a) * 20, cy + Math.sin(a) * 20, '#66ddff', 300, 0.3, 2);
+    }
+
+    shakeDur = 0.08 + sizeRatio * 0.12;
+    if (sizeRatio > 0.5) {
+        slowMoTimer = 0.12;
+        slowMoFactor = 0.3;
+    }
+
+    const sizeBonus = Math.floor(sizeRatio * 50);
+    score += sizeBonus;
+    playerSize = MIN_SIZE;
+    shootCooldown = SHOOT_COOLDOWN;
 }
 
 function triggerScreenShake(duration, intensity) {
     shakeDur = duration;
-    // shakeX/Y computed in update
 }
 
 // ============ COLLISION ============
-function dist(x1, y1, x2, y2) {
+function distFn(x1, y1, x2, y2) {
     return Math.hypot(x2 - x1, y2 - y1);
+}
+
+// Check if angle `a` is within the shielded arc of enemy
+function isShielded(enemy, hitAngle) {
+    if (enemy.type !== 'shielded') return false;
+    // Shield blocks a 120-degree arc
+    let diff = hitAngle - enemy.shieldAngle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return Math.abs(diff) < Math.PI / 3; // 60 degrees each side = 120 total
 }
 
 // ============ UPDATE ============
 function update(dt) {
     if (state !== 'playing') return;
-    
+
     // Slow motion
     if (slowMoTimer > 0) {
         slowMoTimer -= dt;
         dt *= slowMoFactor;
     }
-    
+
     gameTime += dt;
     const diff = DIFF_SETTINGS[difficulty];
-    
+
+    // Cooldown
+    if (shootCooldown > 0) shootCooldown -= dt;
+
     // Tutorial
-    if (!tutorialShown && gameTime < 5) {
-        tutorialTimer = 5 - gameTime;
+    if (!tutorialShown && gameTime < 6) {
+        tutorialTimer = 6 - gameTime;
     } else {
         tutorialShown = true;
         tutorialTimer = 0;
     }
-    
+
     // Player grows
     const growRate = (8 + wave * 0.5) * diff.growRate;
     playerSize = Math.min(playerSize + growRate * dt, playerMaxSize);
     playerAngle += dt * 0.5;
-    
-    // Score from size (bigger = more points per second)
+
+    // Score from size
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
     score += Math.floor((10 + sizeRatio * 40) * comboMultiplier * dt);
-    
+
     // Combo timer
     if (comboTimer > 0) {
         comboTimer -= dt;
@@ -319,7 +464,7 @@ function update(dt) {
             comboMultiplier = 1;
         }
     }
-    
+
     // Wave management
     waveTimer -= dt;
     if (waveTimer <= 0) {
@@ -330,34 +475,31 @@ function update(dt) {
             waveEnemiesSpawned++;
             spawnTimer = spawnInterval;
         }
-        
-        // Wave complete when all enemies spawned and destroyed
+
         if (waveEnemiesSpawned >= waveEnemies && enemies.length === 0) {
             wave++;
             waveEnemies = Math.floor(5 + wave * 3 + wave * wave * 0.3);
             waveEnemiesSpawned = 0;
             waveTimer = 2;
             sfxWave();
-            // Spawn orbs between waves
             for (let i = 0; i < 2 + Math.floor(wave / 3); i++) spawnOrb();
         }
     }
-    
+
     // Random orb spawns
     if (Math.random() < 0.005 * dt * 60) spawnOrb();
-    
+
     // Update enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
         const angle = Math.atan2(cy - e.y, cx - e.x);
-        
-        // Dasher logic
+
         if (e.type === 'dasher') {
             if (!e.isDashing) {
                 e.dashTimer -= dt;
                 if (e.dashTimer <= 0) {
                     e.isDashing = true;
-                    e.dashTimer = 0.4; // dash duration
+                    e.dashTimer = 0.4;
                 }
                 e.vx = Math.cos(angle) * e.speed;
                 e.vy = Math.sin(angle) * e.speed;
@@ -371,8 +513,7 @@ function update(dt) {
                 e.vy = Math.sin(angle) * e.dashSpeed;
             }
         } else if (e.type === 'triangle') {
-            // Triangles spiral inward
-            const d = dist(e.x, e.y, cx, cy);
+            const d = distFn(e.x, e.y, cx, cy);
             e.orbitAngle += e.orbitSpeed * dt;
             const perpAngle = angle + Math.PI / 2;
             const orbitStr = Math.min(1, d / 200) * 0.4;
@@ -382,35 +523,80 @@ function update(dt) {
             e.vx = Math.cos(angle) * e.speed;
             e.vy = Math.sin(angle) * e.speed;
         }
-        
+
         e.x += e.vx * dt;
         e.y += e.vy * dt;
         e.angle += e.spinSpeed * dt;
         if (e.flashTimer > 0) e.flashTimer -= dt;
-        
+
+        // Rotate shield
+        if (e.type === 'shielded') {
+            e.shieldAngle += e.shieldRotSpeed * dt;
+        }
+
         // Hit player
-        const d = dist(e.x, e.y, cx, cy);
+        const d = distFn(e.x, e.y, cx, cy);
         if (d < playerSize + e.size) {
             enemies.splice(i, 1);
             lives--;
             sfxHit();
             shakeDur = 0.3;
-            
-            // Hit particles
+
             for (let j = 0; j < 15; j++) {
                 addParticle(cx, cy, '#ff3366', 200, 0.5, 4);
             }
-            
+
             if (lives <= 0) {
                 gameOver();
                 return;
             }
-            
-            // Invincibility flash handled visually
             continue;
         }
     }
-    
+
+    // Update beams - check collisions with enemies
+    for (let i = beams.length - 1; i >= 0; i--) {
+        const b = beams[i];
+        b.life -= dt;
+        if (b.life <= 0) {
+            beams.splice(i, 1);
+            continue;
+        }
+
+        // Beam collision: check enemies along the beam line
+        const bx = Math.cos(b.angle);
+        const by = Math.sin(b.angle);
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            // Project enemy onto beam axis
+            const dx = e.x - cx;
+            const dy = e.y - cy;
+            const proj = dx * bx + dy * by;
+            if (proj < 0 || proj > b.length) continue;
+            // Perpendicular distance
+            const perpDist = Math.abs(dx * (-by) + dy * bx);
+            if (perpDist < e.size + b.width * 0.5) {
+                // Check shield
+                const hitAngle = Math.atan2(cy - e.y, cx - e.x); // angle FROM enemy TO player
+                if (isShielded(e, hitAngle + Math.PI)) {
+                    // blocked
+                    sfxShieldBlock();
+                    for (let k = 0; k < 4; k++) {
+                        addParticle(e.x + Math.cos(e.shieldAngle) * e.size, e.y + Math.sin(e.shieldAngle) * e.size, '#66ddff', 100, 0.2, 2);
+                    }
+                    continue;
+                }
+                e.hp -= b.damage;
+                e.flashTimer = 0.15;
+                if (e.hp <= 0) {
+                    killEnemy(e, j);
+                }
+                // Beam hits all enemies in path but only damages each once per beam
+                // Mark as hit this frame
+            }
+        }
+    }
+
     // Update fragments - check collisions with enemies
     for (let i = fragments.length - 1; i >= 0; i--) {
         const f = fragments[i];
@@ -420,46 +606,40 @@ function update(dt) {
         f.vy *= 0.97;
         f.life -= dt;
         f.angle += f.spin * dt;
-        
+
         if (f.life <= 0) {
             fragments.splice(i, 1);
             continue;
         }
-        
-        // Check vs enemies
+
         for (let j = enemies.length - 1; j >= 0; j--) {
             const e = enemies[j];
-            if (dist(f.x, f.y, e.x, e.y) < f.size + e.size) {
-                e.hp--;
-                e.flashTimer = 0.1;
-                
-                if (e.hp <= 0) {
-                    // Kill enemy
-                    for (let k = 0; k < 8; k++) {
-                        addParticle(e.x, e.y, e.color, 150, 0.3, 3);
+            if (distFn(f.x, f.y, e.x, e.y) < f.size + e.size) {
+                // Check shield
+                const hitAngle = Math.atan2(f.y - e.y, f.x - e.x); // angle FROM enemy TO fragment
+                if (isShielded(e, hitAngle)) {
+                    // Blocked by shield
+                    sfxShieldBlock();
+                    for (let k = 0; k < 3; k++) {
+                        addParticle(f.x, f.y, '#66ddff', 80, 0.15, 2);
                     }
-                    
-                    enemies.splice(j, 1);
-                    enemiesKilled++;
-                    
-                    // Combo
-                    comboCount++;
-                    comboTimer = COMBO_WINDOW;
-                    comboMultiplier = 1 + Math.floor(comboCount / 3) * 0.5;
-                    bestCombo = Math.max(bestCombo, comboCount);
-                    
-                    // Score per kill
-                    score += Math.floor((25 + wave * 5) * comboMultiplier);
-                    
-                    sfxKill(comboCount);
+                    f.life = 0;
+                    break;
                 }
-                
+
+                e.hp -= (f.damage || 1);
+                e.flashTimer = 0.1;
+
+                if (e.hp <= 0) {
+                    killEnemy(e, j);
+                }
+
                 f.life = 0;
                 break;
             }
         }
     }
-    
+
     // Update particles
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -468,20 +648,19 @@ function update(dt) {
         p.life -= dt;
         if (p.life <= 0) particles.splice(i, 1);
     }
-    
+
     // Update orbs
     for (let i = orbs.length - 1; i >= 0; i--) {
         const o = orbs[i];
         o.pulse += dt * 3;
         o.life -= dt;
-        
+
         if (o.life <= 0) {
             orbs.splice(i, 1);
             continue;
         }
-        
-        // Player collects orb
-        if (dist(o.x, o.y, cx, cy) < playerSize + o.size + 5) {
+
+        if (distFn(o.x, o.y, cx, cy) < playerSize + o.size + 5) {
             playerSize = Math.min(playerSize + 15, playerMaxSize);
             score += 50;
             sfxOrb();
@@ -491,7 +670,7 @@ function update(dt) {
             orbs.splice(i, 1);
         }
     }
-    
+
     // Screen shake
     if (shakeDur > 0) {
         shakeDur -= dt;
@@ -502,9 +681,25 @@ function update(dt) {
         shakeX = 0;
         shakeY = 0;
     }
-    
-    // Update HUD
+
     updateHUD();
+}
+
+function killEnemy(e, index) {
+    for (let k = 0; k < 8; k++) {
+        addParticle(e.x, e.y, e.color, 150, 0.3, 3);
+    }
+
+    enemies.splice(index, 1);
+    enemiesKilled++;
+
+    comboCount++;
+    comboTimer = COMBO_WINDOW;
+    comboMultiplier = 1 + Math.floor(comboCount / 3) * 0.5;
+    bestCombo = Math.max(bestCombo, comboCount);
+
+    score += Math.floor((25 + wave * 5) * comboMultiplier);
+    sfxKill(comboCount);
 }
 
 // ============ RENDER ============
@@ -513,11 +708,11 @@ function drawPlayer() {
     const y = cy + shakeY;
     const s = playerSize;
     const sizeRatio = (s - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
-    
+
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(playerAngle);
-    
+
     // Glow
     const glowSize = s * 1.5;
     const glow = ctx.createRadialGradient(0, 0, s * 0.5, 0, 0, glowSize);
@@ -528,8 +723,8 @@ function drawPlayer() {
     ctx.beginPath();
     ctx.arc(0, 0, glowSize, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Main shape - hexagon
+
+    // Main hexagon
     const sides = 6;
     ctx.beginPath();
     for (let i = 0; i < sides; i++) {
@@ -540,20 +735,18 @@ function drawPlayer() {
         else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
     ctx.closePath();
-    
-    // Fill gradient
+
     const fillGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
     fillGrad.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.9)`);
     fillGrad.addColorStop(0.6, `hsla(${hue}, 100%, 55%, 0.7)`);
     fillGrad.addColorStop(1, `hsla(${hue}, 80%, 40%, 0.5)`);
     ctx.fillStyle = fillGrad;
     ctx.fill();
-    
-    // Border
+
     ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.8)`;
     ctx.lineWidth = 2;
     ctx.stroke();
-    
+
     // Inner detail
     ctx.beginPath();
     for (let i = 0; i < sides; i++) {
@@ -566,7 +759,57 @@ function drawPlayer() {
     ctx.strokeStyle = `hsla(${hue}, 100%, 80%, 0.3)`;
     ctx.lineWidth = 1;
     ctx.stroke();
-    
+
+    ctx.restore();
+
+    // Draw aim indicator (outside rotation)
+    if (state === 'playing') {
+        drawAimIndicator(x, y, s);
+    }
+}
+
+function drawAimIndicator(px, py, size) {
+    const canShoot = playerSize > MIN_SHOOT_SIZE && shootCooldown <= 0;
+    const alpha = canShoot ? 0.5 + Math.sin(gameTime * 4) * 0.2 : 0.15;
+    const cone = shootMode === 'beam' ? BEAM_CONE : SCATTER_CONE;
+    const indicatorDist = size + 15;
+    const indicatorLen = shootMode === 'beam' ? 80 : 50;
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(aimAngle);
+    ctx.globalAlpha = alpha;
+
+    if (shootMode === 'beam') {
+        // Narrow line indicator
+        ctx.strokeStyle = '#66ddff';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(indicatorDist, 0);
+        ctx.lineTo(indicatorDist + indicatorLen, 0);
+        ctx.stroke();
+        // Small cone lines
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(indicatorDist, 0);
+        ctx.lineTo(indicatorDist + indicatorLen, Math.tan(cone / 2) * indicatorLen);
+        ctx.moveTo(indicatorDist, 0);
+        ctx.lineTo(indicatorDist + indicatorLen, -Math.tan(cone / 2) * indicatorLen);
+        ctx.stroke();
+    } else {
+        // Wide cone indicator
+        ctx.strokeStyle = '#00c8ff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(indicatorDist, 0);
+        ctx.arc(0, 0, indicatorDist + indicatorLen, -cone / 2, cone / 2, false);
+        ctx.lineTo(indicatorDist, 0);
+        ctx.stroke();
+    }
+
+    ctx.setLineDash([]);
     ctx.restore();
 }
 
@@ -574,12 +817,12 @@ function drawEnemy(e) {
     ctx.save();
     ctx.translate(e.x + shakeX, e.y + shakeY);
     ctx.rotate(e.angle);
-    
+
     const color = e.flashTimer > 0 ? '#fff' : e.color;
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
-    
+
     if (e.type === 'circle') {
         ctx.beginPath();
         ctx.arc(0, 0, e.size, 0, Math.PI * 2);
@@ -613,24 +856,75 @@ function drawEnemy(e) {
             ctx.fill();
         }
     } else if (e.type === 'dasher') {
-        // Star/bolt shape
-        const s = e.size;
-        const glow = e.isDashing ? 0.6 : 0.2;
         ctx.shadowColor = e.color;
         ctx.shadowBlur = e.isDashing ? 15 : 0;
         ctx.beginPath();
         for (let i = 0; i < 5; i++) {
             const a1 = (Math.PI * 2 * i / 5) - Math.PI / 2;
             const a2 = a1 + Math.PI / 5;
-            ctx.lineTo(Math.cos(a1) * s, Math.sin(a1) * s);
-            ctx.lineTo(Math.cos(a2) * s * 0.4, Math.sin(a2) * s * 0.4);
+            ctx.lineTo(Math.cos(a1) * e.size, Math.sin(a1) * e.size);
+            ctx.lineTo(Math.cos(a2) * e.size * 0.4, Math.sin(a2) * e.size * 0.4);
         }
         ctx.closePath();
         ctx.fill();
         ctx.shadowBlur = 0;
+    } else if (e.type === 'swarmling') {
+        // Tiny circles with a spiky feel
+        ctx.beginPath();
+        ctx.arc(0, 0, e.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#ffaacc';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, e.size * 1.3, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (e.type === 'shielded') {
+        // Body: circle
+        ctx.beginPath();
+        ctx.arc(0, 0, e.size, 0, Math.PI * 2);
+        ctx.fill();
+        // Shield arc (drawn in world-space, so undo rotation)
+        ctx.restore();
+        ctx.save();
+        ctx.translate(e.x + shakeX, e.y + shakeY);
+        // Draw the shield arc
+        const shieldDist = e.size + 4;
+        const shieldArc = Math.PI / 3 * 2; // 120 degree arc
+        ctx.strokeStyle = e.flashTimer > 0 ? '#fff' : '#00eeff';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#00eeff';
+        ctx.shadowBlur = 8;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.arc(0, 0, shieldDist, e.shieldAngle - shieldArc / 2, e.shieldAngle + shieldArc / 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
     }
-    
+
     ctx.restore();
+
+    // Draw HP bar above enemy (only if maxHp > 1)
+    if (e.maxHp > 1 && e.hp > 0) {
+        drawHPBar(e);
+    }
+}
+
+function drawHPBar(e) {
+    const barWidth = e.size * 2;
+    const barHeight = 3;
+    const barY = e.y + shakeY - e.size - 8;
+    const barX = e.x + shakeX - barWidth / 2;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // Fill
+    const ratio = e.hp / e.maxHp;
+    const hpColor = ratio > 0.5 ? '#00ff66' : ratio > 0.25 ? '#ffcc00' : '#ff3333';
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(barX, barY, barWidth * ratio, barHeight);
 }
 
 function drawFragment(f) {
@@ -640,8 +934,7 @@ function drawFragment(f) {
     ctx.translate(f.x + shakeX, f.y + shakeY);
     ctx.rotate(f.angle);
     ctx.fillStyle = f.color;
-    
-    // Small polygon
+
     ctx.beginPath();
     const sides = 4;
     for (let i = 0; i < sides; i++) {
@@ -652,6 +945,54 @@ function drawFragment(f) {
     }
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+}
+
+function drawBeam(b) {
+    const alpha = b.life / b.maxLife;
+    ctx.save();
+    ctx.translate(cx + shakeX, cy + shakeY);
+    ctx.rotate(b.angle);
+    ctx.globalAlpha = alpha;
+
+    // Core beam
+    const grad = ctx.createLinearGradient(0, 0, b.length, 0);
+    grad.addColorStop(0, `rgba(100, 220, 255, ${0.9 * alpha})`);
+    grad.addColorStop(0.3, `rgba(150, 240, 255, ${0.7 * alpha})`);
+    grad.addColorStop(1, `rgba(100, 220, 255, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, -b.width * 0.3);
+    ctx.lineTo(b.length, -b.width * 0.1);
+    ctx.lineTo(b.length, b.width * 0.1);
+    ctx.lineTo(0, b.width * 0.3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bright core
+    const coreGrad = ctx.createLinearGradient(0, 0, b.length * 0.8, 0);
+    coreGrad.addColorStop(0, `rgba(220, 250, 255, ${0.8 * alpha})`);
+    coreGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, -b.width * 0.1);
+    ctx.lineTo(b.length * 0.8, -1);
+    ctx.lineTo(b.length * 0.8, 1);
+    ctx.lineTo(0, b.width * 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor = '#66ddff';
+    ctx.shadowBlur = 20 * alpha;
+    ctx.strokeStyle = `rgba(100, 220, 255, ${0.5 * alpha})`;
+    ctx.lineWidth = b.width * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(b.length * 0.7, 0);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
     ctx.restore();
 }
 
@@ -669,12 +1010,11 @@ function drawOrb(o) {
     const alpha = o.life < 2 ? o.life / 2 : 1;
     const pulse = 1 + Math.sin(o.pulse) * 0.2;
     const r = o.size * pulse;
-    
+
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(o.x + shakeX, o.y + shakeY);
-    
-    // Glow
+
     const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3);
     glow.addColorStop(0, 'rgba(0, 255, 170, 0.4)');
     glow.addColorStop(1, 'transparent');
@@ -682,22 +1022,19 @@ function drawOrb(o) {
     ctx.beginPath();
     ctx.arc(0, 0, r * 3, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Core
+
     ctx.fillStyle = '#00ffaa';
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.restore();
 }
 
 function drawBackground() {
-    // Dark gradient background
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, W, H);
-    
-    // Subtle grid
+
     ctx.strokeStyle = 'rgba(0, 200, 255, 0.03)';
     ctx.lineWidth = 1;
     const gridSize = 60;
@@ -709,15 +1046,13 @@ function drawBackground() {
     for (let y = offsetY; y < H; y += gridSize) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
-    
-    // Radial vignette
+
     const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
     vig.addColorStop(0, 'transparent');
     vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
-    
-    // Low health red vignette
+
     if (state === 'playing' && lives <= 1) {
         const pulse = 0.15 + Math.sin(gameTime * 4) * 0.1;
         const dangerVig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.6);
@@ -729,17 +1064,18 @@ function drawBackground() {
 }
 
 function drawTutorial() {
-    if (tutorialTimer > 0 && gameTime < 5) {
+    if (tutorialTimer > 0 && gameTime < 6) {
         ctx.save();
         ctx.globalAlpha = Math.min(tutorialTimer / 2, 1);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = `${16 * devicePixelRatio}px Rajdhani, sans-serif`;
         ctx.textAlign = 'center';
         const isMobile = 'ontouchstart' in window;
-        const text = isMobile ? 'TAP to SHATTER!' : 'CLICK to SHATTER!';
-        ctx.fillText(text, cx, cy + playerSize + 40 * devicePixelRatio);
-        
-        // Pulsing ring hint
+        const line1 = isMobile ? 'TAP a direction to SHOOT!' : 'CLICK a direction to SHOOT!';
+        const line2 = isMobile ? 'Tap MODE button to switch Scatter/Beam' : 'Press Q to switch Scatter/Beam mode';
+        ctx.fillText(line1, cx, cy + playerSize + 40 * devicePixelRatio);
+        ctx.fillText(line2, cx, cy + playerSize + 60 * devicePixelRatio);
+
         const ringSize = playerSize + 20 + Math.sin(gameTime * 4) * 10;
         ctx.strokeStyle = `rgba(0, 200, 255, ${0.3 + Math.sin(gameTime * 4) * 0.2})`;
         ctx.lineWidth = 2;
@@ -748,34 +1084,26 @@ function drawTutorial() {
         ctx.arc(cx, cy, ringSize, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
-        
+
         ctx.restore();
     }
 }
 
 function render() {
     drawBackground();
-    
+
     if (state === 'playing' || state === 'gameover') {
-        // Draw orbs
         orbs.forEach(drawOrb);
-        
-        // Draw enemies
         enemies.forEach(drawEnemy);
-        
-        // Draw fragments
+        beams.forEach(drawBeam);
         fragments.forEach(drawFragment);
-        
-        // Draw particles
         particles.forEach(drawParticle);
-        
-        // Draw player (if playing)
+
         if (state === 'playing') {
             drawPlayer();
             drawTutorial();
         }
-        
-        // Wave announcement
+
         if (waveTimer > 0 && wave > 1) {
             ctx.save();
             const alpha = Math.min(waveTimer, 1);
@@ -787,8 +1115,7 @@ function render() {
             ctx.restore();
         }
     }
-    
-    // Menu background animation
+
     if (state === 'menu') {
         drawMenuBg();
     }
@@ -818,7 +1145,7 @@ function drawMenuBg() {
         s.y -= s.speed * 0.016;
         s.angle += s.spin * 0.016;
         if (s.y < -50) { s.y = H + 50; s.x = Math.random() * W; }
-        
+
         ctx.save();
         ctx.globalAlpha = s.alpha;
         ctx.translate(s.x, s.y);
@@ -841,14 +1168,12 @@ function drawMenuBg() {
 function updateHUD() {
     document.getElementById('hud-score-val').textContent = Math.floor(score).toLocaleString();
     document.getElementById('hud-wave-val').textContent = wave;
-    
-    // Size bar
+
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
     const sizeBar = document.getElementById('size-bar');
     sizeBar.style.width = (sizeRatio * 100) + '%';
     sizeBar.classList.toggle('full', sizeRatio > 0.85);
-    
-    // Combo
+
     const comboEl = document.getElementById('hud-combo');
     if (comboCount >= 3 && comboTimer > 0) {
         comboEl.classList.remove('hidden');
@@ -856,8 +1181,7 @@ function updateHUD() {
     } else {
         comboEl.classList.add('hidden');
     }
-    
-    // Lives
+
     const livesEl = document.getElementById('hud-lives');
     const totalLives = DIFF_SETTINGS[difficulty].lives;
     if (livesEl.children.length !== totalLives) {
@@ -872,6 +1196,30 @@ function updateHUD() {
     for (let i = 0; i < totalLives; i++) {
         pips[i].className = i < lives ? 'life-pip' : 'life-pip lost';
     }
+
+    // Cooldown indicator on size bar
+    const canShoot = playerSize > MIN_SHOOT_SIZE && shootCooldown <= 0;
+    sizeBar.classList.toggle('ready', canShoot && sizeRatio > 0.3);
+}
+
+function updateModeUI() {
+    const btn = document.getElementById('btn-mode');
+    if (!btn) return;
+    if (shootMode === 'beam') {
+        btn.textContent = '⟐ BEAM';
+        btn.classList.add('mode-beam');
+        btn.classList.remove('mode-scatter');
+    } else {
+        btn.textContent = '⁂ SCATTER';
+        btn.classList.remove('mode-beam');
+        btn.classList.add('mode-scatter');
+    }
+}
+
+function toggleMode() {
+    shootMode = shootMode === 'scatter' ? 'beam' : 'scatter';
+    updateModeUI();
+    sfxModeSwitch();
 }
 
 // ============ SCREENS ============
@@ -892,14 +1240,13 @@ function gameOver() {
     state = 'gameover';
     sfxGameOver();
     document.getElementById('hud').classList.add('hidden');
-    
-    // Save high score
+
     const key = `shatterform_best_${difficulty}`;
     const best = parseInt(localStorage.getItem(key) || '0');
     const finalScore = Math.floor(score);
     const isNew = finalScore > best;
     if (isNew) localStorage.setItem(key, finalScore);
-    
+
     document.getElementById('go-score').textContent = finalScore.toLocaleString();
     document.getElementById('go-best').textContent = Math.max(finalScore, best).toLocaleString();
     document.getElementById('go-wave').textContent = wave;
@@ -907,7 +1254,7 @@ function gameOver() {
     document.getElementById('go-combo').textContent = 'x' + (1 + Math.floor(bestCombo / 3) * 0.5).toFixed(1) + ` (${bestCombo} chain)`;
     document.getElementById('go-shatter').textContent = biggestShatter + ' fragments';
     document.getElementById('new-record').classList.toggle('hidden', !isNew);
-    
+
     setTimeout(() => {
         showScreen('gameover-screen');
         if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
@@ -923,37 +1270,86 @@ function showMenu() {
 
 function updateMenuHighScore() {
     const key = `shatterform_best_${difficulty}`;
-    document.getElementById('menu-highscore').textContent = 
+    document.getElementById('menu-highscore').textContent =
         parseInt(localStorage.getItem(key) || '0').toLocaleString();
 }
 
 // ============ INPUT ============
-function handleShatter(e) {
-    if (e) e.preventDefault();
-    if (state === 'playing') {
-        initAudio();
-        shatter();
-        tutorialShown = true;
-    }
+function getAimAngle(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (clientX - rect.left) * devicePixelRatio;
+    const py = (clientY - rect.top) * devicePixelRatio;
+    return Math.atan2(py - cy, px - cx);
 }
 
-canvas.addEventListener('mousedown', handleShatter);
-canvas.addEventListener('touchstart', handleShatter, { passive: false });
+function handleShoot(e) {
+    if (e) e.preventDefault();
+    if (state !== 'playing') return;
+    initAudio();
+
+    let angle = aimAngle;
+    if (e) {
+        if (e.touches && e.touches.length > 0) {
+            angle = getAimAngle(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.clientX !== undefined) {
+            angle = getAimAngle(e.clientX, e.clientY);
+        }
+    }
+
+    if (shootMode === 'beam') {
+        shootBeam(angle);
+    } else {
+        shootScatter(angle);
+    }
+    tutorialShown = true;
+}
+
+// Track mouse/touch position for aim indicator
+canvas.addEventListener('mousemove', e => {
+    if (state === 'playing') {
+        aimAngle = getAimAngle(e.clientX, e.clientY);
+    }
+});
+
+canvas.addEventListener('touchmove', e => {
+    if (state === 'playing' && e.touches.length > 0) {
+        aimAngle = getAimAngle(e.touches[0].clientX, e.touches[0].clientY);
+    }
+}, { passive: true });
+
+canvas.addEventListener('mousedown', handleShoot);
+canvas.addEventListener('touchstart', handleShoot, { passive: false });
 
 // Keyboard
 document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') {
-        if (state === 'playing') handleShatter();
+        if (state === 'playing') handleShoot();
         else if (state === 'menu') startGame();
+    }
+    if ((e.code === 'KeyQ' || e.code === 'KeyE') && state === 'playing') {
+        toggleMode();
     }
 });
 
 // UI buttons
 document.getElementById('btn-play').addEventListener('click', () => { initAudio(); startGame(); });
 document.getElementById('btn-retry').addEventListener('click', () => { initAudio(); startGame(); });
-// btn-menu replaced with direct link to home
 document.getElementById('btn-how').addEventListener('click', () => showScreen('how-screen'));
 document.getElementById('btn-back').addEventListener('click', () => showScreen('menu-screen'));
+
+// Mode toggle button
+const modeBtn = document.getElementById('btn-mode');
+if (modeBtn) {
+    modeBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (state === 'playing') toggleMode();
+    });
+    modeBtn.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (state === 'playing') toggleMode();
+    }, { passive: false });
+}
 
 // Difficulty buttons
 document.querySelectorAll('.diff-btn').forEach(btn => {
@@ -971,7 +1367,7 @@ function loop(time) {
     requestAnimationFrame(loop);
     const dt = Math.min((time - lastTime) / 1000, 0.05);
     lastTime = time;
-    
+
     update(dt);
     render();
 }

@@ -54,19 +54,27 @@
                 <div class="instructions">
                     <div class="instruction-item">
                         <div class="inst-icon">◈</div>
-                        <p>Your shape <strong>grows automatically</strong>. Bigger = more points per second.</p>
+                        <p>Your shape <strong>grows automatically</strong>. Bigger = more powerful shots.</p>
                     </div>
                     <div class="instruction-item">
-                        <div class="inst-icon">💥</div>
-                        <p><strong>Click / Tap</strong> to SHATTER — fragments fly out and destroy enemies.</p>
+                        <div class="inst-icon">🎯</div>
+                        <p><strong>Click / Tap</strong> in a direction to shoot! Your aim matters.</p>
                     </div>
                     <div class="instruction-item">
-                        <div class="inst-icon">⚡</div>
-                        <p>Bigger shatter = more fragments = bigger blast. But you reset to tiny!</p>
+                        <div class="inst-icon">⁂</div>
+                        <p><strong>SCATTER mode</strong>: Wide cone of fragments. Great vs swarms.</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">⟐</div>
+                        <p><strong>BEAM mode</strong>: Focused energy blast. High damage vs tough enemies.</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">🔄</div>
+                        <p>Press <strong>Q</strong> or tap the <strong>mode button</strong> to switch modes.</p>
                     </div>
                     <div class="instruction-item">
                         <div class="inst-icon">🛡️</div>
-                        <p>Don't let enemies touch your core. You have <strong>3 lives</strong>.</p>
+                        <p>Don't let enemies touch your core. <strong>Shielded</strong> enemies block from one side!</p>
                     </div>
                     <div class="instruction-item">
                         <div class="inst-icon">✨</div>
@@ -94,6 +102,7 @@
             </div>
             <div class="hud-bottom">
                 <div class="hud-lives" id="hud-lives"></div>
+                <button id="btn-mode" class="mode-toggle mode-scatter" aria-label="Toggle shooting mode">⁂ SCATTER</button>
                 <div class="hud-size">
                     <div class="size-bar-bg">
                         <div class="size-bar-fill" id="size-bar"></div>
