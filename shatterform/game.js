@@ -104,6 +104,17 @@ function sfxModeSwitch() {
     playTone(700, 0.06, 'sine', 0.04);
 }
 
+function sfxBarrierPlace() {
+    playTone(250, 0.2, 'triangle', 0.08);
+    playTone(400, 0.15, 'sine', 0.06);
+    playNoise(0.1, 0.05);
+}
+
+function sfxBarrierExpire() {
+    playTone(180, 0.3, 'sine', 0.05);
+    playNoise(0.15, 0.04);
+}
+
 function sfxShieldBlock() {
     playTone(200, 0.15, 'square', 0.08);
     playTone(100, 0.2, 'sine', 0.06);
@@ -131,10 +142,17 @@ let slowMoTimer, slowMoFactor;
 let shootMode; // 'scatter' or 'beam'
 let shootCooldown; // seconds remaining
 let aimAngle; // current mouse/touch aim angle
+let barriers; // barrier array
+let barrierPlaceMode; // true when waiting for click to place
 const SHOOT_COOLDOWN = 0.4; // minimum time between shots
 const MIN_SHOOT_SIZE = 20; // minimum size to fire
 const SCATTER_CONE = Math.PI * 2 / 3; // ~120 degrees
 const BEAM_CONE = Math.PI / 6; // ~30 degrees
+const MAX_BARRIERS = 3;
+const BARRIER_DURATION = 7; // seconds
+const BARRIER_WIDTH = 140; // px
+const BARRIER_THICKNESS = 12;
+const BARRIER_SIZE_COST = 25; // player size cost to place a barrier
 
 const MIN_SIZE = 15;
 const MAX_SIZE = 120;
@@ -174,7 +192,10 @@ function resetGame() {
     shootMode = 'scatter';
     shootCooldown = 0;
     aimAngle = 0;
+    barriers = [];
+    barrierPlaceMode = false;
     updateModeUI();
+    updateBarrierUI();
 }
 
 // ============ ENTITIES ============
@@ -283,18 +304,21 @@ function spawnOrb() {
     });
 }
 
-function addFragment(x, y, angle, speed, size, color, damage) {
+function addFragment(x, y, angle, speed, size, color, damage, fragType) {
+    const isBeam = fragType === 'beam';
+    const life = isBeam ? (1.2 + Math.random() * 0.6) : (1.5 + Math.random() * 0.8);
     fragments.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         size,
         color,
-        life: 0.6 + Math.random() * 0.4,
-        maxLife: 1,
+        life,
+        maxLife: life,
         angle: Math.random() * Math.PI * 2,
         spin: (Math.random() - 0.5) * 10,
         damage: damage || 1,
+        fragType: fragType || 'scatter',
     });
 }
 
@@ -311,14 +335,14 @@ function addParticle(x, y, color, speed, life, size) {
 }
 
 function addBeam(targetAngle, sizeRatio) {
-    const length = 300 + sizeRatio * 500;
+    const length = Math.max(W, H) * (0.6 + sizeRatio * 0.4);
     const width = 8 + sizeRatio * 20;
     beams.push({
         angle: targetAngle,
         length,
         width,
-        life: 0.25,
-        maxLife: 0.25,
+        life: 0.5,
+        maxLife: 0.5,
         sizeRatio,
         damage: Math.floor(2 + sizeRatio * 4), // beam does 2-6 damage
     });
@@ -330,7 +354,7 @@ function shootScatter(targetAngle) {
 
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
     const fragmentCount = Math.floor(8 + sizeRatio * 24);
-    const fragmentSpeed = 200 + sizeRatio * 400;
+    const fragmentSpeed = 400 + sizeRatio * 600;
     const fragmentSize = 4 + sizeRatio * 8;
 
     biggestShatter = Math.max(biggestShatter, fragmentCount);
@@ -342,7 +366,7 @@ function shootScatter(targetAngle) {
         const a = targetAngle + spread;
         const speed = fragmentSpeed * (0.7 + Math.random() * 0.6);
         const hue = 190 + Math.random() * 40;
-        addFragment(cx, cy, a, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`, 1);
+        addFragment(cx, cy, a, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`, 1, 'scatter');
     }
 
     // Particle burst toward aim
@@ -376,13 +400,13 @@ function shootBeam(targetAngle) {
 
     // Also spawn a few tight fragments along the beam for visual flair
     const fragmentCount = Math.floor(3 + sizeRatio * 8);
-    const fragmentSpeed = 400 + sizeRatio * 600;
+    const fragmentSpeed = 600 + sizeRatio * 800;
     for (let i = 0; i < fragmentCount; i++) {
         const spread = (Math.random() - 0.5) * BEAM_CONE * 0.5;
         const a = targetAngle + spread;
         const speed = fragmentSpeed * (0.8 + Math.random() * 0.4);
         const hue = 190 + Math.random() * 30;
-        addFragment(cx, cy, a, speed, 3 + sizeRatio * 4, `hsl(${hue}, 100%, 85%)`, 1);
+        addFragment(cx, cy, a, speed, 3 + sizeRatio * 4, `hsl(${hue}, 100%, 85%)`, 1, 'beam');
     }
 
     // Focused particle burst
@@ -406,6 +430,70 @@ function shootBeam(targetAngle) {
 
 function triggerScreenShake(duration, intensity) {
     shakeDur = duration;
+}
+
+// ============ BARRIERS ============
+function placeBarrier(worldX, worldY) {
+    if (barriers.length >= MAX_BARRIERS) return false;
+    if (playerSize < MIN_SIZE + BARRIER_SIZE_COST) return false;
+
+    // Angle from player to placement point
+    const angle = Math.atan2(worldY - cy, worldX - cx);
+
+    barriers.push({
+        x: worldX,
+        y: worldY,
+        angle: angle + Math.PI / 2, // perpendicular to player direction
+        width: BARRIER_WIDTH,
+        thickness: BARRIER_THICKNESS,
+        life: BARRIER_DURATION,
+        maxLife: BARRIER_DURATION,
+    });
+
+    playerSize -= BARRIER_SIZE_COST;
+    sfxBarrierPlace();
+    shakeDur = 0.05;
+    updateBarrierUI();
+    return true;
+}
+
+function updateBarrierUI() {
+    const el = document.getElementById('hud-barriers');
+    if (!el) return;
+    const count = barriers ? barriers.length : 0;
+    const remaining = MAX_BARRIERS - count;
+    el.textContent = remaining;
+    const container = document.getElementById('barrier-indicator');
+    if (container) {
+        container.classList.toggle('barrier-empty', remaining <= 0);
+        container.classList.toggle('barrier-placing', barrierPlaceMode);
+    }
+}
+
+// Check if a point collides with a barrier segment (line segment collision)
+function barrierBlocksPoint(px, py, radius) {
+    for (const b of barriers) {
+        // Barrier as a line segment
+        const hw = b.width / 2;
+        const dx = Math.cos(b.angle) * hw;
+        const dy = Math.sin(b.angle) * hw;
+        const x1 = b.x - dx, y1 = b.y - dy;
+        const x2 = b.x + dx, y2 = b.y + dy;
+
+        // Distance from point to line segment
+        const segLen2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        if (segLen2 === 0) continue;
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / segLen2;
+        t = Math.max(0, Math.min(1, t));
+        const closestX = x1 + t * (x2 - x1);
+        const closestY = y1 + t * (y2 - y1);
+        const dist = Math.hypot(px - closestX, py - closestY);
+
+        if (dist < radius + b.thickness / 2) {
+            return b;
+        }
+    }
+    return null;
 }
 
 // ============ COLLISION ============
@@ -524,6 +612,23 @@ function update(dt) {
             e.vy = Math.sin(angle) * e.speed;
         }
 
+        // Barrier collision — deflect enemy around barriers
+        const nextX = e.x + e.vx * dt;
+        const nextY = e.y + e.vy * dt;
+        const hitBarrier = barrierBlocksPoint(nextX, nextY, e.size);
+        if (hitBarrier) {
+            // Push perpendicular to barrier
+            const bcos = Math.cos(hitBarrier.angle);
+            const bsin = Math.sin(hitBarrier.angle);
+            // Determine which side the enemy is on
+            const cross = (nextX - hitBarrier.x) * bsin - (nextY - hitBarrier.y) * bcos;
+            const pushDir = cross > 0 ? 1 : -1;
+            // Deflect: slide along barrier
+            const dot = e.vx * bcos + e.vy * bsin;
+            e.vx = bcos * dot + (-bsin) * e.speed * 0.5 * pushDir;
+            e.vy = bsin * dot + bcos * e.speed * 0.5 * pushDir;
+        }
+
         e.x += e.vx * dt;
         e.y += e.vy * dt;
         e.angle += e.spinSpeed * dt;
@@ -602,8 +707,9 @@ function update(dt) {
         const f = fragments[i];
         f.x += f.vx * dt;
         f.y += f.vy * dt;
-        f.vx *= 0.97;
-        f.vy *= 0.97;
+        const drag = f.fragType === 'beam' ? 0.995 : 0.99;
+        f.vx *= drag;
+        f.vy *= drag;
         f.life -= dt;
         f.angle += f.spin * dt;
 
@@ -668,6 +774,21 @@ function update(dt) {
                 addParticle(o.x, o.y, '#00ffaa', 100, 0.3, 3);
             }
             orbs.splice(i, 1);
+        }
+    }
+
+    // Update barriers
+    for (let i = barriers.length - 1; i >= 0; i--) {
+        const b = barriers[i];
+        b.life -= dt;
+        if (b.life <= 0) {
+            // Expire particles
+            for (let j = 0; j < 8; j++) {
+                addParticle(b.x, b.y, '#00ffcc', 80, 0.4, 3);
+            }
+            sfxBarrierExpire();
+            barriers.splice(i, 1);
+            updateBarrierUI();
         }
     }
 
@@ -1031,6 +1152,66 @@ function drawOrb(o) {
     ctx.restore();
 }
 
+function drawBarrier(b) {
+    const alpha = Math.min(b.life / 1.5, 1); // fade in last 1.5s
+    const hw = b.width / 2;
+    const dx = Math.cos(b.angle) * hw;
+    const dy = Math.sin(b.angle) * hw;
+
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.9;
+
+    // Glow
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 15 * alpha;
+
+    // Main barrier line
+    ctx.strokeStyle = `rgba(0, 255, 200, ${0.8 * alpha})`;
+    ctx.lineWidth = b.thickness;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(b.x - dx + shakeX, b.y - dy + shakeY);
+    ctx.lineTo(b.x + dx + shakeX, b.y + dy + shakeY);
+    ctx.stroke();
+
+    // Inner bright core
+    ctx.strokeStyle = `rgba(150, 255, 230, ${0.6 * alpha})`;
+    ctx.lineWidth = b.thickness * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(b.x - dx + shakeX, b.y - dy + shakeY);
+    ctx.lineTo(b.x + dx + shakeX, b.y + dy + shakeY);
+    ctx.stroke();
+
+    // Hex endpoints
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = `rgba(0, 255, 200, ${alpha})`;
+    for (const sign of [-1, 1]) {
+        const ex = b.x + dx * sign + shakeX;
+        const ey = b.y + dy * sign + shakeY;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = Math.PI * 2 * i / 6;
+            const r = 6;
+            if (i === 0) ctx.moveTo(ex + Math.cos(a) * r, ey + Math.sin(a) * r);
+            else ctx.lineTo(ex + Math.cos(a) * r, ey + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Timer indicator: small pips along barrier
+    if (b.life < 3) {
+        const flashRate = b.life < 1 ? 10 : 4;
+        const flashAlpha = 0.3 + Math.sin(gameTime * flashRate) * 0.3;
+        ctx.fillStyle = `rgba(255, 100, 100, ${flashAlpha})`;
+        ctx.beginPath();
+        ctx.arc(b.x + shakeX, b.y + shakeY, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
 function drawBackground() {
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, W, H);
@@ -1094,6 +1275,7 @@ function render() {
 
     if (state === 'playing' || state === 'gameover') {
         orbs.forEach(drawOrb);
+        barriers.forEach(drawBarrier);
         enemies.forEach(drawEnemy);
         beams.forEach(drawBeam);
         fragments.forEach(drawFragment);
@@ -1102,6 +1284,27 @@ function render() {
         if (state === 'playing') {
             drawPlayer();
             drawTutorial();
+
+            // Barrier placement preview
+            if (barrierPlaceMode) {
+                const previewDist = playerSize + 60;
+                const px = cx + Math.cos(aimAngle) * previewDist;
+                const py = cy + Math.sin(aimAngle) * previewDist;
+                const perpAngle = aimAngle + Math.PI / 2;
+                const hw = BARRIER_WIDTH / 2;
+                ctx.save();
+                ctx.globalAlpha = 0.4 + Math.sin(gameTime * 5) * 0.15;
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = BARRIER_THICKNESS;
+                ctx.lineCap = 'round';
+                ctx.setLineDash([8, 8]);
+                ctx.beginPath();
+                ctx.moveTo(px - Math.cos(perpAngle) * hw, py - Math.sin(perpAngle) * hw);
+                ctx.lineTo(px + Math.cos(perpAngle) * hw, py + Math.sin(perpAngle) * hw);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
         }
 
         if (waveTimer > 0 && wave > 1) {
@@ -1291,6 +1494,8 @@ function handleShoot(e) {
     if (e) {
         if (e.touches && e.touches.length > 0) {
             angle = getAimAngle(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            angle = getAimAngle(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
         } else if (e.clientX !== undefined) {
             angle = getAimAngle(e.clientX, e.clientY);
         }
@@ -1317,8 +1522,71 @@ canvas.addEventListener('touchmove', e => {
     }
 }, { passive: true });
 
-canvas.addEventListener('mousedown', handleShoot);
-canvas.addEventListener('touchstart', handleShoot, { passive: false });
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return; // right-click handled separately
+    if (barrierPlaceMode && state === 'playing') {
+        e.preventDefault();
+        const angle = getAimAngle(e.clientX, e.clientY);
+        const rect = canvas.getBoundingClientRect();
+        const wx = (e.clientX - rect.left) * devicePixelRatio;
+        const wy = (e.clientY - rect.top) * devicePixelRatio;
+        placeBarrier(wx, wy);
+        barrierPlaceMode = false;
+        updateBarrierUI();
+        return;
+    }
+    handleShoot(e);
+});
+
+// Right-click to place barrier directly
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (state !== 'playing') return;
+    const rect = canvas.getBoundingClientRect();
+    const wx = (e.clientX - rect.left) * devicePixelRatio;
+    const wy = (e.clientY - rect.top) * devicePixelRatio;
+    placeBarrier(wx, wy);
+});
+
+// Mobile: long-press to place barrier
+let longPressTimer = null;
+let longPressTriggered = false;
+canvas.addEventListener('touchstart', (e) => {
+    longPressTriggered = false;
+    if (state === 'playing' && e.touches.length === 1) {
+        const touch = e.touches[0];
+        longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            const rect = canvas.getBoundingClientRect();
+            const wx = (touch.clientX - rect.left) * devicePixelRatio;
+            const wy = (touch.clientY - rect.top) * devicePixelRatio;
+            placeBarrier(wx, wy);
+        }, 400);
+    }
+    if (!longPressTriggered && !barrierPlaceMode) {
+        // Don't call handleShoot yet — wait for touchend or longpress
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    if (longPressTriggered) { longPressTriggered = false; return; }
+    if (barrierPlaceMode && state === 'playing' && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        const wx = (touch.clientX - rect.left) * devicePixelRatio;
+        const wy = (touch.clientY - rect.top) * devicePixelRatio;
+        placeBarrier(wx, wy);
+        barrierPlaceMode = false;
+        updateBarrierUI();
+        return;
+    }
+    handleShoot(e);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', () => {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}, { passive: true });
 
 // Keyboard
 document.addEventListener('keydown', e => {
@@ -1328,6 +1596,10 @@ document.addEventListener('keydown', e => {
     }
     if ((e.code === 'KeyQ' || e.code === 'KeyE') && state === 'playing') {
         toggleMode();
+    }
+    if (e.code === 'KeyF' && state === 'playing') {
+        barrierPlaceMode = !barrierPlaceMode;
+        updateBarrierUI();
     }
 });
 
@@ -1348,6 +1620,26 @@ if (modeBtn) {
         e.stopPropagation();
         e.preventDefault();
         if (state === 'playing') toggleMode();
+    }, { passive: false });
+}
+
+// Barrier indicator click
+const barrierBtn = document.getElementById('barrier-indicator');
+if (barrierBtn) {
+    barrierBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (state === 'playing') {
+            barrierPlaceMode = !barrierPlaceMode;
+            updateBarrierUI();
+        }
+    });
+    barrierBtn.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (state === 'playing') {
+            barrierPlaceMode = !barrierPlaceMode;
+            updateBarrierUI();
+        }
     }, { passive: false });
 }
 

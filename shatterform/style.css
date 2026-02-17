@@ -375,6 +375,52 @@ canvas {
     transform: scale(0.92);
 }
 
+/* Barrier HUD */
+.barrier-hud {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #00ffcc;
+    background: rgba(0, 255, 200, 0.1);
+    border: 1px solid rgba(0, 255, 200, 0.3);
+    border-radius: 16px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.barrier-hud.barrier-empty {
+    opacity: 0.4;
+    color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.barrier-hud.barrier-placing {
+    background: rgba(0, 255, 200, 0.25);
+    box-shadow: 0 0 12px rgba(0, 255, 200, 0.4);
+    animation: barrier-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes barrier-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 200, 0.3); }
+    50% { box-shadow: 0 0 16px rgba(0, 255, 200, 0.6); }
+}
+
+.barrier-icon {
+    font-size: 1rem;
+}
+
+.barrier-key {
+    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: 2px;
+}
+
 .size-bar-fill.ready {
     box-shadow: 0 0 8px rgba(0, 200, 255, 0.5);
 }
