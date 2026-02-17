@@ -1,0 +1,62 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #e0d0b0; }
+canvas#gameCanvas { display: block; }
+
+#title-screen {
+  position: fixed; inset: 0; z-index: 100; background: #0a0806;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#title-text {
+  font-size: 96px; font-weight: 900; letter-spacing: 12px;
+  color: #ff9030; text-shadow: 0 0 40px #ff6000, 0 0 80px #ff4000, 0 0 120px #cc3000;
+  animation: flicker 0.15s infinite alternate;
+}
+@keyframes flicker {
+  0% { text-shadow: 0 0 40px #ff6000, 0 0 80px #ff4000, 0 0 120px #cc3000; opacity: 1; }
+  50% { text-shadow: 0 0 35px #ff5500, 0 0 70px #ff3500, 0 0 100px #bb2500; opacity: 0.97; }
+  100% { text-shadow: 0 0 45px #ff7000, 0 0 90px #ff4500, 0 0 130px #dd3500; opacity: 1; }
+}
+.subtitle { font-size: 24px; color: #aa8855; margin: 20px 0 40px; letter-spacing: 4px; }
+.instructions { text-align: center; margin-bottom: 40px; line-height: 2; color: #887755; }
+#start-btn, #game-over-screen button {
+  font-size: 28px; padding: 15px 60px; background: #cc6600; color: #fff; border: none;
+  cursor: pointer; letter-spacing: 4px; font-weight: bold;
+  transition: background 0.2s;
+}
+#start-btn:hover, #game-over-screen button:hover { background: #ff8800; }
+
+#game-over-screen {
+  position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.95);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#game-over-screen h1 { font-size: 48px; color: #ff6030; margin-bottom: 30px; }
+#go-stats { margin-bottom: 40px; font-size: 20px; line-height: 2; text-align: center; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+#hud > * { pointer-events: auto; }
+#hud-top-left { position: absolute; top: 10px; left: 10px; }
+#hp-bar-container {
+  width: 200px; height: 20px; background: #333; border: 1px solid #555; position: relative; margin-bottom: 8px;
+}
+#hp-bar { height: 100%; background: #c33; transition: width 0.2s; width: 100%; }
+#hp-text { position: absolute; inset: 0; text-align: center; font-size: 12px; line-height: 20px; color: #fff; }
+#resources { display: flex; gap: 15px; font-size: 16px; }
+#hud-top-center { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center; }
+#wave-info { font-size: 28px; font-weight: bold; color: #ffaa44; }
+#wave-timer { font-size: 18px; color: #aa8855; }
+#hud-top-right { position: absolute; top: 10px; right: 10px; font-size: 20px; }
+#build-bar {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: center;
+}
+#build-mode-label { color: #ff8800; font-weight: bold; font-size: 18px; margin-right: 10px; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.build-btn {
+  padding: 6px 10px; background: #222; border: 1px solid #555; color: #ccc; cursor: pointer;
+  font-size: 12px; text-align: center; min-width: 80px;
+}
+.build-btn:hover { background: #333; }
+.build-btn.selected { border-color: #ff8800; background: #332200; color: #ffaa44; }
+#minimap {
+  position: absolute; bottom: 10px; right: 10px; border: 1px solid #555; background: #000;
+}

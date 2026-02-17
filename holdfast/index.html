@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Holdfast</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="title-screen">
+  <h1 id="title-text">HOLDFAST</h1>
+  <p class="subtitle">Push back the darkness</p>
+  <div class="instructions">
+    <p>WASD to move</p>
+    <p>SPACE / Click to attack</p>
+    <p>B for build mode, 1-7 to select buildings</p>
+    <p>Expand your light, survive the waves</p>
+  </div>
+  <button id="start-btn" onclick="startGame()">START</button>
+</div>
+<div id="game-over-screen" style="display:none">
+  <h1 id="go-title"></h1>
+  <div id="go-stats"></div>
+  <button onclick="location.reload()">PLAY AGAIN</button>
+</div>
+<canvas id="gameCanvas"></canvas>
+<div id="hud" style="display:none">
+  <div id="hud-top-left">
+    <div id="hp-bar-container"><div id="hp-bar"></div><span id="hp-text">100/100</span></div>
+    <div id="resources">
+      <span>🪵 <span id="res-wood">0</span></span>
+      <span>🪨 <span id="res-stone">0</span></span>
+      <span>🔥 <span id="res-ember">0</span></span>
+    </div>
+  </div>
+  <div id="hud-top-center">
+    <div id="wave-info">Wave <span id="wave-num">1</span></div>
+    <div id="wave-timer"></div>
+  </div>
+  <div id="hud-top-right">
+    <div>Score: <span id="score">0</span></div>
+  </div>
+  <div id="build-bar">
+    <span id="build-mode-label" style="display:none">BUILD MODE</span>
+    <button class="build-btn" onclick="selectBuilding(0)" data-key="1">1: Torch<br><small>5W 1E</small></button>
+    <button class="build-btn" onclick="selectBuilding(1)" data-key="2">2: Lantern<br><small>10W 3S 2E</small></button>
+    <button class="build-btn" onclick="selectBuilding(2)" data-key="3">3: Wall<br><small>5S</small></button>
+    <button class="build-btn" onclick="selectBuilding(3)" data-key="4">4: Arrow Tower<br><small>15W 10S 1E</small></button>
+    <button class="build-btn" onclick="selectBuilding(4)" data-key="5">5: Fire Pit<br><small>10W 5S 3E</small></button>
+    <button class="build-btn" onclick="selectBuilding(5)" data-key="6">6: Quarry<br><small>20S 2E</small></button>
+    <button class="build-btn" onclick="selectBuilding(6)" data-key="7">7: Lumber Mill<br><small>20W 2E</small></button>
+  </div>
+  <canvas id="minimap" width="150" height="150"></canvas>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
