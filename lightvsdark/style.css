@@ -12,6 +12,8 @@ body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
 #day-display { margin-top: 4px; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 3px #000; }
 #time-display { font-size: 14px; text-shadow: 1px 1px 3px #000; }
 #night-timer { font-size: 14px; color: #ff6b6b; font-weight: bold; }
+#skip-night-btn { margin-top: 6px; padding: 4px 12px; background: rgba(44,62,80,0.85); border: 2px solid #f39c12; border-radius: 4px; color: #f1c40f; font-size: 13px; font-weight: bold; cursor: pointer; text-shadow: 1px 1px 2px #000; transition: background 0.2s; }
+#skip-night-btn:hover { background: rgba(243,156,18,0.3); }
 
 #hotbar { display: flex; gap: 4px; }
 .hotbar-slot { width: 48px; height: 48px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; text-align: center; cursor: pointer; position: relative; color: #ccc; }

@@ -149,8 +149,14 @@ const Lighting = (() => {
     ctx.drawImage(dark, 0, 0);
   }
   
+  function skipToNight() {
+    if (phase === 'day') {
+      cycleTime = DAY_DUR; // jump to dusk start
+    }
+  }
+  
   return {
-    init, update, drawLighting, getNightTimeRemaining,
+    init, update, drawLighting, getNightTimeRemaining, skipToNight,
     phase: () => phase,
     nightCount: () => nightCount,
     nightAmount: () => nightAmount,

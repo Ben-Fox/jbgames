@@ -72,6 +72,10 @@ const UI = (() => {
       nightTimer.classList.add('hidden');
     }
     
+    // Skip to Night button
+    const skipBtn = document.getElementById('skip-night-btn');
+    if (phase === 'day') { skipBtn.classList.remove('hidden'); } else { skipBtn.classList.add('hidden'); }
+    
     // Resources
     document.getElementById('res-wood').textContent = `🪵 ${ps.resources.wood}`;
     document.getElementById('res-stone').textContent = `🪨 ${ps.resources.stone}`;

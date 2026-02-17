@@ -35,6 +35,9 @@ const Game = (() => {
     Building.init();
     UI.init();
     
+    // Skip to night button
+    document.getElementById('skip-night-btn').onclick = () => { if (Lighting.phase() === 'day') Lighting.skipToNight(); };
+    
     // Give starting resources message
     Audio.init();
     
@@ -241,6 +244,7 @@ const Game = (() => {
     else if (key === ' ') { e.preventDefault(); Player.dodge(keys); }
     else if (key === 'e') { /* pickup handled automatically */ }
     else if (key === 'r') { Building.repair(Player.state().x, Player.state().y); }
+    else if (key === 'n') { if (Lighting.phase() === 'day') Lighting.skipToNight(); }
     else if (key >= '1' && key <= '9') {
       const idx = parseInt(key) - 1;
       const ps = Player.state();
