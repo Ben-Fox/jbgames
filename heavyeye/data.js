@@ -1,4 +1,4 @@
-// HeavyEye — Comparison Data
+// Heavy Eye — Comparison Data
 // Each entry: { a: {name, detail, emoji, weight_lbs, fun_fact}, b: {...}, ratio }
 // ratio = lighter / heavier (0.05 = very easy, 0.95 = nearly impossible)
 

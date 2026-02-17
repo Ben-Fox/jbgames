@@ -1,4 +1,4 @@
-// HeavyEye Game Engine
+// Heavy Eye Game Engine
 (() => {
     // ─── Emoji to OpenMoji ───
     function emojiToCodePoints(emoji) {
@@ -458,7 +458,7 @@
     function shareResults() {
         const modeStr = mode === 'campaign' ? 'Campaign' : 'Wildcard';
         const dots = results.map(r => r ? '🟩' : '🟥').join('');
-        const text = `⚖️ HeavyEye ${modeStr}\n${score}/${rounds.length} ${dots}`;
+        const text = `⚖️ Heavy Eye ${modeStr}\n${score}/${rounds.length} ${dots}`;
         navigator.clipboard.writeText(text).then(() => {
             $('share-btn').classList.add('copied');
             setTimeout(() => $('share-btn').classList.remove('copied'), 2000);
