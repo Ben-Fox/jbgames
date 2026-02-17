@@ -2,14 +2,15 @@
 (function() {
 'use strict';
 
-// ---- CONSTANTS ----
 const SUITS = ['♠','♥','♦','♣'];
 const SUIT_NAMES = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
 const VALUES = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const VAL_NUM = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10,'A':11};
 const VAL_SEQ = {'A':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13};
+const MAX_CHARGE_ATTACK = 25;
+const BREAKPOINT_THRESHOLD = 2; // consecutive cards needed
+const BREAKPOINT_BONUS_DMG = 3;
 
-// ---- STATE ----
 let difficulty = 'medium';
 let deck = [];
 let playerHand = [], oppHand = [];
@@ -17,18 +18,40 @@ let playerHP = 30, oppHP = 30;
 let playerCharge = [], oppCharge = [];
 let playerPressure = 0, oppPressure = 0;
 let playerMomentum = false, oppMomentum = false;
-let playerCombo = [], oppCombo = []; // sequence of played card values
+let playerCombo = [], oppCombo = [];
 let playerBonusDmg = 0, oppBonusDmg = 0;
-let playerCardsPlayed = 0; // for momentum double-play
-let turnOwner = 'player'; // 'player' or 'opponent'
+let playerCardsPlayed = 0;
+let turnOwner = 'player';
 let gameOver = false;
 let selectedCard = null;
 let waitingForResponse = false;
 let stats = { playerDmg: 0, oppDmg: 0, playerCombos: 0, oppCombos: 0, turns: 0 };
-let allPlayed = []; // for hard AI card tracking
+let allPlayed = [];
+// Pressure: track per-TURN, not per-card. These flags track if a spade was played THIS turn.
+let playerPlayedSpadeThisTurn = false;
+let oppPlayedSpadeThisTurn = false;
 let playerNoAttackTurns = 0, oppNoAttackTurns = 0;
+// Prepared guard
+let playerPreparedGuard = null; // card object or null
+let oppPreparedGuard = null;
 
-// ---- HELPERS ----
+const $ = id => document.getElementById(id);
+const startScreen = $('start-screen');
+const gameScreen = $('game-screen');
+
+// ---- START SCREEN ----
+document.querySelectorAll('.diff-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    difficulty = b.dataset.diff;
+  });
+});
+$('deal-btn').addEventListener('click', startGame);
+$('play-again-btn').addEventListener('click', () => { $('gameover-modal').classList.add('hidden'); startGame(); });
+$('rules-toggle').addEventListener('click', () => $('rules-modal').classList.remove('hidden'));
+$('close-rules').addEventListener('click', () => $('rules-modal').classList.add('hidden'));
+
 function makeDeck() {
   let d = [];
   for (let s of SUITS) for (let v of VALUES) d.push({ suit: s, value: v });
@@ -44,24 +67,6 @@ function isRed(c) { return c.suit === '♥' || c.suit === '♦'; }
 function totalCharge(pile) { return pile.reduce((s,c) => s + cardNum(c), 0); }
 function cardId(c) { return c.suit + c.value; }
 
-// ---- DOM REFS ----
-const $ = id => document.getElementById(id);
-const startScreen = $('start-screen');
-const gameScreen = $('game-screen');
-
-// ---- START SCREEN ----
-document.querySelectorAll('.diff-btn').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('selected'));
-    b.classList.add('selected');
-    difficulty = b.dataset.diff;
-  });
-});
-$('deal-btn').addEventListener('click', startGame);
-$('play-again-btn').addEventListener('click', () => { $('gameover-modal').classList.add('hidden'); startGame(); });
-$('rules-toggle').addEventListener('click', () => { $('rules-modal').classList.remove('hidden'); });
-$('close-rules').addEventListener('click', () => { $('rules-modal').classList.add('hidden'); });
-
 function startGame() {
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
@@ -73,7 +78,9 @@ function startGame() {
   playerMomentum = false; oppMomentum = false;
   playerCombo = []; oppCombo = [];
   playerBonusDmg = 0; oppBonusDmg = 0;
+  playerPlayedSpadeThisTurn = false; oppPlayedSpadeThisTurn = false;
   playerNoAttackTurns = 0; oppNoAttackTurns = 0;
+  playerPreparedGuard = null; oppPreparedGuard = null;
   gameOver = false; selectedCard = null; waitingForResponse = false;
   playerCardsPlayed = 0;
   stats = { playerDmg: 0, oppDmg: 0, playerCombos: 0, oppCombos: 0, turns: 0 };
@@ -81,7 +88,6 @@ function startGame() {
   $('action-log').innerHTML = '';
   $('opp-played').innerHTML = '';
   $('player-played').innerHTML = '';
-  // Deal 5 each
   for (let i = 0; i < 5; i++) { playerHand.push(deck.pop()); oppHand.push(deck.pop()); }
   turnOwner = 'player';
   render();
@@ -93,27 +99,59 @@ function startGame() {
 function render() {
   renderHand('opponent-hand', oppHand, false);
   renderHand('player-hand', playerHand, true);
-  renderCharge('opp-charge-pile', oppCharge);
-  renderCharge('player-charge-pile', playerCharge);
+  renderCharge('opp-charge-pile', oppCharge, 'opp-charge-value');
+  renderCharge('player-charge-pile', playerCharge, 'player-charge-value');
   updateHP();
   updateStatus();
   updateDeck();
   renderCombo();
+  renderPreparedGuard();
+  updateTurnIndicator();
 }
 
 function renderHand(containerId, hand, faceUp) {
   const el = $(containerId);
   el.innerHTML = '';
+  const count = hand.length;
+  const isPlayer = containerId === 'player-hand';
   hand.forEach((c, i) => {
     const card = faceUp ? makeCardEl(c) : makeCardBack();
+    // Fan rotation
+    if (count > 1) {
+      const mid = (count - 1) / 2;
+      const angle = (i - mid) * (count > 7 ? 2 : 3);
+      const yOff = Math.abs(i - mid) * 3;
+      card.classList.add('fan');
+      if (!faceUp) {
+        card.style.transform = `rotate(${angle}deg) translateY(${yOff}px)`;
+      } else {
+        card.style.setProperty('--fan-rotate', angle + 'deg');
+        card.style.setProperty('--fan-y', yOff + 'px');
+      }
+      card.style.marginLeft = i === 0 ? '0' : '-8px';
+    }
     if (faceUp && turnOwner === 'player' && !waitingForResponse && !gameOver) {
-      card.classList.add('playable');
-      card.addEventListener('click', () => selectCard(i));
-      card.addEventListener('dblclick', () => { selectCard(i); playSelected(); });
-      card.title = tooltipFor(c);
+      if (c.suit === '♣') {
+        // Clubs disabled on own turn
+        card.classList.add('disabled-club');
+        card.title = 'Counters can only be played when attacked';
+      } else {
+        card.classList.add('playable');
+        card.addEventListener('click', () => selectCard(i));
+        card.addEventListener('dblclick', () => { selectCard(i); playSelected(); });
+      }
     }
     if (faceUp && selectedCard === i) card.classList.add('selected');
+    if (faceUp && !card.classList.contains('selected') && !card.classList.contains('disabled-club')) {
+      // Restore fan transform on non-hovered state
+    }
     card.classList.add('card-enter');
+    // Tooltip on hover
+    if (faceUp) {
+      card.addEventListener('mouseenter', (e) => showTooltip(c, e));
+      card.addEventListener('mousemove', (e) => moveTooltip(e));
+      card.addEventListener('mouseleave', hideTooltip);
+    }
     el.appendChild(card);
   });
 }
@@ -134,14 +172,17 @@ function makeCardBack() {
   return el;
 }
 
-function renderCharge(containerId, pile) {
+function renderCharge(containerId, pile, totalId) {
   const el = $(containerId);
-  el.innerHTML = '<div class="charge-label">' + (containerId.includes('opp') ? 'OPP CHARGE' : 'YOUR CHARGE') + '</div>';
+  // Keep label and total, clear cards
+  const cards = el.querySelectorAll('.card');
+  cards.forEach(c => c.remove());
   pile.forEach(c => {
     const card = makeCardEl(c);
     card.style.width = '50px'; card.style.height = '70px';
     el.appendChild(card);
   });
+  $(totalId).textContent = totalCharge(pile);
 }
 
 function updateHP() {
@@ -176,12 +217,59 @@ function renderCombo() {
   $('combo-values').textContent = playerCombo.length ? playerCombo.join(' → ') : 'none';
 }
 
+function renderPreparedGuard() {
+  const el = $('prepared-guard');
+  if (playerPreparedGuard) {
+    el.classList.remove('hidden');
+    $('prepared-guard-text').textContent = `Prepared Guard: ${playerPreparedGuard.value}♥ (blocks ${cardNum(playerPreparedGuard)})`;
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function updateTurnIndicator() {
+  const el = $('turn-indicator');
+  el.classList.remove('hidden', 'player-turn', 'opponent-turn');
+  if (gameOver) { el.classList.add('hidden'); return; }
+  if (turnOwner === 'player') {
+    el.classList.add('player-turn');
+    el.textContent = 'YOUR TURN';
+  } else {
+    el.classList.add('opponent-turn');
+    el.textContent = "OPPONENT'S TURN";
+  }
+}
+
+// ---- TOOLTIP ----
+function showTooltip(c, e) {
+  const tip = $('card-tooltip');
+  tip.classList.remove('hidden');
+  tip.innerHTML = tooltipFor(c);
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const tip = $('card-tooltip');
+  tip.style.left = (e.clientX + 12) + 'px';
+  tip.style.top = (e.clientY - 40) + 'px';
+}
+function hideTooltip() {
+  $('card-tooltip').classList.add('hidden');
+}
+
 function tooltipFor(c) {
   const v = cardNum(c);
-  if (c.suit === '♠') return `Attack: Deal ${v} damage` + (totalCharge(playerCharge) > 0 ? ` (+${totalCharge(playerCharge)} charge)` : '');
-  if (c.suit === '♥') return `Guard: Block ${v} damage (excess heals up to 5)`;
-  if (c.suit === '♦') return `Charge: Store ${v} power for a future attack`;
-  if (c.suit === '♣') return `Counter: Play when attacked. If value > attack, negate & reflect`;
+  if (c.suit === '♠') {
+    const charge = totalCharge(playerCharge);
+    let total = v + playerBonusDmg;
+    let parts = `<b>♠ Attack: ${v}</b>`;
+    if (playerBonusDmg > 0) parts += ` + ${playerBonusDmg} bonus`;
+    if (charge > 0) parts += `<br>With charge: ${Math.min(MAX_CHARGE_ATTACK, total + charge)} damage`;
+    else parts += `<br>Total: ${total} damage`;
+    return parts;
+  }
+  if (c.suit === '♥') return `<b>♥ Guard: blocks ${v}</b><br>Play now to prepare a guard for the next attack. Excess blocks heal (max 5).`;
+  if (c.suit === '♦') return `<b>♦ Charge: +${v}</b><br>Current charge: ${totalCharge(playerCharge)}<br>After: ${totalCharge(playerCharge) + v}${totalCharge(playerCharge) + v > 12 ? ' ⚠ OVERCHARGE' : ''}`;
+  if (c.suit === '♣') return `<b>♣ Counter</b><br>Can only play when attacked.<br>If value (${v}) > attack damage → negate & reflect.`;
   return '';
 }
 
@@ -191,6 +279,15 @@ function log(msg, cls) {
   const div = document.createElement('div');
   div.className = 'log-entry' + (cls ? ' ' + cls : '');
   div.textContent = msg;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function logTurnSeparator(label) {
+  const el = $('action-log');
+  const div = document.createElement('div');
+  div.className = 'log-entry log-separator';
+  div.textContent = `── ${label} ──`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -232,16 +329,57 @@ function showOverchargeExplosion() {
 function showCardPlayed(card, who) {
   const slot = $(who === 'player' ? 'player-played' : 'opp-played');
   slot.innerHTML = '';
-  slot.appendChild(makeCardEl(card));
+  const cardEl = makeCardEl(card);
+  slot.appendChild(cardEl);
+}
+
+// ---- OVERCHARGE with deck composition ----
+function getOverchargeOdds() {
+  if (deck.length === 0) return { safe: 50, boom: 50 };
+  let red = 0, black = 0;
+  for (const c of deck) {
+    if (isRed(c)) red++; else black++;
+  }
+  const safePercent = Math.round((red / deck.length) * 100);
+  return { safe: safePercent, boom: 100 - safePercent };
+}
+
+function doOverchargeCheck(who, callback) {
+  const odds = getOverchargeOdds();
+  if (who === 'player') {
+    log(`⚠ Overcharge check! Charge > 12... (${odds.safe}% safe / ${odds.boom}% boom)`, 'log-important');
+  } else {
+    log(`⚠ Opponent overcharge check! (${odds.safe}% safe / ${odds.boom}% boom)`, 'log-important');
+  }
+  
+  if (deck.length === 0) { callback(); return; }
+  const flipped = deck.pop();
+  allPlayed.push(flipped);
+  
+  const isPlayerTarget = who === 'player';
+  
+  if (isRed(flipped)) {
+    log(`Flipped ${flipped.value}${flipped.suit} — RED! Safe.`, 'log-heal');
+  } else {
+    log(`Flipped ${flipped.value}${flipped.suit} — BLACK! Overcharge explodes!`, 'log-damage');
+    showOverchargeExplosion();
+    if (isPlayerTarget) {
+      playerHP -= 10; stats.oppDmg += 10; playerCharge = [];
+      floatText('-10', window.innerWidth/2, window.innerHeight - 160, '#f44');
+    } else {
+      oppHP -= 10; stats.playerDmg += 10; oppCharge = [];
+      floatText('-10', window.innerWidth/2, 80, '#f44');
+    }
+  }
+  updateDeck();
+  callback();
 }
 
 // ---- DRAW ----
 function drawCard(who) {
   if (deck.length === 0) {
-    // reshuffle discards - just make new deck minus known cards
     log('Deck empty - reshuffling!');
     deck = makeDeck();
-    // Remove cards in hands/charge
     const inPlay = [...playerHand, ...oppHand, ...playerCharge, ...oppCharge].map(cardId);
     deck = deck.filter(c => !inPlay.includes(cardId(c)));
     shuffle(deck);
@@ -259,32 +397,23 @@ function startPlayerTurn() {
   if (gameOver) return;
   turnOwner = 'player';
   playerCardsPlayed = 0;
+  playerPlayedSpadeThisTurn = false;
   stats.turns++;
+  logTurnSeparator(`Turn ${stats.turns} — You`);
 
-  // Overcharge check
-  if (totalCharge(playerCharge) > 12) {
-    log('⚠ Overcharge check! Your charge > 12...', 'log-important');
-    const top = deck.length > 0 ? deck[deck.length - 1] : { suit: '♠', value: 'A' };
-    const flipped = deck.pop();
-    if (flipped) {
-      allPlayed.push(flipped);
-      if (isRed(flipped)) {
-        log(`Flipped ${flipped.value}${flipped.suit} — RED! Safe.`, 'log-heal');
-      } else {
-        log(`Flipped ${flipped.value}${flipped.suit} — BLACK! Overcharge explodes!`, 'log-damage');
-        showOverchargeExplosion();
-        playerHP -= 10;
-        stats.oppDmg += 10;
-        playerCharge = [];
-        floatText('-10', window.innerWidth/2, window.innerHeight - 160, '#f44');
-      }
-    }
-    updateDeck();
-  }
-
-  // Draw
+  // BUG FIX #4: Draw FIRST, then overcharge check
   const drawn = drawCard('player');
   if (drawn) log('You drew a card.');
+
+  if (totalCharge(playerCharge) > 12) {
+    doOverchargeCheck('player', () => {
+      render();
+      if (checkGameOver()) return;
+      showActionButtons();
+    });
+    return;
+  }
+  
   render();
   showActionButtons();
 }
@@ -292,7 +421,6 @@ function startPlayerTurn() {
 function showActionButtons() {
   $('play-btn').classList.remove('hidden');
   $('pass-btn').classList.add('hidden');
-  // Show use-charge if player has spade selected and has charge
   $('use-charge-btn').classList.add('hidden');
   selectedCard = null;
   render();
@@ -300,12 +428,13 @@ function showActionButtons() {
 
 function selectCard(i) {
   if (waitingForResponse || gameOver) return;
+  const c = playerHand[i];
+  // Clubs can't be played on own turn
+  if (c && c.suit === '♣') return;
   selectedCard = (selectedCard === i) ? null : i;
   render();
-  // highlight selected
   const cards = $('player-hand').children;
   if (selectedCard !== null && cards[selectedCard]) cards[selectedCard].classList.add('selected');
-  // show use-charge if spade + has charge
   if (selectedCard !== null && playerHand[selectedCard].suit === '♠' && playerCharge.length > 0) {
     $('use-charge-btn').classList.remove('hidden');
   } else {
@@ -319,8 +448,8 @@ $('use-charge-btn').addEventListener('click', () => playSelected(true));
 function playSelected(useCharge) {
   if (selectedCard === null || waitingForResponse || gameOver) return;
   const card = playerHand[selectedCard];
+  if (card.suit === '♣') return; // safety
   
-  // Preemptive guard is allowed
   playerHand.splice(selectedCard, 1);
   selectedCard = null;
   allPlayed.push(card);
@@ -346,13 +475,12 @@ function resolvePlayerCard(card, useCharge) {
   }
   renderCombo();
 
-  // Check breakpoint (3+ consecutive)
-  if (playerCombo.length >= 3) {
+  // Check breakpoint (2+ consecutive)
+  if (playerCombo.length >= BREAKPOINT_THRESHOLD) {
     showBreakpointAnim();
     log('⚡ BREAKPOINT triggered!', 'log-important');
     stats.playerCombos++;
-    playerCombo = [seqVal]; // reset after trigger
-    // show choice modal
+    playerCombo = [seqVal];
     showBreakpointChoice('player', () => afterPlayerCard(card, suit, val, useCharge));
     return;
   }
@@ -362,7 +490,6 @@ function resolvePlayerCard(card, useCharge) {
 
 function afterPlayerCard(card, suit, val, useCharge) {
   if (suit === '♠') {
-    // ATTACK
     let dmg = val + playerBonusDmg;
     playerBonusDmg = 0;
     if (useCharge) {
@@ -370,10 +497,37 @@ function afterPlayerCard(card, suit, val, useCharge) {
       log(`Unleashing ${totalCharge(playerCharge)} stored charge!`, 'log-important');
       playerCharge = [];
     }
-    playerNoAttackTurns = 0;
+    // Cap charge-boosted attacks at 25
+    dmg = Math.min(dmg, MAX_CHARGE_ATTACK);
+    playerPlayedSpadeThisTurn = true;
     log(`You attack for ${dmg}!`);
 
-    // Opponent can guard or counter
+    // Check opponent prepared guard
+    if (oppPreparedGuard) {
+      const guardVal = cardNum(oppPreparedGuard);
+      log(`Opponent had a prepared guard (${oppPreparedGuard.value}♥, blocks ${guardVal})!`, 'log-important');
+      const netDmg = Math.max(0, dmg - guardVal);
+      const heal = Math.min(5, Math.max(0, guardVal - dmg));
+      oppPreparedGuard = null;
+      if (netDmg > 0) {
+        oppHP -= netDmg; stats.playerDmg += netDmg;
+        log(`${netDmg} damage gets through!`, 'log-damage');
+        floatText('-' + netDmg, window.innerWidth/2, 80, '#f44');
+        if (netDmg >= 10) screenFlash();
+        checkMomentum('player', netDmg);
+      } else {
+        log('Attack fully blocked by prepared guard!');
+      }
+      if (heal > 0) {
+        oppHP = Math.min(30, oppHP + heal);
+        log(`Opponent heals ${heal} HP!`, 'log-heal');
+      }
+      // AI might still additionally respond
+      finishAfterAttack();
+      return;
+    }
+
+    // Opponent responds
     const guards = oppHand.filter(c => c.suit === '♥');
     const counters = oppHand.filter(c => c.suit === '♣');
     const aiResponse = aiChooseResponse(dmg, guards, counters);
@@ -390,11 +544,10 @@ function afterPlayerCard(card, suit, val, useCharge) {
         const heal = Math.min(5, Math.max(0, block - dmg));
         log(`Opponent guards with ${aiResponse.value}♥ (blocks ${block}).`);
         if (netDmg > 0) {
-          oppHP -= netDmg;
-          stats.playerDmg += netDmg;
+          oppHP -= netDmg; stats.playerDmg += netDmg;
           log(`${netDmg} damage gets through!`, 'log-damage');
           floatText('-' + netDmg, window.innerWidth/2, 80, '#f44');
-          if (netDmg >= 10) { screenFlash(); }
+          if (netDmg >= 10) screenFlash();
           checkMomentum('player', netDmg);
         } else {
           log('Attack fully blocked!');
@@ -407,57 +560,74 @@ function afterPlayerCard(card, suit, val, useCharge) {
         const cval = cardNum(aiResponse);
         if (cval > dmg) {
           const reflect = Math.ceil(dmg / 3);
-          log(`Opponent counters with ${aiResponse.value}♣! Attack negated, ${reflect} reflected!`, 'log-damage');
-          playerHP -= reflect;
-          stats.oppDmg += reflect;
+          log(`Opponent counters! Attack negated, ${reflect} reflected!`, 'log-damage');
+          playerHP -= reflect; stats.oppDmg += reflect;
           floatText('-' + reflect, window.innerWidth/2, window.innerHeight - 160, '#f44');
         } else {
-          log(`Opponent tries to counter with ${aiResponse.value}♣ but fails!`);
-          oppHP -= dmg;
-          stats.playerDmg += dmg;
+          log(`Opponent counter fails! (${cval} ≤ ${dmg})`);
+          oppHP -= dmg; stats.playerDmg += dmg;
           floatText('-' + dmg, window.innerWidth/2, 80, '#f44');
           if (dmg >= 10) screenFlash();
           checkMomentum('player', dmg);
         }
       }
     } else {
-      oppHP -= dmg;
-      stats.playerDmg += dmg;
+      oppHP -= dmg; stats.playerDmg += dmg;
       log(`Opponent takes ${dmg} damage!`, 'log-damage');
       floatText('-' + dmg, window.innerWidth/2, 80, '#f44');
       if (dmg >= 10) screenFlash();
       checkMomentum('player', dmg);
     }
   } else if (suit === '♥') {
-    log(`You play a preemptive guard (${val}).`);
-    playerNoAttackTurns++;
+    // Prepared guard - store it
+    playerPreparedGuard = card;
+    log(`You prepare a guard (${card.value}♥, blocks ${val}). Will auto-apply when attacked.`, 'log-heal');
   } else if (suit === '♦') {
     playerCharge.push(card);
     log(`You charge +${val} (total: ${totalCharge(playerCharge)}).`);
-    playerNoAttackTurns++;
-  } else if (suit === '♣') {
-    log(`Clubs can only be used as counters during opponent's attack. Discarded.`);
-    playerNoAttackTurns++;
   }
+  // Clubs can't be played here (blocked in UI)
 
-  checkPressure('player');
+  finishAfterAttack();
+}
 
-  render();
-  if (checkGameOver()) return;
-
-  // Momentum: allow second play
-  if (playerMomentum && playerCardsPlayed === 1) {
-    playerMomentum = false;
-    log('⚡ Momentum! Play a second card!', 'log-important');
-    render();
-    showActionButtons();
-    $('pass-btn').classList.remove('hidden');
-    return;
+// Pressure tracking: check once at end of each full turn
+function checkPressureEndOfTurn(who, playedSpade) {
+  if (who === 'player') {
+    if (playedSpade) {
+      playerNoAttackTurns = 0;
+    } else {
+      playerNoAttackTurns++;
+      if (playerNoAttackTurns >= 2) {
+        playerPressure++;
+        log(`🔥 Your pressure: ${playerPressure}`, 'log-important');
+        if (playerPressure >= 3) {
+          log('💥 PRESSURE OVERLOAD! Discard hand & lose 5 HP!', 'log-damage');
+          playerHand = [];
+          playerHP -= 5; stats.oppDmg += 5;
+          playerPressure = 0; playerNoAttackTurns = 0;
+          floatText('-5 HP', window.innerWidth/2, window.innerHeight - 160, '#f44');
+        }
+      }
+    }
+  } else {
+    if (playedSpade) {
+      oppNoAttackTurns = 0;
+    } else {
+      oppNoAttackTurns++;
+      if (oppNoAttackTurns >= 2) {
+        oppPressure++;
+        log(`🔥 Opponent pressure: ${oppPressure}`, 'log-important');
+        if (oppPressure >= 3) {
+          log('💥 Opponent PRESSURE OVERLOAD!', 'log-damage');
+          oppHand = [];
+          oppHP -= 5; stats.playerDmg += 5;
+          oppPressure = 0; oppNoAttackTurns = 0;
+          floatText('-5 HP', window.innerWidth/2, 80, '#f44');
+        }
+      }
+    }
   }
-  playerMomentum = false;
-
-  // End player turn
-  setTimeout(() => startOpponentTurn(), 600);
 }
 
 function checkMomentum(who, dmg) {
@@ -472,46 +642,35 @@ $('pass-btn').addEventListener('click', () => {
   $('play-btn').classList.add('hidden');
   $('use-charge-btn').classList.add('hidden');
   playerMomentum = false;
+  // End turn with pressure check
+  checkPressureEndOfTurn('player', playerPlayedSpadeThisTurn);
+  render();
+  if (checkGameOver()) return;
   setTimeout(() => startOpponentTurn(), 400);
 });
 
-// ---- PRESSURE ----
-function checkPressure(who) {
-  if (who === 'player') {
-    // playerNoAttackTurns tracked per non-spade play - but we need consecutive TURNS not cards
-    // Already incrementing. Check >= 2 for +1 pressure
-    if (playerNoAttackTurns >= 2) {
-      playerPressure++;
-      log(`🔥 Your pressure: ${playerPressure}`, 'log-important');
-      if (playerPressure >= 3) {
-        log('💥 PRESSURE OVERLOAD! Discard hand & lose 5 HP!', 'log-damage');
-        playerHand = [];
-        playerHP -= 5;
-        stats.oppDmg += 5;
-        playerPressure = 0;
-        floatText('-5 HP', window.innerWidth/2, window.innerHeight - 160, '#f44');
-      }
-    }
-  } else {
-    if (oppNoAttackTurns >= 2) {
-      oppPressure++;
-      log(`🔥 Opponent pressure: ${oppPressure}`, 'log-important');
-      if (oppPressure >= 3) {
-        log('💥 Opponent PRESSURE OVERLOAD!', 'log-damage');
-        oppHand = [];
-        oppHP -= 5;
-        stats.playerDmg += 5;
-        oppPressure = 0;
-        floatText('-5 HP', window.innerWidth/2, 80, '#f44');
-      }
-    }
+function finishAfterAttack() {
+  render();
+  if (checkGameOver()) return;
+  if (playerMomentum && playerCardsPlayed === 1) {
+    playerMomentum = false;
+    log('⚡ Momentum! Play a second card!', 'log-important');
+    render();
+    showActionButtons();
+    $('pass-btn').classList.remove('hidden');
+    return;
   }
+  playerMomentum = false;
+  // End of turn pressure check
+  checkPressureEndOfTurn('player', playerPlayedSpadeThisTurn);
+  render();
+  if (checkGameOver()) return;
+  setTimeout(() => startOpponentTurn(), 600);
 }
 
 // ---- BREAKPOINT CHOICE ----
 function showBreakpointChoice(who, callback) {
   if (who === 'opponent') {
-    // AI chooses
     const choice = aiBreakpointChoice();
     applyBreakpoint(who, choice);
     callback();
@@ -529,18 +688,18 @@ function showBreakpointChoice(who, callback) {
 
 function applyBreakpoint(who, choice) {
   if (who === 'player') {
-    if (choice === 'damage') { playerBonusDmg += 5; log('Breakpoint: +5 damage on next attack!', 'log-important'); }
-    else if (choice === 'draw') { drawCard('player'); drawCard('player'); log('Breakpoint: Drew 2 cards!', 'log-important'); }
+    if (choice === 'damage') { playerBonusDmg += BREAKPOINT_BONUS_DMG; log(`Breakpoint: +${BREAKPOINT_BONUS_DMG} damage on next attack!`, 'log-important'); }
+    else if (choice === 'draw') { drawCard('player'); log('Breakpoint: Drew 1 card!', 'log-important'); }
     else if (choice === 'steal') {
       if (oppCharge.length > 0) {
         const stolen = oppCharge.pop();
         playerCharge.push(stolen);
         log('Breakpoint: Stole 1 charge from opponent!', 'log-important');
-      } else { drawCard('player'); log('Breakpoint: Opponent has no charge, drew 1 card instead.', 'log-important'); }
+      } else { drawCard('player'); log('Breakpoint: No charge to steal, drew 1 card.', 'log-important'); }
     }
   } else {
-    if (choice === 'damage') { oppBonusDmg += 5; log('Opponent Breakpoint: +5 damage!', 'log-important'); }
-    else if (choice === 'draw') { drawCard('opponent'); drawCard('opponent'); log('Opponent Breakpoint: Drew 2 cards!', 'log-important'); }
+    if (choice === 'damage') { oppBonusDmg += BREAKPOINT_BONUS_DMG; log(`Opponent Breakpoint: +${BREAKPOINT_BONUS_DMG} damage!`, 'log-important'); }
+    else if (choice === 'draw') { drawCard('opponent'); log('Opponent Breakpoint: Drew 1 card!', 'log-important'); }
     else if (choice === 'steal') {
       if (playerCharge.length > 0) {
         const stolen = playerCharge.pop();
@@ -556,41 +715,36 @@ function applyBreakpoint(who, choice) {
 function startOpponentTurn() {
   if (gameOver) return;
   turnOwner = 'opponent';
-  
-  // Overcharge check
-  if (totalCharge(oppCharge) > 12) {
-    log('⚠ Opponent overcharge check!', 'log-important');
-    const flipped = deck.pop();
-    if (flipped) {
-      allPlayed.push(flipped);
-      if (isRed(flipped)) {
-        log(`Flipped ${flipped.value}${flipped.suit} — RED! Safe.`);
-      } else {
-        log(`Flipped ${flipped.value}${flipped.suit} — BLACK! Opponent overcharge explodes!`, 'log-damage');
-        showOverchargeExplosion();
-        oppHP -= 10;
-        stats.playerDmg += 10;
-        oppCharge = [];
-        floatText('-10', window.innerWidth/2, 80, '#f44');
-      }
-    }
-    updateDeck();
-  }
-
-  // Draw
-  drawCard('opponent');
-  log('Opponent draws a card.');
+  oppPlayedSpadeThisTurn = false;
+  logTurnSeparator(`Turn ${stats.turns} — Opponent`);
   render();
 
-  // AI plays
+  // BUG FIX #4: Draw FIRST, then overcharge
+  drawCard('opponent');
+  log('Opponent draws a card.');
+
+  if (totalCharge(oppCharge) > 12) {
+    doOverchargeCheck('opponent', () => {
+      render();
+      if (checkGameOver()) return;
+      let cardsToPlay = oppMomentum ? 2 : 1;
+      oppMomentum = false;
+      playAICards(cardsToPlay);
+    });
+    return;
+  }
+
+  render();
   let cardsToPlay = oppMomentum ? 2 : 1;
   oppMomentum = false;
-
   playAICards(cardsToPlay);
 }
 
 function playAICards(remaining) {
   if (remaining <= 0 || oppHand.length === 0 || gameOver) {
+    // End of opponent turn: check pressure
+    checkPressureEndOfTurn('opponent', oppPlayedSpadeThisTurn);
+    render();
     if (checkGameOver()) return;
     setTimeout(() => startPlayerTurn(), 600);
     return;
@@ -598,6 +752,8 @@ function playAICards(remaining) {
 
   const card = aiChooseCard();
   if (!card) {
+    checkPressureEndOfTurn('opponent', oppPlayedSpadeThisTurn);
+    render();
     if (checkGameOver()) return;
     setTimeout(() => startPlayerTurn(), 600);
     return;
@@ -611,7 +767,6 @@ function playAICards(remaining) {
   const val = cardNum(card);
   const useCharge = card.suit === '♠' && oppCharge.length > 0 && aiWantsCharge(val);
 
-  // Track combo
   const seqVal = cardSeq(card);
   if (oppCombo.length === 0 || seqVal === oppCombo[oppCombo.length - 1] + 1) {
     oppCombo.push(seqVal);
@@ -619,9 +774,8 @@ function playAICards(remaining) {
     oppCombo = [seqVal];
   }
 
-  // Check breakpoint
   let bpTriggered = false;
-  if (oppCombo.length >= 3) {
+  if (oppCombo.length >= BREAKPOINT_THRESHOLD) {
     showBreakpointAnim();
     log('⚡ Opponent triggers BREAKPOINT!', 'log-important');
     stats.oppCombos++;
@@ -646,116 +800,142 @@ function resolveOppCard(card, val, useCharge, remaining) {
       log(`Opponent unleashes ${totalCharge(oppCharge)} stored charge!`, 'log-important');
       oppCharge = [];
     }
-    oppNoAttackTurns = 0;
+    dmg = Math.min(dmg, MAX_CHARGE_ATTACK);
+    oppPlayedSpadeThisTurn = true;
     log(`Opponent attacks for ${dmg}!`);
 
-    // Player can respond with guard or counter
-    const guards = playerHand.filter(c => c.suit === '♥');
-    const counters = playerHand.filter(c => c.suit === '♣');
-    
-    if (guards.length > 0 || counters.length > 0) {
-      showResponseModal(dmg, guards, counters, (response) => {
-        if (response) {
-          const ri = playerHand.indexOf(response);
-          playerHand.splice(ri, 1);
-          allPlayed.push(response);
-          showCardPlayed(response, 'player');
-
-          if (response.suit === '♥') {
-            const block = cardNum(response);
-            const netDmg = Math.max(0, dmg - block);
-            const heal = Math.min(5, Math.max(0, block - dmg));
-            log(`You guard with ${response.value}♥ (blocks ${block}).`);
-            if (netDmg > 0) {
-              playerHP -= netDmg;
-              stats.oppDmg += netDmg;
-              log(`${netDmg} damage gets through!`, 'log-damage');
-              floatText('-' + netDmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
-              if (netDmg >= 10) screenFlash();
-              checkMomentum('opponent', netDmg);
-            } else {
-              log('Attack fully blocked!');
-            }
-            if (heal > 0) {
-              playerHP = Math.min(30, playerHP + heal);
-              log(`You heal ${heal} HP!`, 'log-heal');
-              floatText('+' + heal, window.innerWidth/2, window.innerHeight - 160, '#4f4');
-            }
-          } else if (response.suit === '♣') {
-            const cval = cardNum(response);
-            if (cval > dmg) {
-              const reflect = Math.ceil(dmg / 3);
-              log(`Counter succeeds! Attack negated, ${reflect} reflected!`, 'log-important');
-              oppHP -= reflect;
-              stats.playerDmg += reflect;
-              floatText('-' + reflect, window.innerWidth/2, 80, '#f44');
-            } else {
-              log(`Counter fails! (${cval} ≤ ${dmg})`);
-              playerHP -= dmg;
-              stats.oppDmg += dmg;
-              floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
-              if (dmg >= 10) screenFlash();
-              checkMomentum('opponent', dmg);
-            }
-          }
-        } else {
-          playerHP -= dmg;
-          stats.oppDmg += dmg;
-          log(`You take ${dmg} damage!`, 'log-damage');
-          floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
-          if (dmg >= 10) screenFlash();
-          checkMomentum('opponent', dmg);
+    // Check player prepared guard first
+    let prepGuardBlock = 0;
+    if (playerPreparedGuard) {
+      prepGuardBlock = cardNum(playerPreparedGuard);
+      log(`Your prepared guard activates! (${playerPreparedGuard.value}♥, blocks ${prepGuardBlock})`, 'log-heal');
+      playerPreparedGuard = null;
+      dmg = Math.max(0, dmg - prepGuardBlock);
+      if (dmg === 0) {
+        log('Attack fully blocked by prepared guard!');
+        const heal = Math.min(5, Math.max(0, prepGuardBlock - (val + (useCharge ? totalCharge(oppCharge) : 0))));
+        if (heal > 0) {
+          playerHP = Math.min(30, playerHP + heal);
+          log(`You heal ${heal} HP from excess guard!`, 'log-heal');
+          floatText('+' + heal, window.innerWidth/2, window.innerHeight - 160, '#4f4');
         }
         render();
         if (checkGameOver()) return;
-        setTimeout(() => playAICards(remaining - 1), 600);
-      });
+        setTimeout(() => playAICards(remaining - 1), 300);
+        return;
+      }
+      log(`${dmg} damage remaining after prepared guard.`);
+    }
+
+    // Player can still respond with guard or counter
+    const guards = playerHand.filter(c => c.suit === '♥');
+    const counters = playerHand.filter(c => c.suit === '♣');
+    
+    if ((guards.length > 0 || counters.length > 0) && dmg > 0) {
+      // Dramatic pause + red flash before showing response
+      setTimeout(() => {
+        showResponseModal(dmg, guards, counters, (response) => {
+          if (response) {
+            const ri = playerHand.indexOf(response);
+            playerHand.splice(ri, 1);
+            allPlayed.push(response);
+            showCardPlayed(response, 'player');
+
+            if (response.suit === '♥') {
+              const block = cardNum(response);
+              const netDmg = Math.max(0, dmg - block);
+              const heal = Math.min(5, Math.max(0, block - dmg));
+              log(`You guard with ${response.value}♥ (blocks ${block}).`);
+              if (netDmg > 0) {
+                playerHP -= netDmg; stats.oppDmg += netDmg;
+                log(`${netDmg} damage gets through!`, 'log-damage');
+                floatText('-' + netDmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
+                if (netDmg >= 10) screenFlash();
+                checkMomentum('opponent', netDmg);
+              } else { log('Attack fully blocked!'); }
+              if (heal > 0) {
+                playerHP = Math.min(30, playerHP + heal);
+                log(`You heal ${heal} HP!`, 'log-heal');
+                floatText('+' + heal, window.innerWidth/2, window.innerHeight - 160, '#4f4');
+              }
+            } else if (response.suit === '♣') {
+              const cval = cardNum(response);
+              if (cval > dmg) {
+                const reflect = Math.ceil(dmg / 3);
+                log(`Counter succeeds! Attack negated, ${reflect} reflected!`, 'log-important');
+                oppHP -= reflect; stats.playerDmg += reflect;
+                floatText('-' + reflect, window.innerWidth/2, 80, '#f44');
+              } else {
+                log(`Counter fails! (${cval} ≤ ${dmg})`);
+                playerHP -= dmg; stats.oppDmg += dmg;
+                floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
+                if (dmg >= 10) screenFlash();
+                checkMomentum('opponent', dmg);
+              }
+            }
+          } else {
+            playerHP -= dmg; stats.oppDmg += dmg;
+            log(`You take ${dmg} damage!`, 'log-damage');
+            floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
+            if (dmg >= 10) screenFlash();
+            checkMomentum('opponent', dmg);
+          }
+          render();
+          if (checkGameOver()) return;
+          setTimeout(() => playAICards(remaining - 1), 300);
+        });
+      }, 500); // dramatic pause
       return;
     } else {
-      playerHP -= dmg;
-      stats.oppDmg += dmg;
-      log(`You take ${dmg} damage!`, 'log-damage');
-      floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
-      if (dmg >= 10) screenFlash();
-      checkMomentum('opponent', dmg);
+      if (dmg > 0) {
+        playerHP -= dmg; stats.oppDmg += dmg;
+        log(`You take ${dmg} damage!`, 'log-damage');
+        floatText('-' + dmg, window.innerWidth/2, window.innerHeight - 160, '#f44');
+        if (dmg >= 10) screenFlash();
+        checkMomentum('opponent', dmg);
+      }
     }
   } else if (card.suit === '♥') {
-    log(`Opponent plays preemptive guard (${val}).`);
-    oppNoAttackTurns++;
+    // Opponent prepares guard
+    oppPreparedGuard = card;
+    log(`Opponent prepares a guard (${card.value}♥, blocks ${val}).`);
   } else if (card.suit === '♦') {
     oppCharge.push(card);
     log(`Opponent charges +${val} (total: ${totalCharge(oppCharge)}).`);
-    oppNoAttackTurns++;
   } else if (card.suit === '♣') {
+    // AI shouldn't play clubs on own turn, but just in case
     log(`Opponent plays a club out of turn. Discarded.`);
-    oppNoAttackTurns++;
   }
-
-  checkPressure('opponent');
 
   render();
   if (checkGameOver()) return;
-  setTimeout(() => playAICards(remaining - 1), 800);
+  setTimeout(() => playAICards(remaining - 1), 300);
 }
 
 // ---- RESPONSE MODAL ----
 function showResponseModal(dmg, guards, counters, callback) {
   waitingForResponse = true;
-  $('response-modal').classList.remove('hidden');
+  const modal = $('response-modal');
+  modal.classList.remove('hidden');
   $('response-title').textContent = `Opponent attacks for ${dmg}!`;
   $('response-desc').textContent = 'Play a ♥ to guard or ♣ to counter:';
   
+  // Red flash on modal
+  const content = $('response-modal-content');
+  content.classList.remove('attack-flash');
+  void content.offsetWidth; // force reflow
+  content.classList.add('attack-flash');
+
   const container = $('response-cards');
   container.innerHTML = '';
 
-  // Highlight usable cards
   const usable = [...guards, ...counters];
   usable.forEach(c => {
     const el = makeCardEl(c);
     el.classList.add(c.suit === '♥' ? 'glow-guard' : 'glow-counter');
     el.addEventListener('click', () => {
       waitingForResponse = false;
-      $('response-modal').classList.add('hidden');
+      modal.classList.add('hidden');
       callback(c);
     });
     container.appendChild(el);
@@ -763,17 +943,11 @@ function showResponseModal(dmg, guards, counters, callback) {
 
   $('response-skip').onclick = () => {
     waitingForResponse = false;
-    $('response-modal').classList.add('hidden');
+    modal.classList.add('hidden');
     callback(null);
   };
 
-  // Also highlight cards in hand
   render();
-  playerHand.forEach((c, i) => {
-    const el = $('player-hand').children[i];
-    if (c.suit === '♥') el.classList.add('glow-guard');
-    if (c.suit === '♣') el.classList.add('glow-counter');
-  });
 }
 
 // ---- GAME OVER ----
@@ -802,90 +976,126 @@ function checkGameOver() {
 // ---- AI ----
 function aiChooseCard() {
   if (oppHand.length === 0) return null;
+  // Never play clubs on own turn
+  const playable = oppHand.filter(c => c.suit !== '♣');
+  if (playable.length === 0) return null;
 
-  if (difficulty === 'easy') return aiEasy();
-  if (difficulty === 'medium') return aiMedium();
-  return aiHard();
+  if (difficulty === 'easy') return aiEasy(playable);
+  if (difficulty === 'medium') return aiMedium(playable);
+  return aiHard(playable);
 }
 
-function aiEasy() {
-  // Random play
-  return oppHand[Math.floor(Math.random() * oppHand.length)];
+function aiEasy(playable) {
+  return playable[Math.floor(Math.random() * playable.length)];
 }
 
-function aiMedium() {
-  const spades = oppHand.filter(c => c.suit === '♠');
-  const diamonds = oppHand.filter(c => c.suit === '♦');
-  const hearts = oppHand.filter(c => c.suit === '♥');
+function aiMedium(playable) {
+  const spades = playable.filter(c => c.suit === '♠');
+  const diamonds = playable.filter(c => c.suit === '♦');
+  const hearts = playable.filter(c => c.suit === '♥');
 
-  // Try breakpoint
-  const bp = aiFindBreakpointCard();
+  // Try breakpoint (look for next in sequence)
+  const bp = aiFindBreakpointCard(playable);
   if (bp) return bp;
 
-  // If pressure is building, attack
-  if (oppNoAttackTurns >= 1 && spades.length > 0) return spades[0];
+  // If pressure building, attack
+  if (oppNoAttackTurns >= 1 && spades.length > 0) return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
+
+  // Unleash charge at 8+ (was 6)
+  if (spades.length > 0 && totalCharge(oppCharge) >= 8) return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
 
   // Build charge sometimes
   if (diamonds.length > 0 && totalCharge(oppCharge) < 10 && Math.random() < 0.3) return diamonds[0];
 
-  // Attack if possible
+  // Attack
   if (spades.length > 0) return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
 
-  // Guard preemptively if low HP
   if (oppHP < 15 && hearts.length > 0) return hearts[0];
-
-  // Charge
   if (diamonds.length > 0) return diamonds[0];
-
-  return oppHand[0];
+  return playable[0];
 }
 
-function aiHard() {
-  const spades = oppHand.filter(c => c.suit === '♠');
-  const diamonds = oppHand.filter(c => c.suit === '♦');
-  const hearts = oppHand.filter(c => c.suit === '♥');
-  const clubs = oppHand.filter(c => c.suit === '♣');
+function aiHard(playable) {
+  const spades = playable.filter(c => c.suit === '♠');
+  const diamonds = playable.filter(c => c.suit === '♦');
+  const hearts = playable.filter(c => c.suit === '♥');
 
-  // Try breakpoint
-  const bp = aiFindBreakpointCard();
-  if (bp) return bp;
-
-  // Bait with small attack, then big
-  if (spades.length > 0) {
-    const sorted = spades.sort((a,b) => cardNum(a) - cardNum(b));
-    // If player likely has counters, play small first
-    if (sorted.length >= 2 && playerHand.length > 3) return sorted[0];
-    // Otherwise go big, especially with charge
-    if (oppCharge.length > 0 && totalCharge(oppCharge) >= 8) return sorted[sorted.length - 1];
-    return sorted[sorted.length - 1];
+  // Preemptively guard when low HP
+  if (oppHP < 10 && hearts.length > 0 && !oppPreparedGuard) {
+    return hearts.sort((a,b) => cardNum(b) - cardNum(a))[0];
   }
 
-  // Charge strategically
-  if (diamonds.length > 0 && totalCharge(oppCharge) < 12 && oppNoAttackTurns < 1) {
-    return diamonds.sort((a,b) => cardNum(b) - cardNum(a))[0];
+  // Try breakpoint - look 2 ahead
+  const bp = aiFindBreakpointCard(playable);
+  if (bp) return bp;
+  // Also try starting a breakpoint sequence
+  const bpStart = aiFindBreakpointStart(playable);
+  if (bpStart) return bpStart;
+
+  // If player has few cards, go aggressive
+  if (playerHand.length < 3 && spades.length > 0) {
+    return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
+  }
+
+  // If player has been charging (we can estimate from allPlayed), save counters for response
+  // and attack aggressively
+  const playerChargeVisible = totalCharge(playerCharge);
+
+  // Bait strategy: if we have 2+ spades, play small first
+  if (spades.length >= 2 && playerHand.length > 3) {
+    const sorted = spades.sort((a,b) => cardNum(a) - cardNum(b));
+    // If we have charge ready, play big attack with charge
+    if (oppCharge.length > 0 && totalCharge(oppCharge) >= 8) return sorted[sorted.length - 1];
+    return sorted[0]; // bait with small
+  }
+
+  // Big attack with charge
+  if (spades.length > 0 && oppCharge.length > 0 && totalCharge(oppCharge) >= 8) {
+    return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
   }
 
   // Must attack to avoid pressure
   if (oppNoAttackTurns >= 1 && spades.length > 0) return spades[0];
 
+  // Attack
+  if (spades.length > 0) return spades.sort((a,b) => cardNum(b) - cardNum(a))[0];
+
+  // Charge strategically (under 12)
+  if (diamonds.length > 0 && totalCharge(oppCharge) < 12 && oppNoAttackTurns < 1) {
+    return diamonds.sort((a,b) => cardNum(b) - cardNum(a))[0];
+  }
+
   if (hearts.length > 0 && oppHP < 12) return hearts[0];
   if (diamonds.length > 0) return diamonds[0];
   if (hearts.length > 0) return hearts[0];
-  // Clubs as last resort (wasted)
-  return oppHand[0];
+  return playable[0];
 }
 
-function aiFindBreakpointCard() {
-  if (oppCombo.length < 2) return null;
+function aiFindBreakpointCard(playable) {
+  if (oppCombo.length < 1) return null;
   const nextVal = oppCombo[oppCombo.length - 1] + 1;
   if (nextVal > 13) return null;
-  return oppHand.find(c => cardSeq(c) === nextVal) || null;
+  return (playable || oppHand).find(c => c.suit !== '♣' && cardSeq(c) === nextVal) || null;
+}
+
+// Hard AI: look for a card that could START a 2-card breakpoint sequence
+function aiFindBreakpointStart(playable) {
+  if (oppCombo.length > 0) return null; // already in a combo
+  // Look for cards where we have consecutive values
+  const seqVals = playable.map(c => cardSeq(c)).sort((a,b) => a - b);
+  for (let i = 0; i < seqVals.length - 1; i++) {
+    if (seqVals[i+1] === seqVals[i] + 1) {
+      // Found a pair - play the lower one first
+      return playable.find(c => cardSeq(c) === seqVals[i]);
+    }
+  }
+  return null;
 }
 
 function aiChooseResponse(dmg, guards, counters) {
   if (difficulty === 'easy') {
-    // Rarely responds
-    if (Math.random() < 0.3 && guards.length > 0) return guards[0];
+    // BUG FIX #5: reduce from 30% to 10%
+    if (Math.random() < 0.10 && guards.length > 0) return guards[0];
     return null;
   }
 
@@ -895,31 +1105,39 @@ function aiChooseResponse(dmg, guards, counters) {
       const valid = counters.filter(c => cardNum(c) > dmg);
       if (valid.length > 0) return valid[0];
     }
-    // Guard medium+
-    if (dmg >= 5 && guards.length > 0) return guards.sort((a,b) => cardNum(a) - cardNum(b)).find(c => cardNum(c) >= dmg) || guards[0];
+    // Guard attacks > 6 damage (was 5, but also skipped small — now actually guards)
+    if (dmg >= 6 && guards.length > 0) {
+      return guards.sort((a,b) => cardNum(a) - cardNum(b)).find(c => cardNum(c) >= dmg) || guards[guards.length - 1];
+    }
+    // Also guard if HP is low
+    if (oppHP < 12 && dmg >= 4 && guards.length > 0) return guards[0];
     return null;
   }
 
-  // Hard: optimal
+  // Hard: optimal + card tracking
+  // Estimate what player might have based on allPlayed
+  const spadesPlayed = allPlayed.filter(c => c.suit === '♠').length;
+  const playerLikelyAggressive = spadesPlayed > 5 || playerHand.length < 3;
+
   // Counter if possible for reflect
   if (counters.length > 0 && dmg >= 6) {
     const valid = counters.filter(c => cardNum(c) > dmg);
-    if (valid.length > 0) return valid.sort((a,b) => cardNum(a) - cardNum(b))[0]; // smallest valid counter
+    if (valid.length > 0) return valid.sort((a,b) => cardNum(a) - cardNum(b))[0];
   }
   // Guard efficiently
   if (guards.length > 0 && dmg >= 4) {
-    // Pick smallest guard that covers
     const sorted = guards.sort((a,b) => cardNum(a) - cardNum(b));
-    return sorted.find(c => cardNum(c) >= dmg) || (dmg >= 8 ? sorted[sorted.length-1] : null);
+    return sorted.find(c => cardNum(c) >= dmg) || (dmg >= 7 ? sorted[sorted.length-1] : null);
   }
-  // Take small hits
+  // If HP critical, guard anything
+  if (oppHP <= dmg && guards.length > 0) return guards[0];
+  if (oppHP <= dmg && counters.length > 0) return counters[0];
   return null;
 }
 
 function aiWantsCharge(attackVal) {
   if (difficulty === 'easy') return Math.random() < 0.2;
-  if (difficulty === 'medium') return totalCharge(oppCharge) >= 6;
-  // Hard: use charge when total dmg would be big
+  if (difficulty === 'medium') return totalCharge(oppCharge) >= 8; // was 6
   return attackVal + totalCharge(oppCharge) >= 12;
 }
 
@@ -935,13 +1153,5 @@ function aiBreakpointChoice() {
   if (oppHand.length <= 2) return 'draw';
   return 'damage';
 }
-
-// Fix pressure tracking - use turn-level tracking
-// The no-attack tracking was double-incrementing. Let's clean it up.
-// playerNoAttackTurns resets to 0 when a spade is played, otherwise increments once per turn.
-// We handle this in afterPlayerCard and resolveOppCard already via direct set/increment.
-// checkPressure is called per turn. Remove extra increments:
-// Actually the logic has a bug - non-spade suits increment oppNoAttackTurns twice.
-// Let's fix by removing the extra increment in resolveOppCard for non-spade.
 
 })();
