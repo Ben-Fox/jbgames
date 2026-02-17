@@ -46,7 +46,8 @@ const Enemies = (() => {
     let count;
     if (nightNum <= 1) count = 6;
     else if (nightNum <= 3) count = 8 + nightNum * 3;
-    else count = 12 + nightNum * 4;
+    else if (nightNum <= 6) count = 12 + nightNum * 4;
+    else count = 16 + nightNum * 5; // Night 7+: more enemies to overwhelm defenders
     
     waveTotal = count + (isBossNight ? 1 : 0);
     waveEnemiesLeft = waveTotal;
@@ -186,6 +187,16 @@ const Enemies = (() => {
       if (e.attackCd <= 0) {
         let attacked = false;
         
+        // Attack nearby defenders
+        if (!attacked && typeof Defenders !== 'undefined') {
+          const nearDef = Defenders.getNearestDefender(e.x, e.y, 28 + e.size);
+          if (nearDef) {
+            e.attackCd = 1;
+            attacked = true;
+            Defenders.takeDamage(nearDef, e.dmg);
+          }
+        }
+        
         // Priority: attack player if in melee range
         if (!attacked && dist(e, playerState) < 28 + e.size) {
           e.attackCd = 1;
@@ -280,6 +291,8 @@ const Enemies = (() => {
       
       if (!isHit) continue;
       
+      // AoE weapons hit all (don't break after first unless not AoE)
+      
       // Shielded: reduce damage from front
       let dmg = attackInfo.dmg;
       if (e.shielded) {
@@ -313,6 +326,7 @@ const Enemies = (() => {
   }
   
   function hitEnemyProjectile(proj) {
+    let hitAny = false;
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       if (dist(e, proj) < e.size + 5) {
@@ -323,10 +337,11 @@ const Enemies = (() => {
         Particles.damageNumber(e.x, e.y - 10, proj.dmg, '#ffd700', proj.dmg >= 15);
         Effects.setNameplate(e);
         if (e.hp <= 0) killEnemy(i);
-        return true;
+        if (!proj.pierce) return true;
+        hitAny = true;
       }
     }
-    return false;
+    return hitAny;
   }
   
   function killEnemy(idx) {

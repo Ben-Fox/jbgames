@@ -64,6 +64,10 @@ body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
 .build-cat { background: #252545; border: 1px solid #444; color: #aaa; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; flex: 1; }
 .build-cat.active { border-color: #f1c40f; color: #f1c40f; }
 #build-list { }
+
+#defend-menu { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(26,26,46,0.95); border: 2px solid #5dade2; border-radius: 8px; padding: 12px; width: 220px; z-index: 20; max-height: 70vh; overflow-y: auto; }
+#defend-menu h3 { text-align: center; color: #5dade2; margin-bottom: 8px; font-size: 14px; }
+#defender-count { text-align: center; margin-top: 8px; font-size: 13px; color: #5dade2; }
 .build-item { background: #252545; border: 1px solid #333; border-radius: 4px; padding: 8px; margin: 4px 0; cursor: pointer; font-size: 11px; }
 .build-item:hover { border-color: #3498db; }
 .build-item.selected { border-color: #2ecc71; background: #1a3a2e; }

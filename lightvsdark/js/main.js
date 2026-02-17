@@ -7,6 +7,7 @@ const Game = (() => {
   let mouse = { x: 0, y: 0, down: false };
   let mouseWorld = { x: 0, y: 0 };
   let playerProjectiles = [];
+  let wildlife = [];
   let gameMode = 'normal'; // normal or endless
   let crystalHp = 200;
   let crystalMaxHp = 200;
@@ -26,6 +27,7 @@ const Game = (() => {
     crystalHp = 200;
     waveSpawned = false;
     playerProjectiles = [];
+    wildlife = [];
     
     GameMap.generate(Date.now() % 10000);
     Lighting.init();
@@ -33,7 +35,20 @@ const Game = (() => {
     Player.init();
     Enemies.init();
     Building.init();
+    Defenders.init();
     Effects.init();
+    
+    // Spawn wildlife
+    for (let i = 0; i < 15; i++) {
+      wildlife.push({
+        x: randFloat(100, MAP_PX_W - 100),
+        y: randFloat(100, MAP_PX_H - 100),
+        type: Math.random() < 0.6 ? 'rabbit' : 'bird',
+        vx: 0, vy: 0,
+        wanderTimer: randFloat(0, 3),
+        fleeing: false, fleeTimer: 0
+      });
+    }
     UI.init();
     
     // Skip to night button
@@ -113,6 +128,48 @@ const Game = (() => {
     
     // Update buildings
     Building.update(dt);
+    
+    // Update defenders
+    Defenders.update(dt);
+    
+    // Cleanse check
+    if (ps._cleanse) {
+      ps._cleanse = false;
+      // Remove corruption patches near player (handled via Enemies internals - just clear nearby)
+    }
+    
+    // Update wildlife
+    if (Lighting.phase() === 'day') {
+      for (const w of wildlife) {
+        const dToPlayer = dist(w, ps);
+        if (dToPlayer < 80 && !w.fleeing) {
+          w.fleeing = true;
+          w.fleeTimer = 2;
+          const angle = angleTo(ps, w);
+          w.vx = Math.cos(angle) * 80;
+          w.vy = Math.sin(angle) * 80;
+        }
+        if (w.fleeing) {
+          w.x += w.vx * dt;
+          w.y += w.vy * dt;
+          w.fleeTimer -= dt;
+          w.vx *= 0.98;
+          w.vy *= 0.98;
+          if (w.fleeTimer <= 0) { w.fleeing = false; w.vx = 0; w.vy = 0; }
+        } else {
+          w.wanderTimer -= dt;
+          if (w.wanderTimer <= 0) {
+            w.wanderTimer = randFloat(2, 5);
+            w.vx = randFloat(-15, 15);
+            w.vy = randFloat(-15, 15);
+          }
+          w.x += w.vx * dt;
+          w.y += w.vy * dt;
+        }
+        w.x = clamp(w.x, 10, MAP_PX_W - 10);
+        w.y = clamp(w.y, 10, MAP_PX_H - 10);
+      }
+    }
     
     // Update enemies
     const enemyResult = Enemies.update(dt, ps, Lighting.nightCount());
@@ -200,6 +257,42 @@ const Game = (() => {
       ctx.fillRect(cx - 25, cy, 50 * (crystalHp / crystalMaxHp), 5);
     }
     
+    // Wildlife (during day only)
+    if (Lighting.phase() === 'day' || Lighting.phase() === 'dawn') {
+      for (const w of wildlife) {
+        const wx = w.x - cam.x;
+        const wy = w.y - cam.y;
+        if (wx < -10 || wy < -10 || wx > canvas.width + 10 || wy > canvas.height + 10) continue;
+        if (w.type === 'rabbit') {
+          ctx.fillStyle = '#c0a080';
+          ctx.beginPath();
+          ctx.ellipse(wx, wy, 4, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Ears
+          ctx.fillRect(wx - 2, wy - 5, 1.5, 3);
+          ctx.fillRect(wx + 1, wy - 5, 1.5, 3);
+        } else {
+          // Bird
+          ctx.fillStyle = '#6a8caf';
+          ctx.beginPath();
+          ctx.arc(wx, wy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Wings
+          const flap = Math.sin(Date.now() * 0.02) * 2;
+          ctx.strokeStyle = '#6a8caf';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(wx - 4, wy + flap);
+          ctx.lineTo(wx, wy);
+          ctx.lineTo(wx + 4, wy + flap);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // Defenders
+    Defenders.draw(ctx, cam);
+    
     // Enemies
     Enemies.draw(ctx, cam);
     
@@ -216,6 +309,11 @@ const Game = (() => {
     
     // Particles
     Particles.draw(ctx, cam);
+    
+    // Defend mode ghost
+    if (Defenders.defendMode() && Defenders.selectedDefender()) {
+      Defenders.drawGhost(ctx, cam, mouseWorld.x, mouseWorld.y, Defenders.selectedDefender());
+    }
     
     // Build mode ghost
     if (Building.buildMode() && Building.selectedBuilding()) {
@@ -243,7 +341,8 @@ const Game = (() => {
     
     if (key === 'escape') { returnToMenu(); return; }
     if (key === 'tab') { e.preventDefault(); UI.toggleInventory(); }
-    else if (key === 'b') { UI.toggleBuildMode(); }
+    else if (key === 'b') { if (Defenders.defendMode()) UI.toggleDefendMode(); UI.toggleBuildMode(); }
+    else if (key === 'd' && !Building.buildMode()) { UI.toggleDefendMode(); }
     else if (key === ' ') { e.preventDefault(); Player.dodge(keys); }
     else if (key === 'e') { /* pickup handled automatically */ }
     else if (key === 'r') { Building.repair(Player.state().x, Player.state().y); }
@@ -253,10 +352,13 @@ const Game = (() => {
       const ps = Player.state();
       ps.hotbarIdx = idx;
       const item = ps.hotbar[idx];
-      if (item && Player.WEAPONS[item]) {
+      if (item && Player.CONSUMABLES[item]) {
+        Player.useConsumable(item);
+        UI.updateHotbar();
+      } else if (item && Player.WEAPONS[item]) {
         ps.weapon = item;
-        // Exit build mode when switching to a weapon
         if (Building.buildMode()) UI.toggleBuildMode();
+        if (Defenders.defendMode()) UI.toggleDefendMode();
       }
       UI.updateHotbar();
     }
@@ -280,7 +382,13 @@ const Game = (() => {
     
     mouse.down = true;
     
-    if (Building.buildMode()) {
+    if (Defenders.defendMode()) {
+      const sel = Defenders.selectedDefender();
+      if (sel) {
+        Defenders.place(sel, mouseWorld.x, mouseWorld.y);
+        UI.updateDefendMenu();
+      }
+    } else if (Building.buildMode()) {
       const tx = Math.floor(mouseWorld.x / TILE);
       const ty = Math.floor(mouseWorld.y / TILE);
       const sel = Building.selectedBuilding();
@@ -293,6 +401,25 @@ const Game = (() => {
       if (result) {
         if (result.type === 'melee') {
           const hitAny = Enemies.hitEnemy(result);
+          // Try gathering mushrooms near attack point
+          const mtx = Math.floor(result.x / TILE);
+          const mty = Math.floor(result.y / TILE);
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              const envObjs = GameMap.envObjects();
+              const mush = envObjs.find(o => o.tx === mtx + dx && o.ty === mty + dy && o.type === 'mushroom');
+              if (mush) {
+                Player.addResource('mushroom', 1);
+                Audio.pickup();
+                const mx = mush.tx * TILE + TILE / 2;
+                const my = mush.ty * TILE + TILE / 2;
+                Particles.damageNumber(mx, my - 16, '+1 mushroom 🍄', '#e74c3c', false);
+                Effects.log('+1 mushroom 🍄', '#e74c3c');
+                GameMap.removeEnvAt(mush.tx, mush.ty);
+                break;
+              }
+            }
+          }
           // If holding a gathering tool, try gathering env objects
           const w = Player.WEAPONS[Player.state().weapon];
           if (w && w.gather) {

@@ -86,6 +86,24 @@ const Particles = (() => {
   function updateAmbient(nightAmount, cam, canvasW, canvasH) {
     // Spawn ambient particles
     const phase = Lighting.phase();
+    // Falling leaves near trees during day
+    if (phase === 'day' && chance(0.02)) {
+      const envObjs = GameMap.envObjects();
+      const trees = envObjs.filter(o => (o.type === 'tree_large' || o.type === 'tree_small'));
+      if (trees.length > 0) {
+        const t = trees[randInt(0, trees.length - 1)];
+        const tx = t.tx * TILE + TILE / 2;
+        const ty = t.ty * TILE;
+        if (tx > cam.x - 50 && tx < cam.x + canvasW + 50 && ty > cam.y - 50 && ty < cam.y + canvasH + 50) {
+          ambientParticles.push({
+            x: tx + randFloat(-8, 8), y: ty + randFloat(-5, 5),
+            vx: randFloat(-0.5, 0.5), vy: randFloat(0.3, 0.8),
+            life: 3, maxLife: 3, wobble: Math.random() * Math.PI * 2,
+            color: chance(0.5) ? '#6b4' : '#a85', size: 2.5, type: 'leaf'
+          });
+        }
+      }
+    }
     if (phase === 'day' && ambientParticles.length < 30) {
       // Pollen/dust
       if (chance(0.1)) {
@@ -139,6 +157,10 @@ const Particles = (() => {
         p.wobble += 0.05;
         p.x += Math.sin(p.wobble) * 0.5;
         p.y += Math.cos(p.wobble * 0.7) * 0.3;
+      } else if (p.type === 'leaf') {
+        p.x += p.vx + Math.sin(p.wobble || 0) * 0.3;
+        p.y += p.vy;
+        p.wobble = (p.wobble || 0) + 0.03;
       } else {
         p.x += p.vx;
         p.y += p.vy;
@@ -182,7 +204,15 @@ const Particles = (() => {
       const alpha = Math.min(1, p.life / p.maxLife * 2) * Math.min(1, (p.maxLife - p.life) * 2);
       const sx = p.x - cam.x;
       const sy = p.y - cam.y;
-      if (p.type === 'fog') {
+      if (p.type === 'leaf') {
+        p.wobble += 0.04;
+        p.x += Math.sin(p.wobble) * 0.4;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, p.size, p.size * 0.5, p.wobble, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === 'fog') {
         ctx.fillStyle = p.color;
         ctx.globalAlpha = alpha;
         ctx.beginPath();

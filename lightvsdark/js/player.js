@@ -23,12 +23,18 @@ const Player = (() => {
       armorBonus: 0,
       hotbar: ['wooden_sword', null, null, null, null, null, null, null, null],
       hotbarIdx: 0,
-      resources: { wood: 20, stone: 10, iron: 0, copper: 0, tin: 0, coal: 0, bronze: 0, steel: 0, crystal: 0 },
+      resources: { wood: 20, stone: 10, iron: 0, copper: 0, tin: 0, coal: 0, bronze: 0, steel: 0, crystal: 0, mushroom: 0 },
       drops: { shadow_dust: 0, dark_chitin: 0, void_shards: 0, corruption_gel: 0, shadow_silk: 0, dark_steel: 0, umbra_core: 0, leather: 0 },
       inventory: [],
       kills: 0,
       arrows: 0,
-      voidArrows: 0
+      voidArrows: 0,
+      shield: 'none',
+      shieldBlock: 0,
+      consumables: { health_potion: 0, greater_health_potion: 0, regen_salve: 0, antidote: 0 },
+      potionCd: 0,
+      regenTimer: 0,
+      regenRate: 0
     };
   }
   
@@ -50,7 +56,10 @@ const Player = (() => {
     crystal_sword: { name: 'Crystal Sword', dmg: 25, speed: 0.3, range: 44, type: 'melee', color: '#66ccff', tier: 5 },
     wooden_bow: { name: 'Wooden Bow', dmg: 7, speed: 0.8, range: 250, type: 'ranged', color: '#8b6914', ammo: 'arrows', tier: 1 },
     iron_crossbow: { name: 'Iron Crossbow', dmg: 18, speed: 0.6, range: 300, type: 'ranged', color: '#777', ammo: 'arrows', tier: 2 },
-    umbra_blade: { name: 'Umbra Blade', dmg: 35, speed: 0.25, range: 48, type: 'melee', color: '#9b59b6', tier: 5 }
+    umbra_blade: { name: 'Umbra Blade', dmg: 35, speed: 0.25, range: 48, type: 'melee', color: '#9b59b6', tier: 5 },
+    spear: { name: 'Spear', dmg: 12, speed: 0.6, range: 55, type: 'melee', color: '#b0b0b0', tier: 2 },
+    war_hammer: { name: 'War Hammer', dmg: 22, speed: 0.8, range: 32, type: 'melee', color: '#cd7f32', tier: 3, knockback: 10, aoe: true },
+    crystal_staff: { name: 'Crystal Staff', dmg: 15, speed: 0.5, range: 280, type: 'ranged', color: '#66ccff', tier: 5, noAmmo: true, pierce: true }
   };
   
   // Tool tier requirements for gathering different resource types
@@ -75,6 +84,50 @@ const Player = (() => {
     dark_steel_armor: { name: 'Dark Steel Armor', bonus: 60, speedMult: 0.8 }
   };
   
+  const SHIELDS = {
+    none: { name: 'None', block: 0 },
+    wooden_shield: { name: 'Wooden Shield', block: 0.2 },
+    iron_shield: { name: 'Iron Shield', block: 0.35 },
+    steel_shield: { name: 'Steel Shield', block: 0.5 }
+  };
+
+  const CONSUMABLES = {
+    health_potion: { name: 'Health Potion', icon: '🧪', heal: 25, desc: 'Heals 25 HP' },
+    greater_health_potion: { name: 'Greater Health Potion', icon: '🧪', heal: 50, desc: 'Heals 50 HP' },
+    regen_salve: { name: 'Regen Salve', icon: '💚', regen: 5, regenDur: 10, desc: '5 HP/s for 10s' },
+    antidote: { name: 'Antidote', icon: '🧴', cleanse: true, desc: 'Clears corruption' }
+  };
+
+  function useConsumable(id) {
+    if (!state.consumables[id] || state.consumables[id] <= 0) return false;
+    if (state.potionCd > 0) return false;
+    const c = CONSUMABLES[id];
+    if (!c) return false;
+
+    state.consumables[id]--;
+    state.potionCd = 3; // 3 second cooldown between consumables
+
+    if (c.heal) {
+      state.hp = Math.min(state.maxHp, state.hp + c.heal);
+      Particles.damageNumber(state.x, state.y - 20, '+' + c.heal + ' HP', '#2ecc71', true);
+      Effects.log(`Used ${c.name} (+${c.heal} HP)`, '#2ecc71');
+    }
+    if (c.regen) {
+      state.regenTimer = c.regenDur;
+      state.regenRate = c.regen;
+      Effects.log(`Used ${c.name} (${c.regen} HP/s for ${c.regenDur}s)`, '#2ecc71');
+    }
+    if (c.cleanse) {
+      // Remove corruption patches near player
+      const enemies = Enemies.enemies ? Enemies : null;
+      Effects.log(`Used ${c.name} — corruption cleared!`, '#2ecc71');
+      // Signal to main to clear corruption
+      state._cleanse = true;
+    }
+    Audio.pickup();
+    return true;
+  }
+
   function equip(itemId) {
     if (WEAPONS[itemId]) {
       state.weapon = itemId;
@@ -88,6 +141,9 @@ const Player = (() => {
       state.maxHp = 100 + state.armorBonus;
       state.hp = Math.min(state.hp, state.maxHp);
       state.speed = SPEED * (ARMORS[itemId].speedMult || 1);
+    } else if (SHIELDS[itemId]) {
+      state.shield = itemId;
+      state.shieldBlock = SHIELDS[itemId].block;
     }
   }
   
@@ -196,6 +252,14 @@ const Player = (() => {
       }
     }
     
+    // Potion cooldown
+    if (state.potionCd > 0) state.potionCd -= dt;
+    // Regen salve
+    if (state.regenTimer > 0) {
+      state.regenTimer -= dt;
+      state.hp = Math.min(state.maxHp, state.hp + state.regenRate * dt);
+    }
+    
     if (!Lighting.isNight()) {
       const crystalDist = dist(state, { x: MAP_PX_W / 2, y: MAP_PX_H / 2 });
       if (crystalDist < 100) {
@@ -260,21 +324,28 @@ const Player = (() => {
     Audio.swing();
     
     if (w.type === 'ranged') {
-      const ammoKey = w.ammo === 'arrows' ? 'arrows' : 'voidArrows';
-      if (state[ammoKey] <= 0 && state.arrows <= 0) { Audio.error(); return null; }
-      if (state[ammoKey] > 0) state[ammoKey]--;
-      else state.arrows--;
+      if (!w.noAmmo) {
+        const ammoKey = w.ammo === 'arrows' ? 'arrows' : 'voidArrows';
+        if (state[ammoKey] <= 0 && state.arrows <= 0) { Audio.error(); return null; }
+        if (state[ammoKey] > 0) state[ammoKey]--;
+        else state.arrows--;
+      }
       Audio.shoot();
       const angle = angleTo(state, mouseWorld);
-      return { type: 'projectile', x: state.x, y: state.y, angle, dmg: w.dmg, range: w.range, speed: 400, color: w.color };
+      return { type: 'projectile', x: state.x, y: state.y, angle, dmg: w.dmg, range: w.range, speed: 400, color: w.color, pierce: w.pierce || false };
     }
     
     const angle = angleTo(state, mouseWorld);
-    return { type: 'melee', x: state.x + Math.cos(angle) * 20, y: state.y + Math.sin(angle) * 20, radius: w.range, dmg: w.dmg, angle, knockback: 5 };
+    const kb = w.knockback || 5;
+    return { type: 'melee', x: state.x + Math.cos(angle) * 20, y: state.y + Math.sin(angle) * 20, radius: w.range, dmg: w.dmg, angle, knockback: kb, aoe: w.aoe || false };
   }
   
   function takeDamage(amount) {
     if (state.invincible || state.dodging) return false;
+    // Shield blocks damage when NOT attacking
+    if (state.shieldBlock > 0 && !state.attacking) {
+      amount = Math.round(amount * (1 - state.shieldBlock));
+    }
     state.hp -= amount;
     state.invincible = true;
     state.invTimer = 0.3;
@@ -347,6 +418,17 @@ const Player = (() => {
       }
     }
     
+    // Shield
+    if (state.shield !== 'none') {
+      const shieldColors = { wooden_shield: '#8b6914', iron_shield: '#aaa', steel_shield: '#d0d0d0' };
+      ctx.fillStyle = shieldColors[state.shield] || '#8b6914';
+      const shx = f === 'right' ? -12 : f === 'left' ? 8 : (fx > 0 ? -10 : 6);
+      const shy = sy - 4;
+      ctx.fillRect(sx + shx, shy, 6, 12);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(sx + shx + 1, shy + 1, 4, 5);
+    }
+    
     // Armor indicator
     if (state.armor !== 'none') {
       const armorColors = {
@@ -364,8 +446,8 @@ const Player = (() => {
   
   return {
     init, update, dodge, attack, takeDamage, draw, equip, addToInventory,
-    addResource, hasResources, spendResources, canWalk, canGatherResource,
+    addResource, hasResources, spendResources, canWalk, canGatherResource, useConsumable,
     state: () => state,
-    WEAPONS, ARMORS, GATHER_REQUIREMENTS
+    WEAPONS, ARMORS, SHIELDS, CONSUMABLES, GATHER_REQUIREMENTS
   };
 })();

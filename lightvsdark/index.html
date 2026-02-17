@@ -26,6 +26,7 @@
         <span class="res" id="res-stone">🪨 0</span>
         <span class="res" id="res-iron">⛏️ 0</span>
         <span class="res" id="res-crystal">💎 0</span>
+        <span class="res" id="res-mushroom">🍄 0</span>
       </div>
       <div id="mode-display">Combat Mode</div>
       <button id="menu-btn" title="Back to Menu (Esc)">☰ Menu</button>
@@ -41,6 +42,7 @@
           <div id="equip-slots">
             <div class="equip-slot" id="equip-weapon">Weapon: <span>Wooden Sword</span></div>
             <div class="equip-slot" id="equip-armor">Armor: <span>None</span></div>
+            <div class="equip-slot" id="equip-shield">Shield: <span>None</span></div>
           </div>
           <h3>Inventory</h3>
           <div id="inv-grid"></div>
@@ -70,6 +72,11 @@
     </div>
     <div id="build-list"></div>
   </div>
+  <div id="defend-menu" class="hidden">
+    <h3>Defend Mode (D to close)</h3>
+    <div id="defend-list"></div>
+    <div id="defender-count">🛡️ Defenders: 0</div>
+  </div>
   <div id="splash-screen">
     <div id="splash-content">
       <h1>⚔️ Light vs Dark 🌓</h1>
@@ -84,6 +91,7 @@
           <li><b>B</b> — Build mode</li>
           <li><b>Tab</b> — Inventory & Crafting</li>
           <li><b>1-9</b> — Hotbar</li>
+          <li><b>D</b> — Defend mode (place defenders)</li>
           <li><b>E</b> — Pick up items</li>
           <li><b>R</b> — Repair nearby building</li>
           <li><b>N</b> — Skip to night (during day)</li>
@@ -122,6 +130,7 @@
 <script src="js/player.js"></script>
 <script src="js/enemies.js"></script>
 <script src="js/building.js"></script>
+<script src="js/defenders.js"></script>
 <script src="js/crafting.js"></script>
 <script src="js/effects.js"></script>
 <script src="js/ui.js"></script>

@@ -76,6 +76,11 @@ const UI = (() => {
     document.getElementById('res-stone').textContent = `🪨 ${ps.resources.stone}`;
     document.getElementById('res-iron').textContent = `⛏️ ${ps.resources.iron}`;
     document.getElementById('res-crystal').textContent = `💎 ${ps.resources.crystal}`;
+    document.getElementById('res-mushroom').textContent = `🍄 ${ps.resources.mushroom}`;
+    
+    // Defender count
+    const defCount = document.getElementById('defender-count');
+    if (defCount) defCount.textContent = `🛡️ Defenders: ${Defenders.count()}`;
     
     // Extended resource display (second row)
     let extEl = document.getElementById('res-extended');
@@ -95,7 +100,10 @@ const UI = (() => {
     extEl.textContent = extRes.join('  ');
     
     const modeDisp = document.getElementById('mode-display');
-    if (Building.buildMode()) {
+    if (Defenders.defendMode()) {
+      modeDisp.textContent = '🛡️ Defend Mode';
+      modeDisp.style.color = '#5dade2';
+    } else if (Building.buildMode()) {
       modeDisp.textContent = '🔨 Build Mode';
       modeDisp.style.color = '#2ecc71';
     } else {
@@ -120,6 +128,7 @@ const UI = (() => {
       if (item) {
         const w = Player.WEAPONS[item];
         const a = Player.ARMORS[item];
+        const c = Player.CONSUMABLES ? Player.CONSUMABLES[item] : null;
         const icons = {
           wooden_sword: '🗡️', wooden_axe: '🪓', wooden_pickaxe: '⛏️',
           stone_axe: '🪓', stone_pickaxe: '⛏️',
@@ -128,13 +137,20 @@ const UI = (() => {
           steel_sword: '⚔️', steel_axe: '🪓', steel_pickaxe: '⛏️',
           crystal_sword: '💎', wooden_bow: '🏹', iron_crossbow: '🏹',
           umbra_blade: '🔮',
+          spear: '🔱', war_hammer: '🔨', crystal_staff: '🪄',
+          wooden_shield: '🛡️', iron_shield: '🛡️', steel_shield: '🛡️',
+          health_potion: '🧪', greater_health_potion: '🧪', regen_salve: '💚', antidote: '🧴',
           leather_armor: '🛡️', chitin_armor: '🛡️', bronze_armor: '🛡️',
           steel_armor: '🛡️', dark_steel_armor: '🛡️',
           shadow_cloak: '👻', corruption_bomb: '💣'
         };
         const icon = icons[item] || '📦';
-        const name = w ? w.name : a ? a.name : item.replace(/_/g, ' ');
-        slot.innerHTML += `<div style="font-size:16px;line-height:1">${icon}</div><span style="font-size:9px">${name}</span>`;
+        const name = w ? w.name : a ? a.name : c ? c.name : item.replace(/_/g, ' ');
+        let countStr = '';
+        if (c && ps.consumables[item] !== undefined) {
+          countStr = `<span style="position:absolute;bottom:1px;right:2px;font-size:10px;color:#2ecc71;font-weight:bold">x${ps.consumables[item]}</span>`;
+        }
+        slot.innerHTML += `<div style="font-size:16px;line-height:1">${icon}</div><span style="font-size:9px">${name}</span>${countStr}`;
       }
       
       slot.addEventListener('click', () => {
@@ -155,6 +171,8 @@ const UI = (() => {
     document.querySelector('#equip-weapon span').textContent = weaponName;
     const armorName = Player.ARMORS[ps.armor]?.name || 'None';
     document.querySelector('#equip-armor span').textContent = armorName;
+    const shieldName = Player.SHIELDS ? (Player.SHIELDS[ps.shield]?.name || 'None') : 'None';
+    document.querySelector('#equip-shield span').textContent = shieldName;
     
     const grid = document.getElementById('inv-grid');
     grid.innerHTML = '';
@@ -169,7 +187,7 @@ const UI = (() => {
     // Full resources display in inventory
     const resDiv = document.getElementById('inv-resources');
     let html = '<b>Materials:</b><br>';
-    const resNames = { wood: '🪵 Wood', stone: '🪨 Stone', iron: '⛏️ Iron', copper: '🟤 Copper', tin: '⬜ Tin', coal: '⬛ Coal', bronze: '🟠 Bronze', steel: '⚙️ Steel', crystal: '💎 Crystal' };
+    const resNames = { wood: '🪵 Wood', stone: '🪨 Stone', iron: '⛏️ Iron', copper: '🟤 Copper', tin: '⬜ Tin', coal: '⬛ Coal', bronze: '🟠 Bronze', steel: '⚙️ Steel', crystal: '💎 Crystal', mushroom: '🍄 Mushroom' };
     for (const [k, v] of Object.entries(ps.resources)) {
       if (v > 0 || k === 'wood' || k === 'stone' || k === 'iron' || k === 'crystal') {
         html += `${resNames[k] || k}: ${v}<br>`;
@@ -183,6 +201,12 @@ const UI = (() => {
     }
     if (ps.arrows > 0) html += `<br>🏹 Arrows: ${ps.arrows}`;
     if (ps.voidArrows > 0) html += `<br>💜 Void Arrows: ${ps.voidArrows}`;
+    // Consumables
+    const conNames = { health_potion: '🧪 Health Potion', greater_health_potion: '🧪 Greater Health Potion', regen_salve: '💚 Regen Salve', antidote: '🧴 Antidote' };
+    let hasConsumables = false;
+    for (const [k, v] of Object.entries(ps.consumables || {})) {
+      if (v > 0) { if (!hasConsumables) { html += '<br><b>Consumables:</b><br>'; hasConsumables = true; } html += `${conNames[k] || k}: ${v}<br>`; }
+    }
     resDiv.innerHTML = html;
     
     const maxTier = Building.getMaxCraftTier();
@@ -254,6 +278,45 @@ const UI = (() => {
     }
   }
   
+  function toggleDefendMode() {
+    Defenders.setDefendMode(!Defenders.defendMode());
+    document.getElementById('defend-menu').classList.toggle('hidden', !Defenders.defendMode());
+    if (Defenders.defendMode()) {
+      // Close build mode if open
+      if (Building.buildMode()) { Building.setBuildMode(false); document.getElementById('build-menu').classList.add('hidden'); }
+      updateDefendMenu();
+    }
+  }
+  
+  function updateDefendMenu() {
+    const list = document.getElementById('defend-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const ps = Player.state();
+    
+    for (const [key, t] of Object.entries(Defenders.TYPES)) {
+      const can = Defenders.canRecruit(key);
+      const hasReq = Defenders.hasBuilding(t.requires);
+      const div = document.createElement('div');
+      div.className = 'build-item' + (can ? '' : ' cant-afford') + (Defenders.selectedDefender() === key ? ' selected' : '');
+      
+      let costHtml = '';
+      for (const [k, v] of Object.entries(t.cost)) {
+        costHtml += `${k}: ${v} `;
+      }
+      
+      const reqText = hasReq ? '' : ` (need ${t.requires})`;
+      div.innerHTML = `<div class="bi-name">${t.name}</div><div class="bi-cost">${costHtml}</div><div class="bi-desc">HP:${t.hp} DMG:${t.dmg} ${t.ranged?'Ranged':'Melee'}${reqText}</div>`;
+      div.addEventListener('click', () => {
+        Defenders.setSelected(key);
+        updateDefendMenu();
+      });
+      list.appendChild(div);
+    }
+    
+    document.getElementById('defender-count').textContent = `🛡️ Defenders: ${Defenders.count()}`;
+  }
+  
   function toggleBuildMode() {
     Building.setBuildMode(!Building.buildMode());
     document.getElementById('build-menu').classList.toggle('hidden', !Building.buildMode());
@@ -277,6 +340,12 @@ const UI = (() => {
     
     ctx.fillStyle = '#66ccff';
     ctx.fillRect(MAP_PX_W / 2 * sx - 3, MAP_PX_H / 2 * sy - 3, 6, 6);
+    
+    // Defenders on minimap
+    ctx.fillStyle = '#5dade2';
+    for (const d of Defenders.defenders()) {
+      ctx.fillRect(d.x * sx - 1, d.y * sy - 1, 3, 3);
+    }
     
     ctx.fillStyle = '#e74c3c';
     for (const e of Enemies.enemies()) {
@@ -306,7 +375,7 @@ const UI = (() => {
   
   return {
     init, toggleInventory, updateHUD, updateHotbar, updateBuildMenu,
-    toggleBuildMode, drawMinimap, showGameOver,
+    toggleBuildMode, toggleDefendMode, updateDefendMenu, drawMinimap, showGameOver,
     isInventoryOpen: () => inventoryOpen
   };
 })();

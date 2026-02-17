@@ -61,6 +61,7 @@ const Audio = (() => {
         setTimeout(() => playTone(f, 0.4, 'sawtooth', 0.1), i * 200);
       });
     },
-    repair() { playTone(350, 0.08, 'triangle', 0.08); playTone(440, 0.08, 'triangle', 0.06); }
+    repair() { playTone(350, 0.08, 'triangle', 0.08); playTone(440, 0.08, 'triangle', 0.06); },
+    potion() { playTone(600, 0.1, 'sine', 0.1); playTone(700, 0.15, 'sine', 0.08); }
   };
 })();

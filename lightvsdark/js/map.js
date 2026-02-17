@@ -125,13 +125,22 @@ const GameMap = (() => {
         
         if (tiles[ty][tx] === T.FLOWER) {
           const colors = ['#ff6b6b','#feca57','#ff9ff3','#fff'];
+          const sway = Math.sin(Date.now() * 0.002 + tx * 5 + ty * 7) * 2;
           ctx.fillStyle = colors[(tx*7+ty*13) % colors.length];
-          ctx.fillRect(sx + 12, sy + 10, 4, 4);
-          ctx.fillRect(sx + 20, sy + 18, 3, 3);
+          ctx.fillRect(sx + 12 + sway, sy + 10, 4, 4);
+          ctx.fillRect(sx + 20 + sway * 0.7, sy + 18, 3, 3);
+          // Stem
+          ctx.fillStyle = '#4a8d54';
+          ctx.fillRect(sx + 13 + sway * 0.5, sy + 14, 1, 6);
+          ctx.fillRect(sx + 21 + sway * 0.35, sy + 21, 1, 5);
         }
         if (tiles[ty][tx] === T.PUDDLE) {
           ctx.fillStyle = 'rgba(150,200,255,0.3)';
           ctx.fillRect(sx + 8, sy + 6, 6, 3);
+          // Shimmer
+          const shimmer = Math.sin(Date.now() * 0.003 + tx * 3 + ty * 7) * 0.15 + 0.15;
+          ctx.fillStyle = `rgba(255,255,255,${shimmer})`;
+          ctx.fillRect(sx + 10, sy + 7, 2, 1);
         }
       }
     }

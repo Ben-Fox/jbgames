@@ -29,7 +29,11 @@ const Building = (() => {
     forge: { name: 'Forge', cat: 'utility', hp: 70, cost: { stone: 10, iron: 10 }, color: '#c0392b', desc: 'Unlocks Tier 2 crafting', station: 2 },
     advanced_forge: { name: 'Advanced Forge', cat: 'utility', hp: 80, cost: { iron: 10, bronze: 5 }, color: '#8b0000', desc: 'Unlocks steel smelting', station: 3 },
     crystal_altar: { name: 'Crystal Altar', cat: 'utility', hp: 80, cost: { iron: 10, crystal: 10 }, color: '#3498db', desc: 'Unlocks Tier 3 crafting', station: 3 },
-    healing_fountain: { name: 'Healing Fountain', cat: 'utility', hp: 60, cost: { crystal: 5, stone: 5 }, color: '#2ecc71', desc: 'Heals 2 HP/s nearby', heals: true, healRange: 80, healRate: 2 }
+    healing_fountain: { name: 'Healing Fountain', cat: 'utility', hp: 60, cost: { crystal: 5, stone: 5 }, color: '#2ecc71', desc: 'Heals 2 HP/s nearby', heals: true, healRange: 80, healRate: 2 },
+    barracks: { name: 'Barracks', cat: 'utility', hp: 80, cost: { wood: 20, stone: 15, iron: 10 }, color: '#5d6d7e', desc: 'Recruit Archers & Pikemen' },
+    castle: { name: 'Castle', cat: 'utility', hp: 120, cost: { stone: 20, iron: 15, steel: 10 }, color: '#7f8c8d', desc: 'Recruit Knights' },
+    ballista_tower: { name: 'Ballista Tower', cat: 'defensive', hp: 100, cost: { iron: 15, bronze: 10 }, color: '#6d4c1d', desc: 'Heavy damage tower (25 dmg)', tower: true, towerRange: 220, towerDmg: 25, towerRate: 3 },
+    fire_pit: { name: 'Fire Pit', cat: 'utility', hp: 30, cost: { wood: 5, coal: 2 }, color: '#e67e22', desc: 'Light + 3 dmg/s to enemies', light: true, lightRadius: 100, flicker: true, firePit: true, fireDmg: 3 }
   };
   
   function init() {
@@ -200,6 +204,17 @@ const Building = (() => {
         }
       }
       
+      if (t.firePit) {
+        const bx = b.tx * TILE + TILE / 2;
+        const by = b.ty * TILE + TILE / 2;
+        for (const e of Enemies.enemies()) {
+          if (dist(e, { x: bx, y: by }) < t.lightRadius) {
+            e.hp -= t.fireDmg * dt;
+            if (Math.random() < 0.02) Particles.hitSparks(e.x, e.y);
+          }
+        }
+      }
+      
       if (t.heals) {
         const bx = b.tx * TILE + TILE / 2;
         const by = b.ty * TILE + TILE / 2;
@@ -283,6 +298,45 @@ const Building = (() => {
           ctx.arc(sx + TILE / 2, sy + TILE / 2, 8, 0, Math.PI * 2);
           ctx.fill();
         }
+      } else if (b.type === 'barracks') {
+        ctx.fillRect(sx + 2, sy + 4, TILE - 4, TILE - 6);
+        ctx.fillStyle = '#4a5568';
+        ctx.fillRect(sx + 4, sy + 6, TILE - 8, 4);
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚔', sx + TILE/2, sy + TILE/2 + 6);
+      } else if (b.type === 'castle') {
+        ctx.fillRect(sx + 2, sy + 4, TILE - 4, TILE - 6);
+        // Turrets
+        ctx.fillStyle = '#95a5a6';
+        ctx.fillRect(sx, sy, 6, 10);
+        ctx.fillRect(sx + TILE - 6, sy, 6, 10);
+        ctx.fillRect(sx + TILE/2 - 3, sy - 2, 6, 8);
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🏰', sx + TILE/2, sy + TILE/2 + 6);
+      } else if (b.type === 'fire_pit') {
+        // Fire pit base
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(sx + TILE/2, sy + TILE/2 + 4, 10, 0, Math.PI * 2);
+        ctx.fill();
+        // Flames
+        const flicker = Math.sin(Date.now() * 0.015 + b.flickerPhase);
+        ctx.fillStyle = '#e67e22';
+        ctx.beginPath();
+        ctx.arc(sx + TILE/2, sy + TILE/2 + flicker, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.arc(sx + TILE/2, sy + TILE/2 - 3 + flicker, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(sx + TILE/2, sy + TILE/2 - 5 + flicker, 2, 0, Math.PI * 2);
+        ctx.fill();
       } else if (t.produces) {
         ctx.fillRect(sx + 2, sy + 6, TILE - 4, TILE - 8);
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
