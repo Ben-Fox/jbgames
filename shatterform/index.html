@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Shatterform | BrainSmacks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-layer">
+        <!-- Menu Screen -->
+        <div id="menu-screen" class="screen active">
+            <div class="menu-content">
+                <h1 class="game-title">SHATTER<span class="accent">FORM</span></h1>
+                <p class="tagline">Grow. Shatter. Survive.</p>
+                <div class="menu-buttons">
+                    <button id="btn-play" class="btn btn-primary">PLAY</button>
+                    <button id="btn-how" class="btn btn-secondary">HOW TO PLAY</button>
+                </div>
+                <div class="difficulty-select">
+                    <span class="diff-label">DIFFICULTY</span>
+                    <div class="diff-buttons">
+                        <button class="diff-btn" data-diff="0">CHILL</button>
+                        <button class="diff-btn active" data-diff="1">NORMAL</button>
+                        <button class="diff-btn" data-diff="2">INTENSE</button>
+                    </div>
+                </div>
+                <div class="high-score-display">
+                    <span>BEST: <span id="menu-highscore">0</span></span>
+                </div>
+                <p class="brand">A BrainSmacks Game</p>
+            </div>
+        </div>
+
+        <!-- How To Play -->
+        <div id="how-screen" class="screen">
+            <div class="how-content">
+                <h2>HOW TO PLAY</h2>
+                <div class="instructions">
+                    <div class="instruction-item">
+                        <div class="inst-icon">◈</div>
+                        <p>Your shape <strong>grows automatically</strong>. Bigger = more points per second.</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">💥</div>
+                        <p><strong>Click / Tap</strong> to SHATTER — fragments fly out and destroy enemies.</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">⚡</div>
+                        <p>Bigger shatter = more fragments = bigger blast. But you reset to tiny!</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">🛡️</div>
+                        <p>Don't let enemies touch your core. You have <strong>3 lives</strong>.</p>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="inst-icon">✨</div>
+                        <p>Grab <strong>energy orbs</strong> to grow faster. Chain kills for <strong>combo multipliers</strong>!</p>
+                    </div>
+                </div>
+                <button id="btn-back" class="btn btn-secondary">BACK</button>
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="hud-top">
+                <div class="hud-score">
+                    <span class="hud-label">SCORE</span>
+                    <span id="hud-score-val">0</span>
+                </div>
+                <div class="hud-combo hidden" id="hud-combo">
+                    <span id="hud-combo-val">x2</span>
+                </div>
+                <div class="hud-wave">
+                    <span class="hud-label">WAVE</span>
+                    <span id="hud-wave-val">1</span>
+                </div>
+            </div>
+            <div class="hud-bottom">
+                <div class="hud-lives" id="hud-lives"></div>
+                <div class="hud-size">
+                    <div class="size-bar-bg">
+                        <div class="size-bar-fill" id="size-bar"></div>
+                    </div>
+                    <span class="size-label">SIZE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="gameover-screen" class="screen">
+            <div class="gameover-content">
+                <h2 class="gameover-title">SHATTERED</h2>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-label">SCORE</span>
+                        <span class="stat-value" id="go-score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">BEST</span>
+                        <span class="stat-value" id="go-best">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">WAVE</span>
+                        <span class="stat-value" id="go-wave">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">ENEMIES DESTROYED</span>
+                        <span class="stat-value" id="go-kills">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">BEST COMBO</span>
+                        <span class="stat-value" id="go-combo">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">BIGGEST SHATTER</span>
+                        <span class="stat-value" id="go-shatter">0</span>
+                    </div>
+                </div>
+                <div id="new-record" class="new-record hidden">★ NEW RECORD ★</div>
+                <div class="menu-buttons">
+                    <button id="btn-retry" class="btn btn-primary">PLAY AGAIN</button>
+                    <button id="btn-menu" class="btn btn-secondary">MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
