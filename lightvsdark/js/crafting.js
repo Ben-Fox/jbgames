@@ -3,6 +3,8 @@ const Crafting = (() => {
   const RECIPES = [
     // Tier 0 — no station needed
     { id: 'wooden_sword', name: 'Wooden Sword', tier: 0, type: 'weapon', cost: { wood: 5 }, desc: '5 dmg, fast' },
+    { id: 'wooden_axe', name: 'Wooden Axe', tier: 0, type: 'weapon', cost: { wood: 3 }, desc: 'Gather wood from trees' },
+    { id: 'wooden_pickaxe', name: 'Wooden Pickaxe', tier: 0, type: 'weapon', cost: { wood: 3, stone: 2 }, desc: 'Gather stone from rocks' },
     { id: 'torch_item', name: 'Torch (placeable)', tier: 0, type: 'building', buildType: 'torch', cost: { wood: 2 }, desc: 'Small light source' },
     { id: 'wood_wall_item', name: 'Wood Wall', tier: 0, type: 'building', buildType: 'wood_wall', cost: { wood: 5 }, desc: '50 HP barrier' },
     { id: 'wood_gate_item', name: 'Wood Gate', tier: 0, type: 'building', buildType: 'wood_gate', cost: { wood: 8 }, desc: 'Walk-through door' },

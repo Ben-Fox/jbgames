@@ -108,7 +108,16 @@ const UI = (() => {
       const item = ps.hotbar[i];
       if (item) {
         const w = Player.WEAPONS[item];
-        if (w) slot.innerHTML += `<span>${w.name}</span>`;
+        const a = Player.ARMORS[item];
+        const icons = {
+          wooden_sword: '🗡️', wooden_axe: '🪓', wooden_pickaxe: '⛏️', stone_axe: '🪓',
+          iron_blade: '⚔️', crystal_sword: '💎', wooden_bow: '🏹', iron_crossbow: '🏹',
+          umbra_blade: '🔮', chitin_armor: '🛡️', dark_steel_armor: '🛡️',
+          shadow_cloak: '👻', corruption_bomb: '💣'
+        };
+        const icon = icons[item] || '📦';
+        const name = w ? w.name : a ? a.name : item.replace(/_/g, ' ');
+        slot.innerHTML += `<div style="font-size:16px;line-height:1">${icon}</div><span style="font-size:9px">${name}</span>`;
       }
       
       slot.addEventListener('click', () => {

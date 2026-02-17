@@ -44,9 +44,9 @@ const Enemies = (() => {
     
     const isBossNight = nightNum % 5 === 0 && nightNum > 0;
     let count;
-    if (nightNum <= 1) count = 4;
-    else if (nightNum <= 3) count = 6 + nightNum * 2;
-    else count = 8 + nightNum * 3;
+    if (nightNum <= 1) count = 6;
+    else if (nightNum <= 3) count = 8 + nightNum * 3;
+    else count = 12 + nightNum * 4;
     
     waveTotal = count + (isBossNight ? 1 : 0);
     waveEnemiesLeft = waveTotal;
@@ -97,7 +97,7 @@ const Enemies = (() => {
     if (waveActive && waveEnemiesLeft > 0) {
       spawnTimer -= dt;
       if (spawnTimer <= 0) {
-        spawnTimer = 1.5;
+        spawnTimer = 0.8;
         const isBossNight = nightNum % 5 === 0 && nightNum > 0;
         if (isBossNight && waveEnemiesLeft === 1) {
           spawnAtEdge('umbra_lord');

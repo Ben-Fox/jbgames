@@ -252,9 +252,30 @@ const GameMap = (() => {
     }
   }
   
+  // Gather resource from environment object at tile
+  function gatherAt(tx, ty, gatherType) {
+    const obj = envObjects.find(o => o.tx === tx && o.ty === ty);
+    if (!obj) return null;
+    if (gatherType === 'wood' && (obj.type === 'tree_large' || obj.type === 'tree_small' || obj.type === 'stump' || obj.type === 'fallen_log')) {
+      removeEnvAt(tx, ty);
+      const amount = obj.type === 'tree_large' ? 5 : obj.type === 'tree_small' ? 3 : 1;
+      return { resource: 'wood', amount };
+    }
+    if (gatherType === 'stone' && (obj.type === 'rock' || obj.type === 'boulder')) {
+      removeEnvAt(tx, ty);
+      const amount = obj.type === 'boulder' ? 5 : 3;
+      return { resource: 'stone', amount };
+    }
+    if (gatherType === 'stone' && obj.type === 'crystal_deposit') {
+      removeEnvAt(tx, ty);
+      return { resource: 'crystal', amount: 2 };
+    }
+    return null;
+  }
+  
   return {
     T, tiles: () => tiles, envObjects: () => envObjects, camera: () => camera,
-    generate, isEnvBlocking, removeEnvAt, updateCamera, drawTerrain, drawEnvObjects,
+    generate, isEnvBlocking, removeEnvAt, gatherAt, updateCamera, drawTerrain, drawEnvObjects,
     isWalkable(tx, ty) {
       if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
       return !isEnvBlocking(tx, ty);

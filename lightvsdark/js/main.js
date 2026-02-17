@@ -267,7 +267,28 @@ const Game = (() => {
       const result = Player.attack(mouseWorld);
       if (result) {
         if (result.type === 'melee') {
-          Enemies.hitEnemy(result);
+          const hitAny = Enemies.hitEnemy(result);
+          // If holding a gathering tool and didn't hit an enemy, try gathering
+          if (!hitAny) {
+            const w = Player.WEAPONS[Player.state().weapon];
+            if (w && w.gather) {
+              const tx = Math.floor(result.x / TILE);
+              const ty = Math.floor(result.y / TILE);
+              // Check target tile and adjacent tiles
+              for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                  const gathered = GameMap.gatherAt(tx + dx, ty + dy, w.gather);
+                  if (gathered) {
+                    Player.addResource(gathered.resource, gathered.amount);
+                    Audio.pickup();
+                    Particles.buildDust((tx + dx) * TILE + TILE/2, (ty + dy) * TILE + TILE/2);
+                    Particles.damageNumber((tx + dx) * TILE + TILE/2, (ty + dy) * TILE - 10, '+' + gathered.amount + ' ' + gathered.resource, '#2ecc71');
+                    break;
+                  }
+                }
+              }
+            }
+          }
         } else if (result.type === 'projectile') {
           playerProjectiles.push(result);
         }

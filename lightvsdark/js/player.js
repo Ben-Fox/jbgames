@@ -34,6 +34,8 @@ const Player = (() => {
   
   const WEAPONS = {
     wooden_sword: { name: 'Wooden Sword', dmg: 5, speed: 0.35, range: 36, type: 'melee', color: '#a0522d' },
+    wooden_axe: { name: 'Wooden Axe', dmg: 4, speed: 0.5, range: 34, type: 'melee', color: '#8b6914', gather: 'wood' },
+    wooden_pickaxe: { name: 'Wooden Pickaxe', dmg: 3, speed: 0.55, range: 34, type: 'melee', color: '#8b6914', gather: 'stone' },
     stone_axe: { name: 'Stone Axe', dmg: 8, speed: 0.5, range: 38, type: 'melee', color: '#888' },
     iron_blade: { name: 'Iron Blade', dmg: 15, speed: 0.45, range: 42, type: 'melee', color: '#b0b0b0' },
     crystal_sword: { name: 'Crystal Sword', dmg: 25, speed: 0.3, range: 44, type: 'melee', color: '#66ccff' },
