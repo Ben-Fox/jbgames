@@ -97,7 +97,7 @@ const GameMap = (() => {
   function isEnvBlocking(tx, ty) {
     return envObjects.some(o => o.tx === tx && o.ty === ty && 
       (o.type === 'tree_large' || o.type === 'tree_small' || o.type === 'rock' || o.type === 'boulder'
-       || o.type === 'iron_ore' || o.type === 'copper_ore' || o.type === 'tin_ore' || o.type === 'coal_deposit'));
+       || o.type === 'iron_ore' || o.type === 'copper_ore' || o.type === 'tin_ore' || o.type === 'coal_deposit' || o.type === 'crystal_deposit'));
   }
   
   function removeEnvAt(tx, ty) {

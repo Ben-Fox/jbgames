@@ -47,7 +47,7 @@ const Particles = (() => {
   }
   
   function damageNumber(x, y, amount, color = '#ff4444') {
-    damageNumbers.push({ x, y, amount: Math.round(amount), color, life: 0.8, maxLife: 0.8 });
+    damageNumbers.push({ x, y, amount: typeof amount === 'number' ? Math.round(amount) : amount, color, life: 0.8, maxLife: 0.8 });
   }
   
   function updateAmbient(nightAmount, cam, canvasW, canvasH) {

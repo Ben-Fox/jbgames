@@ -41,9 +41,9 @@ const Player = (() => {
     iron_blade: { name: 'Iron Blade', dmg: 15, speed: 0.45, range: 42, type: 'melee', color: '#b0b0b0', tier: 2 },
     iron_axe: { name: 'Iron Axe', dmg: 10, speed: 0.45, range: 38, type: 'melee', color: '#aaa', gather: 'wood', gatherTier: 3, tier: 2 },
     iron_pickaxe: { name: 'Iron Pickaxe', dmg: 8, speed: 0.5, range: 38, type: 'melee', color: '#aaa', gather: 'stone', gatherTier: 3, tier: 2 },
-    bronze_sword: { name: 'Bronze Sword', dmg: 12, speed: 0.4, range: 40, type: 'melee', color: '#cd7f32', tier: 3 },
-    bronze_axe: { name: 'Bronze Axe', dmg: 9, speed: 0.45, range: 38, type: 'melee', color: '#cd7f32', gather: 'wood', gatherTier: 4, tier: 3 },
-    bronze_pickaxe: { name: 'Bronze Pickaxe', dmg: 7, speed: 0.5, range: 38, type: 'melee', color: '#cd7f32', gather: 'stone', gatherTier: 4, tier: 3 },
+    bronze_sword: { name: 'Bronze Sword', dmg: 18, speed: 0.4, range: 40, type: 'melee', color: '#cd7f32', tier: 3 },
+    bronze_axe: { name: 'Bronze Axe', dmg: 12, speed: 0.45, range: 38, type: 'melee', color: '#cd7f32', gather: 'wood', gatherTier: 4, tier: 3 },
+    bronze_pickaxe: { name: 'Bronze Pickaxe', dmg: 10, speed: 0.5, range: 38, type: 'melee', color: '#cd7f32', gather: 'stone', gatherTier: 4, tier: 3 },
     steel_sword: { name: 'Steel Sword', dmg: 20, speed: 0.35, range: 44, type: 'melee', color: '#d0d0d0', tier: 4 },
     steel_axe: { name: 'Steel Axe', dmg: 14, speed: 0.4, range: 40, type: 'melee', color: '#d0d0d0', gather: 'wood', gatherTier: 5, tier: 4 },
     steel_pickaxe: { name: 'Steel Pickaxe', dmg: 12, speed: 0.45, range: 40, type: 'melee', color: '#d0d0d0', gather: 'stone', gatherTier: 5, tier: 4 },
@@ -69,8 +69,8 @@ const Player = (() => {
   const ARMORS = {
     none: { name: 'None', bonus: 0 },
     leather_armor: { name: 'Leather Armor', bonus: 10 },
-    chitin_armor: { name: 'Chitin Armor', bonus: 30 },
-    bronze_armor: { name: 'Bronze Armor', bonus: 25, speedMult: 0.95 },
+    chitin_armor: { name: 'Chitin Armor', bonus: 20 },
+    bronze_armor: { name: 'Bronze Armor', bonus: 35, speedMult: 0.95 },
     steel_armor: { name: 'Steel Armor', bonus: 45, speedMult: 0.9 },
     dark_steel_armor: { name: 'Dark Steel Armor', bonus: 60, speedMult: 0.8 }
   };
