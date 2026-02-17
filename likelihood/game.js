@@ -233,7 +233,7 @@ function showFinal() {
   else if (ratingIdx >= 3) playSound('correct');
 }
 
-function goHome() { showScreen('splash'); }
+function goHome() { clearTimer(); showScreen('splash'); }
 
 // Init
 document.addEventListener('DOMContentLoaded', () => showScreen('splash'));

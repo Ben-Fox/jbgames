@@ -142,6 +142,10 @@ h1 {
 }
 .btn-home:hover { border-color: var(--text); color: var(--text); }
 
+/* EXIT BUTTON */
+.btn-exit { position: absolute; top: 12px; right: 16px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: #aaa; width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; transition: background 0.2s, color 0.2s; z-index: 20; font-family: inherit; }
+.btn-exit:hover { background: rgba(239,68,68,0.3); border-color: #ef4444; color: #fff; }
+
 /* NEXT BUTTON */
 .btn-next { display: inline-block; margin-top: 1.2rem; padding: 0.75rem 2rem; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.15s, filter 0.2s; font-family: inherit; }
 .btn-next:hover { transform: scale(1.05); filter: brightness(1.15); }
