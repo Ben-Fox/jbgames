@@ -45,9 +45,38 @@ body {
   color: var(--ink);
   font-family: 'Azeret Mono', monospace;
   min-height: 100vh;
-  background-image: 
+  background-image:
     radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.06) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 20%, rgba(184,134,11,0.04) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInScale { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes popBounce { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(124,58,237,0.3); } 50% { box-shadow: 0 0 20px rgba(124,58,237,0.6); } }
+@keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 200px; } }
+@keyframes confettiBurst {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) rotate(360deg) scale(0); opacity: 0; }
+}
+@keyframes flipIn {
+  0% { transform: rotateX(90deg); opacity: 0; }
+  100% { transform: rotateX(0deg); opacity: 1; }
+}
+@keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes celebrateGlow {
+  0% { box-shadow: 0 0 0 rgba(111,207,111,0); }
+  50% { box-shadow: 0 0 40px rgba(111,207,111,0.3); }
+  100% { box-shadow: 0 0 0 rgba(111,207,111,0); }
+}
+@keyframes markerPulse {
+  0%,100% { box-shadow: 0 0 10px rgba(124,58,237,0.4); }
+  50% { box-shadow: 0 0 24px rgba(124,58,237,0.8); }
 }
 
 /* ── HUB ── */
@@ -62,6 +91,7 @@ body {
   padding: 56px 20px 40px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 40px;
+  animation: fadeIn 0.6s ease;
 }
 
 .hub-logo {
@@ -70,7 +100,7 @@ body {
   font-weight: 700;
   letter-spacing: -2px;
   line-height: 1;
-  background: linear-gradient(90deg, #ff69b4, #c4b5fd);
+  background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 40%, #ff69b4 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 
@@ -95,7 +125,7 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--accent-light);
-  background: rgba(124,58,237,.1);
+  background: rgba(124,58,237,.08);
   border-radius: 20px;
 }
 
@@ -111,10 +141,16 @@ body {
   border-radius: 16px;
   padding: 28px 24px 24px;
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(.25,.46,.45,.94), box-shadow 0.3s, border-color 0.3s;
+  transition: transform 0.3s cubic-bezier(.25,.46,.45,.94), box-shadow 0.35s, border-color 0.3s;
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  animation: fadeInScale 0.5s ease forwards;
 }
+.game-card:nth-child(1) { animation-delay: 0.05s; }
+.game-card:nth-child(2) { animation-delay: 0.12s; }
+.game-card:nth-child(3) { animation-delay: 0.19s; }
+.game-card:nth-child(4) { animation-delay: 0.26s; }
 
 .game-card::before {
   content: '';
@@ -123,19 +159,32 @@ body {
   height: 3px;
   background: var(--card-accent, var(--accent));
   border-radius: 16px 16px 0 0;
+  transition: height 0.3s;
 }
+.game-card:hover::before { height: 4px; }
+
+.game-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.35s;
+  background: radial-gradient(circle at 50% 0%, var(--card-accent, rgba(124,58,237,0.12)), transparent 70%);
+  pointer-events: none;
+}
+.game-card:hover::after { opacity: 1; }
 
 .game-card:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 8px 32px rgba(0,0,0,.5);
-  border-color: var(--card-accent, var(--accent));
+  box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 30px color-mix(in srgb, var(--card-accent, var(--accent)) 20%, transparent);
+  border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 50%, transparent);
 }
 
-.game-card.done {
-  opacity: 0.5;
-}
+.game-card.done { opacity: 0.5; }
+.game-card.done { animation: fadeInScale 0.5s ease forwards; }
 
-.card-emoji { font-size: 28px; display: block; margin-bottom: 12px; }
+.card-emoji { font-size: 32px; display: block; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
 .card-name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 26px;
@@ -162,14 +211,14 @@ body {
   text-transform: uppercase;
   font-weight: 600;
   color: var(--card-accent, var(--accent-light));
-  padding: 6px 16px;
-  border-radius: 8px;
+  padding: 8px 18px;
+  border-radius: 10px;
   background: rgba(124,58,237,.1);
   display: inline-block;
-  transition: background .2s;
+  transition: all .25s;
 }
-.game-card:hover .card-cta { background: rgba(124,58,237,.2); }
-.card-cta.done-label { color: var(--sage); background: rgba(74,103,65,.1); }
+.game-card:hover .card-cta { background: rgba(124,58,237,.2); transform: translateX(2px); }
+.card-cta.done-label { color: var(--sage); background: rgba(111,207,111,.08); }
 
 /* ── GAME SHELL ── */
 #game-shell {
@@ -177,6 +226,7 @@ body {
   max-width: 680px;
   margin: 0 auto;
   padding: 0 20px 60px;
+  animation: fadeIn 0.3s ease;
 }
 
 .game-header {
@@ -220,48 +270,48 @@ body {
 .how-to-play {
   background: var(--paper2);
   border: 1px solid var(--border);
-  padding: 24px 28px;
+  border-radius: 16px;
+  padding: 28px 28px;
   margin-bottom: 28px;
+  animation: fadeInScale 0.4s ease;
 }
 
 .htp-title {
   font-size: 9px;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 12px;
+  color: var(--accent-light);
+  margin-bottom: 14px;
+  font-weight: 600;
 }
 
 .htp-text {
   font-size: 13px;
   line-height: 1.8;
-  color: var(--ink);
+  color: #ccc;
 }
 
 .htp-text strong { color: var(--accent-light); }
 
 .htp-dismiss {
-  margin-top: 16px;
+  margin-top: 20px;
   background: linear-gradient(135deg, #7c3aed, #a78bfa);
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 10px 24px;
+  padding: 12px 28px;
   font-family: 'Azeret Mono', monospace;
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
   transition: filter 0.2s, transform 0.15s;
+  box-shadow: 0 4px 16px rgba(124,58,237,.3);
 }
 .htp-dismiss:hover { filter: brightness(1.2); transform: scale(1.03); }
 
 /* ── GAME CONTENT ── */
-.game-area { animation: fadeIn 0.3s ease; }
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
-@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.game-area { animation: fadeIn 0.35s ease; }
 
 .prompt-label {
   font-size: 9px;
@@ -277,10 +327,12 @@ body {
   font-weight: 600;
   line-height: 1.4;
   margin-bottom: 24px;
-  padding: 18px 20px;
+  padding: 18px 22px;
   background: var(--paper2);
   border-left: 3px solid var(--accent);
   border-radius: 0 12px 12px 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
 }
 
 .input-row {
@@ -299,12 +351,12 @@ body {
   color: var(--ink);
   outline: none;
   border-radius: 10px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.game-input:focus { border-color: var(--accent); }
+.game-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,.15); }
 
 .submit-btn {
-  padding: 12px 20px;
+  padding: 12px 22px;
   background: linear-gradient(135deg, #7c3aed, #a78bfa);
   color: #fff;
   border: none;
@@ -314,20 +366,23 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: filter 0.2s, transform 0.15s;
+  transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(124,58,237,.25);
 }
-.submit-btn:hover { filter: brightness(1.2); transform: scale(1.03); }
-.submit-btn:disabled { background: var(--paper3); color: var(--muted); cursor: default; filter: none; transform: none; }
+.submit-btn:hover { filter: brightness(1.2); transform: scale(1.03); box-shadow: 0 6px 20px rgba(124,58,237,.35); }
+.submit-btn:disabled { background: var(--paper3); color: var(--muted); cursor: default; filter: none; transform: none; box-shadow: none; }
 
 .feedback-msg {
   font-size: 12px;
   padding: 10px 14px;
   margin-bottom: 12px;
   border-left: 3px solid var(--muted);
+  border-radius: 0 8px 8px 0;
+  animation: fadeIn 0.25s ease;
 }
-.feedback-msg.good { border-color: var(--sage); color: var(--sage); background: rgba(111,207,111,0.08); }
-.feedback-msg.bad { border-color: var(--rust); color: var(--rust); background: rgba(239,107,91,0.08); animation: shake 0.4s; }
+.feedback-msg.good { border-color: var(--sage); color: var(--sage); background: rgba(111,207,111,0.06); }
+.feedback-msg.bad { border-color: var(--rust); color: var(--rust); background: rgba(239,107,91,0.06); animation: shake 0.4s ease; }
 
 .guesses-list { margin-bottom: 16px; }
 .guess-item {
@@ -346,6 +401,7 @@ body {
   padding: 10px 14px;
   background: var(--paper3);
   border-left: 3px solid var(--slate);
+  border-radius: 0 8px 8px 0;
   font-size: 12px;
   margin-bottom: 8px;
   animation: fadeIn 0.3s;
@@ -363,27 +419,39 @@ body {
   background: var(--paper3);
   border: 1px solid var(--border);
   border-radius: 3px;
-  transition: background 0.3s;
+  transition: all 0.4s cubic-bezier(.25,.46,.45,.94);
 }
-.round-dot.active { background: var(--accent); }
-.round-dot.won { background: var(--sage); }
-.round-dot.lost { background: var(--rust); }
+.round-dot.active { background: var(--accent); box-shadow: 0 0 8px rgba(124,58,237,.4); animation: pulse 2s infinite; }
+.round-dot.won { background: var(--sage); border-color: var(--sage); box-shadow: 0 0 6px rgba(111,207,111,.3); }
+.round-dot.lost { background: var(--rust); border-color: var(--rust); }
 
 /* ── RESULT BANNER ── */
 .result-banner {
   text-align: center;
-  padding: 36px 24px;
+  padding: 40px 24px;
   background: var(--paper2);
   border: 1px solid var(--border);
   border-radius: 16px;
-  animation: fadeIn 0.4s;
+  animation: fadeInScale 0.5s ease;
+  position: relative;
+  overflow: hidden;
 }
-.result-banner.won { border-top: 3px solid var(--sage); }
+.result-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0.06;
+  pointer-events: none;
+}
+.result-banner.won { border-top: 3px solid var(--sage); animation: fadeInScale 0.5s ease, celebrateGlow 1.5s ease 0.3s; }
+.result-banner.won::before { background: radial-gradient(circle at 50% 0%, var(--sage), transparent 60%); }
 .result-banner.lost { border-top: 3px solid var(--rust); }
-.result-emoji { font-size: 40px; margin-bottom: 12px; }
+.result-banner.lost::before { background: radial-gradient(circle at 50% 0%, var(--rust), transparent 60%); }
+.result-emoji { font-size: 48px; margin-bottom: 14px; animation: popBounce 0.6s ease 0.2s both; }
 .result-title {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -393,26 +461,50 @@ body {
   margin-bottom: 6px;
 }
 .result-score {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--accent-light);
-  margin: 12px 0;
+  margin: 14px 0;
+  animation: countUp 0.5s ease 0.4s both;
 }
 .result-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 
-/* ── CIPHER (reworked) ── */
+/* Confetti particles (CSS only) */
+.confetti-container {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFall 1.5s ease forwards;
+  opacity: 0;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120px) rotate(720deg); opacity: 0; }
+}
+
+/* ── CIPHER ── */
 .cipher-quote-area {
-  padding: 20px;
-  background: var(--paper3);
+  padding: 22px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--gold);
+  border-radius: 0 12px 12px 0;
   margin-bottom: 20px;
   line-height: 1.2;
 }
 
 .cipher-word {
   display: inline-block;
-  margin-right: 12px;
-  margin-bottom: 8px;
+  margin-right: 14px;
+  margin-bottom: 10px;
 }
 
 .cipher-cell {
@@ -453,12 +545,13 @@ body {
 
 .cipher-cell.selected .cipher-decoded {
   border-color: var(--gold);
-  background: rgba(184,134,11,0.1);
+  background: rgba(212,160,23,0.1);
+  box-shadow: 0 2px 8px rgba(212,160,23,.15);
 }
 
 .cipher-cell.locked .cipher-decoded {
   border-color: var(--sage);
-  background: rgba(74,103,65,0.1);
+  background: rgba(111,207,111,0.08);
   color: var(--sage);
 }
 
@@ -471,9 +564,13 @@ body {
   color: var(--sage);
 }
 
+.cipher-cell.just-mapped .cipher-decoded {
+  animation: flipIn 0.3s ease;
+}
+
 .cipher-toolbar {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 16px;
@@ -487,17 +584,19 @@ body {
 
 .cipher-hint-btn {
   padding: 8px 16px;
-  background: var(--gold);
-  color: white;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #1a1a24;
   border: none;
+  border-radius: 8px;
   font-family: 'Azeret Mono', monospace;
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: filter 0.2s, transform 0.15s;
+  font-weight: 600;
 }
-.cipher-hint-btn:hover { background: var(--gold-light); }
+.cipher-hint-btn:hover { filter: brightness(1.15); transform: scale(1.03); }
 
 .cipher-keyboard {
   display: grid;
@@ -512,15 +611,16 @@ body {
   font-weight: 600;
   background: var(--paper2);
   border: 1px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
   text-transform: uppercase;
+  color: var(--ink);
 }
-.cipher-key:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-.cipher-key.used { background: var(--paper3); color: var(--muted); opacity: 0.5; }
-.cipher-key.locked { background: rgba(74,103,65,0.15); color: var(--sage); cursor: default; border-color: var(--sage); }
+.cipher-key:hover { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(124,58,237,.3); }
+.cipher-key.used { background: var(--paper3); color: var(--muted); opacity: 0.4; }
+.cipher-key.locked { background: rgba(111,207,111,0.1); color: var(--sage); cursor: default; border-color: rgba(111,207,111,.3); }
 
-/* Mapping table */
 .cipher-map-grid {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
@@ -533,11 +633,13 @@ body {
   padding: 4px 2px;
   background: var(--paper2);
   border: 1px solid var(--border);
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .cipher-map-cell:hover { border-color: var(--gold); }
-.cipher-map-cell.locked { border-color: var(--sage); background: rgba(74,103,65,0.1); }
+.cipher-map-cell.locked { border-color: rgba(111,207,111,.3); background: rgba(111,207,111,0.06); }
+.cipher-map-cell.selected { border-color: var(--gold); background: rgba(212,160,23,0.08); }
 .cipher-map-enc {
   font-size: 11px;
   font-weight: 600;
@@ -554,16 +656,19 @@ body {
   color: var(--sage);
 }
 
-/* Frequency analysis */
 .cipher-freq {
   margin-bottom: 20px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
 }
 .cipher-freq-title {
   font-size: 9px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .cipher-freq-bars {
   display: flex;
@@ -580,14 +685,14 @@ body {
   gap: 2px;
   cursor: pointer;
 }
-.cipher-freq-col:hover .cipher-freq-bar { background: var(--gold); }
-.cipher-freq-col.selected .cipher-freq-bar { background: var(--gold); }
+.cipher-freq-col:hover .cipher-freq-bar { background: var(--gold); opacity: 1; }
+.cipher-freq-col.selected .cipher-freq-bar { background: var(--gold); opacity: 1; }
 .cipher-freq-bar {
   width: 100%;
-  background: var(--slate);
-  opacity: 0.6;
-  transition: all 0.2s;
-  border-radius: 1px 1px 0 0;
+  background: var(--accent-light);
+  opacity: 0.5;
+  transition: all 0.25s;
+  border-radius: 2px 2px 0 0;
   min-height: 2px;
 }
 .cipher-freq-lbl {
@@ -598,7 +703,7 @@ body {
 .cipher-freq-hint {
   font-size: 10px;
   color: var(--muted);
-  margin-top: 4px;
+  margin-top: 6px;
   font-style: italic;
 }
 
@@ -610,10 +715,10 @@ body {
   padding: 14px 16px;
   background: var(--paper2);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 6px;
+  border-radius: 12px;
+  margin-bottom: 8px;
   cursor: grab;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(.25,.46,.45,.94);
   font-size: 13px;
   line-height: 1.5;
   display: flex;
@@ -621,14 +726,20 @@ body {
   gap: 12px;
   user-select: none;
 }
-.chronicle-event:hover { border-color: var(--accent); }
-.chronicle-event.dragging { opacity: 0.5; }
-.chronicle-event.correct-pos { border-color: var(--sage); background: rgba(111,207,111,0.06); cursor: default; }
-.chronicle-event.wrong-pos { border-color: var(--rust); background: rgba(239,107,91,0.06); }
-.event-handle { color: var(--muted); font-size: 16px; cursor: grab; }
+.chronicle-event:hover { border-color: var(--accent); transform: translateX(4px); }
+.chronicle-event.dragging { opacity: 0.4; transform: scale(0.98); }
+.chronicle-event.correct-pos {
+  border-color: var(--sage);
+  background: rgba(111,207,111,0.06);
+  cursor: default;
+}
+.chronicle-event.correct-pos .event-num { border-color: var(--sage); color: var(--sage); }
+.chronicle-event.wrong-pos { border-color: var(--rust); background: rgba(239,107,91,0.05); animation: shake 0.4s ease; }
+.event-handle { color: var(--muted); font-size: 16px; cursor: grab; opacity: 0.5; transition: opacity 0.2s; }
+.chronicle-event:hover .event-handle { opacity: 1; }
 .event-num {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--border);
   border-radius: 50%;
   display: flex;
@@ -638,16 +749,33 @@ body {
   font-weight: 600;
   flex-shrink: 0;
   color: var(--muted);
+  transition: all 0.3s;
+}
+
+/* Timeline connector dots */
+.chronicle-timeline {
+  position: relative;
+  padding-left: 20px;
+}
+.chronicle-timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: var(--border);
 }
 
 /* ── WAVELENGTH ── */
 .spectrum-bar {
   position: relative;
-  height: 48px;
-  background: linear-gradient(90deg, var(--slate), var(--paper3), var(--rust));
-  border-radius: 12px;
+  height: 52px;
+  background: linear-gradient(90deg, var(--slate), var(--accent), var(--rust));
+  border-radius: 14px;
   margin-bottom: 8px;
   overflow: visible;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.3), 0 0 20px rgba(124,58,237,.1);
 }
 .spectrum-labels {
   display: flex;
@@ -656,48 +784,62 @@ body {
   color: var(--muted);
   letter-spacing: 1px;
   margin-bottom: 20px;
+  padding: 0 4px;
 }
 .spectrum-target {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
   width: 4px;
-  height: 60px;
+  height: 64px;
   background: var(--ink);
   border-radius: 2px;
+  box-shadow: 0 0 10px rgba(255,255,255,.3);
+  animation: fadeIn 0.4s ease;
+}
+.spectrum-target::after {
+  content: '▼';
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--ink);
 }
 .spectrum-guess-marker {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 3px solid var(--accent-light);
   background: var(--bg);
   cursor: pointer;
   transition: left 0.1s;
-  box-shadow: 0 0 10px rgba(124,58,237,.4);
+  animation: markerPulse 2s infinite;
+  z-index: 2;
 }
 .spectrum-slider {
   width: 100%;
   margin-bottom: 16px;
   accent-color: var(--accent);
   cursor: pointer;
+  height: 6px;
 }
 
 /* ── MIMIC ── */
 .mimic-blanks {
   display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
+  gap: 7px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 .letter-box {
-  width: 38px;
-  height: 48px;
+  width: 40px;
+  height: 50px;
   border: 2px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -705,23 +847,48 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  transition: all 0.2s;
+  transition: all 0.3s;
   background: var(--paper2);
+  perspective: 400px;
 }
-.letter-box.correct { border-color: var(--sage); background: rgba(111,207,111,0.1); color: var(--sage); }
-.letter-box.present { border-color: var(--gold); background: rgba(212,160,23,0.1); color: var(--gold); }
-.letter-box.absent { border-color: rgba(255,255,255,.1); background: var(--paper3); color: var(--muted); }
+.letter-box.correct {
+  border-color: var(--sage);
+  background: rgba(111,207,111,0.1);
+  color: var(--sage);
+  animation: popBounce 0.4s ease;
+}
+.letter-box.present {
+  border-color: var(--gold);
+  background: rgba(212,160,23,0.1);
+  color: var(--gold);
+  animation: flipIn 0.3s ease;
+}
+.letter-box.absent {
+  border-color: rgba(255,255,255,.06);
+  background: var(--paper3);
+  color: var(--muted);
+  animation: flipIn 0.3s ease;
+}
 .letter-box.empty { border-color: var(--border); }
+/* Cascade delay for letter boxes */
+.letter-box:nth-child(1) { animation-delay: 0s; }
+.letter-box:nth-child(2) { animation-delay: 0.08s; }
+.letter-box:nth-child(3) { animation-delay: 0.16s; }
+.letter-box:nth-child(4) { animation-delay: 0.24s; }
+.letter-box:nth-child(5) { animation-delay: 0.32s; }
 
 .mimic-difficulty {
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-block;
 }
-.mimic-difficulty.easy { color: var(--sage); }
-.mimic-difficulty.medium { color: var(--gold); }
-.mimic-difficulty.hard { color: var(--rust); }
+.mimic-difficulty.easy { color: var(--sage); background: rgba(111,207,111,.08); }
+.mimic-difficulty.medium { color: var(--gold); background: rgba(212,160,23,.08); }
+.mimic-difficulty.hard { color: var(--rust); background: rgba(239,107,91,.08); }
 
 /* ── SCORE BAR ── */
 .score-bar {
@@ -729,31 +896,37 @@ body {
   gap: 6px;
   margin-bottom: 24px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .score-pip {
-  width: 20px; height: 20px;
+  width: 24px; height: 24px;
   border: 1px solid var(--border);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
+  font-weight: 600;
+  transition: all 0.3s;
 }
-.score-pip.won { background: var(--sage); color: white; border-color: var(--sage); }
-.score-pip.lost { background: var(--rust); color: white; border-color: var(--rust); }
+.score-pip.won { background: rgba(111,207,111,.15); color: var(--sage); border-color: rgba(111,207,111,.3); }
+.score-pip.lost { background: rgba(239,107,91,.1); color: var(--rust); border-color: rgba(239,107,91,.2); }
 .score-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-left: 8px; }
 
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 480px) {
   .cipher-keyboard { grid-template-columns: repeat(7, 1fr); }
   .cipher-map-grid { grid-template-columns: repeat(9, 1fr); }
   .hub-logo { font-size: 36px; }
+  .game-card { padding: 22px 18px 20px; }
+  .letter-box { width: 36px; height: 44px; font-size: 16px; }
+  .chronicle-event { font-size: 12px; padding: 12px 12px; gap: 8px; }
 }
 </style>
 </head>
 <body>
 
-<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(14,14,18,0.8);backdrop-filter:blur(8px);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s;border:1px solid rgba(255,255,255,.08)" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
 
 <!-- HUB -->
 <div id="hub">
@@ -790,20 +963,24 @@ function getWeekIndex(poolSize) {
 function getWeekLabel() {
   const now = new Date();
   const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay());
+  start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday-based
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
   const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return `Week of ${fmt(start)} – ${fmt(end)}`;
 }
 
+function weekKey() {
+  return getWeekIndex(10000);
+}
+
 function saveProgress(gameId, data) {
-  const key = `fivefold_${gameId}_week${getWeekIndex(1000)}`;
+  const key = `fivefold_${gameId}_week${weekKey()}`;
   localStorage.setItem(key, JSON.stringify(data));
 }
 
 function loadProgress(gameId) {
-  const key = `fivefold_${gameId}_week${getWeekIndex(1000)}`;
+  const key = `fivefold_${gameId}_week${weekKey()}`;
   try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; }
 }
 
@@ -811,7 +988,6 @@ function loadProgress(gameId) {
 // PUZZLE DATA POOLS
 // ═══════════════════════════════════════════════
 
-// CIPHER — scrambled quotes (random substitution cipher)
 const CIPHER_POOL = [
   { plain: "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO", author: "Steve Jobs" },
   { plain: "IN THE MIDDLE OF DIFFICULTY LIES OPPORTUNITY", author: "Albert Einstein" },
@@ -841,7 +1017,6 @@ function makeCipher(plain) {
   return { plain, encoded, encMap, decMap };
 }
 
-// CHRONICLE — ordering events
 const CHRONICLE_POOL = [
   {
     events: [
@@ -890,7 +1065,6 @@ const CHRONICLE_POOL = [
   },
 ];
 
-// WAVELENGTH — guess where a word falls on a spectrum
 const WAVELENGTH_POOL = [
   {
     rounds: [
@@ -939,7 +1113,6 @@ const WAVELENGTH_POOL = [
   },
 ];
 
-// MIMIC — 5-letter words with clues
 const MIMIC_POOL = [
   {
     rounds: [
@@ -993,7 +1166,7 @@ const MIMIC_POOL = [
 // ═══════════════════════════════════════════════
 const GAMES = [
   { id: "cipher",     name: "Cipher",     emoji: "🔐", type: "Single Puzzle", desc: "Decode an encrypted quote by cracking the letter substitution cipher.", accent: "#4a6741", render: renderCipher },
-  { id: "chronicle",  name: "Chronicle",  emoji: "📜", type: "5 Rounds",      desc: "Arrange five historical events in the correct chronological order.", accent: "#3d4f5c", render: renderChronicle },
+  { id: "chronicle",  name: "Chronicle",  emoji: "📜", type: "Single Round",  desc: "Arrange five historical events in the correct chronological order.", accent: "#3d4f5c", render: renderChronicle },
   { id: "wavelength", name: "Wavelength", emoji: "🌊", type: "5 Rounds",      desc: "Place a word on the correct spot of a spectrum. Closer = more points.", accent: "#8b3a2a", render: renderWavelength },
   { id: "mimic",      name: "Mimic",      emoji: "🪞", type: "5 Rounds",      desc: "Guess the hidden 5-letter word from three progressive clues.", accent: "#6b3a7d", render: renderMimic },
 ];
@@ -1005,7 +1178,7 @@ function buildHub() {
   document.getElementById('week-badge').textContent = getWeekLabel();
   const grid = document.getElementById('game-grid');
   grid.innerHTML = '';
-  GAMES.forEach(g => {
+  GAMES.forEach((g, idx) => {
     const prog = loadProgress(g.id);
     const done = prog && prog.finished;
     const card = document.createElement('div');
@@ -1025,9 +1198,14 @@ function buildHub() {
 
 function launchGame(g) {
   document.getElementById('hub').style.display = 'none';
-  document.getElementById('game-shell').style.display = 'block';
+  const shell = document.getElementById('game-shell');
+  shell.style.display = 'block';
+  shell.style.animation = 'none';
+  shell.offsetHeight; // reflow
+  shell.style.animation = 'fadeIn 0.3s ease';
   document.getElementById('shell-title').textContent = g.emoji + ' ' + g.name;
   document.getElementById('shell-round').textContent = g.type;
+  document.getElementById('game-content').innerHTML = '';
   g.render();
 }
 
@@ -1040,10 +1218,9 @@ function showHub() {
 // ═══════════════════════════════════════════════
 // SHARED HELPERS
 // ═══════════════════════════════════════════════
-function norm(s) { return s.trim().toUpperCase(); }
-
 function howToPlay(html, onDismiss) {
-  const prog = loadProgress('__htp__' + onDismiss.name.slice(0,8));
+  const htpKey = '__htp__' + (onDismiss.name || 'x').slice(0,12);
+  const prog = loadProgress(htpKey);
   if (prog && prog.seen) { onDismiss(); return; }
   const div = document.createElement('div');
   div.className = 'how-to-play';
@@ -1052,17 +1229,20 @@ function howToPlay(html, onDismiss) {
   document.getElementById('game-content').innerHTML = '';
   document.getElementById('game-content').appendChild(div);
   document.getElementById('htp-btn').onclick = () => {
-    saveProgress('__htp__' + onDismiss.name.slice(0,8), { seen: true });
+    saveProgress(htpKey, { seen: true });
     onDismiss();
   };
 }
 
-function roundProgress(scores, total) {
+function roundProgress(scores, total, activeIdx) {
   const bar = document.createElement('div');
   bar.className = 'round-progress';
   for (let i = 0; i < total; i++) {
     const d = document.createElement('div');
-    d.className = 'round-dot ' + (scores[i] === undefined ? '' : scores[i] > 0 ? 'won' : 'lost');
+    let cls = 'round-dot';
+    if (i < scores.length) cls += scores[i] > 0 ? ' won' : ' lost';
+    else if (i === (activeIdx !== undefined ? activeIdx : scores.length)) cls += ' active';
+    d.className = cls;
     bar.appendChild(d);
   }
   return bar;
@@ -1071,7 +1251,7 @@ function roundProgress(scores, total) {
 function scoreBar(scores) {
   const bar = document.createElement('div');
   bar.className = 'score-bar';
-  scores.forEach((s, i) => {
+  scores.forEach((s) => {
     const pip = document.createElement('div');
     pip.className = 'score-pip ' + (s > 0 ? 'won' : 'lost');
     pip.textContent = s > 0 ? s : '✗';
@@ -1085,10 +1265,28 @@ function scoreBar(scores) {
   return bar;
 }
 
+function makeConfetti(container) {
+  const colors = ['#7c3aed','#a78bfa','#6fcf6f','#d4a017','#ff69b4','#7eb8d8'];
+  const wrap = document.createElement('div');
+  wrap.className = 'confetti-container';
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-particle';
+    p.style.left = (10 + Math.random() * 80) + '%';
+    p.style.top = (20 + Math.random() * 30) + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = (Math.random() * 0.5) + 's';
+    p.style.animationDuration = (1 + Math.random() * 1) + 's';
+    wrap.appendChild(p);
+  }
+  container.appendChild(wrap);
+}
+
 function resultBanner(won, title, answer, sub, scoreEl) {
   const div = document.createElement('div');
   div.className = 'result-banner ' + (won ? 'won' : 'lost');
-  div.innerHTML = `<div class="result-emoji">${won ? '🎉' : '😔'}</div>
+  if (won) makeConfetti(div);
+  div.innerHTML += `<div class="result-emoji">${won ? '🎉' : '😔'}</div>
     <div class="result-title">${title}</div>
     <div class="result-answer">${answer}</div>`;
   if (scoreEl) div.appendChild(scoreEl);
@@ -1100,16 +1298,14 @@ function resultBanner(won, title, answer, sub, scoreEl) {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 1: CIPHER (reworked)
+// GAME 1: CIPHER
 // ═══════════════════════════════════════════════
 function renderCipher() {
   howToPlay(`
-    A famous quote has been <strong>encrypted</strong> with a substitution cipher — each letter of the alphabet has been swapped with a different letter. The same swap is used throughout.<br><br>
-    <strong>Spaces and punctuation are unchanged</strong> — only letters are encoded.<br><br>
-    <strong>How to play:</strong> Click a coded letter in the quote (or in the mapping table), then click the letter you think it decodes to on the keyboard. All instances update instantly.<br><br>
-    <strong>Tips:</strong> Use <strong>letter frequency</strong> — in English, E, T, A, O, I, N are the most common letters. Short words like "THE", "IS", "TO" are good starting points.<br><br>
-    <strong>Hints:</strong> You get <strong>3 free hints</strong> that reveal a correct letter mapping. Correct letters <span style="color:var(--sage)">lock in green</span>.<br><br>
-    Click a mapped letter to <strong>undo</strong> that mapping. A new cipher appears every <strong>Monday</strong>.
+    A famous quote has been <strong>encrypted</strong> with a substitution cipher — each letter has been swapped with a different letter throughout.<br><br>
+    <strong>How to play:</strong> Click a coded letter in the quote (or mapping table), then click the letter you think it decodes to on the keyboard. All instances update instantly.<br><br>
+    <strong>Tips:</strong> Use <strong>letter frequency</strong> — E, T, A, O, I, N are the most common. Short words like "THE", "IS", "TO" are good starting points.<br><br>
+    You get <strong>3 free hints</strong>. Correct letters <span style="color:var(--sage)">lock in green</span>. Click a mapped letter again to <strong>undo</strong>. New cipher every <strong>Monday</strong>.
   `, startCipher);
 }
 
@@ -1121,7 +1317,6 @@ function startCipher() {
   const prog = loadProgress('cipher') || { userMap: {}, hints: 0, finished: false };
   const content = document.getElementById('game-content');
 
-  // Get unique encoded letters and their frequencies
   const encLetters = new Set();
   const encFreq = {};
   for (const c of cipherData.encoded) {
@@ -1132,7 +1327,6 @@ function startCipher() {
   }
   const maxFreq = Math.max(...Object.values(encFreq));
 
-  // Count unique plain letters needed
   const plainLettersNeeded = new Set();
   for (const c of plain) {
     if (c >= 'A' && c <= 'Z') plainLettersNeeded.add(c);
@@ -1149,10 +1343,6 @@ function startCipher() {
       if (isCorrect(enc, dec)) n++;
     }
     return n;
-  }
-
-  function countMappings() {
-    return Object.keys(prog.userMap).length;
   }
 
   function isComplete() {
@@ -1177,14 +1367,13 @@ function startCipher() {
       return;
     }
 
-    // Toolbar: progress + hints
+    // Toolbar
     const toolbar = document.createElement('div');
     toolbar.className = 'cipher-toolbar';
-
     const progressSpan = document.createElement('span');
     progressSpan.className = 'cipher-progress';
     const correct = countCorrectMappings();
-    progressSpan.textContent = `${correct} of ${totalLettersNeeded} letters decoded`;
+    progressSpan.textContent = `${correct} / ${totalLettersNeeded} letters decoded`;
     toolbar.appendChild(progressSpan);
 
     if (prog.hints < 3) {
@@ -1192,13 +1381,12 @@ function startCipher() {
       hintBtn.className = 'cipher-hint-btn';
       hintBtn.textContent = `💡 Hint (${3 - prog.hints} left)`;
       hintBtn.onclick = () => {
-        // Find an unmapped or incorrectly mapped encoded letter
         for (const enc of encLetters) {
           if (!prog.userMap[enc] || !isCorrect(enc, prog.userMap[enc])) {
-            // Remove any existing mapping that targets this decoded letter
             const correctDec = cipherData.decMap[enc];
+            // Remove conflicting mappings
             Object.keys(prog.userMap).forEach(k => {
-              if (prog.userMap[k] === correctDec) delete prog.userMap[k];
+              if (prog.userMap[k] === correctDec && k !== enc) delete prog.userMap[k];
             });
             prog.userMap[enc] = correctDec;
             prog.hints++;
@@ -1212,10 +1400,9 @@ function startCipher() {
       };
       toolbar.appendChild(hintBtn);
     }
-
     area.appendChild(toolbar);
 
-    // Quote display
+    // Quote
     const lbl = document.createElement('div');
     lbl.className = 'prompt-label';
     lbl.textContent = 'Decode the quote';
@@ -1224,10 +1411,8 @@ function startCipher() {
     const quoteArea = document.createElement('div');
     quoteArea.className = 'cipher-quote-area';
 
-    // Split encoded into words
     const encWords = cipherData.encoded.split(' ');
     const plainWords = plain.split(' ');
-    let charIdx = 0;
 
     encWords.forEach((encWord, wi) => {
       const wordSpan = document.createElement('span');
@@ -1235,13 +1420,10 @@ function startCipher() {
 
       for (let ci = 0; ci < encWord.length; ci++) {
         const enc = encWord[ci];
-        const plainChar = plainWords[wi][ci];
         const isLetter = enc >= 'A' && enc <= 'Z';
-
         const cell = document.createElement('span');
 
         if (!isLetter) {
-          // Punctuation
           cell.className = 'cipher-cell punct';
           cell.innerHTML = `<span class="cipher-encoded">&nbsp;</span><span class="cipher-decoded" style="border:none;color:var(--muted)">${enc}</span>`;
         } else {
@@ -1254,21 +1436,11 @@ function startCipher() {
           else if (mapped) cell.classList.add('mapped');
           if (enc === selectedEnc && !locked) cell.classList.add('selected');
 
-          const encSpan = document.createElement('span');
-          encSpan.className = 'cipher-encoded';
-          encSpan.textContent = enc;
-
-          const decSpan = document.createElement('span');
-          decSpan.className = 'cipher-decoded';
-          decSpan.textContent = mapped || '_';
-
-          cell.appendChild(encSpan);
-          cell.appendChild(decSpan);
+          cell.innerHTML = `<span class="cipher-encoded">${enc}</span><span class="cipher-decoded">${mapped || '_'}</span>`;
 
           cell.onclick = () => {
             if (locked) return;
             if (mapped && enc === selectedEnc) {
-              // Undo: click selected mapped letter to clear
               delete prog.userMap[enc];
               saveProgress('cipher', prog);
               selectedEnc = null;
@@ -1279,17 +1451,14 @@ function startCipher() {
             render();
           };
         }
-
         wordSpan.appendChild(cell);
       }
       quoteArea.appendChild(wordSpan);
-      charIdx += encWord.length + 1;
     });
-
     area.appendChild(quoteArea);
 
     const authorDiv = document.createElement('div');
-    authorDiv.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:1px;';
+    authorDiv.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:1px;font-style:italic;';
     authorDiv.textContent = `— ${author}`;
     area.appendChild(authorDiv);
 
@@ -1300,7 +1469,6 @@ function startCipher() {
     const freqBars = document.createElement('div');
     freqBars.className = 'cipher-freq-bars';
 
-    // Sort encoded letters by frequency descending
     const sortedEnc = [...encLetters].sort((a, b) => (encFreq[b] || 0) - (encFreq[a] || 0));
     sortedEnc.forEach(enc => {
       const col = document.createElement('div');
@@ -1327,14 +1495,13 @@ function startCipher() {
       freqBars.appendChild(col);
     });
     freqDiv.appendChild(freqBars);
-
     const freqHint = document.createElement('div');
     freqHint.className = 'cipher-freq-hint';
     freqHint.textContent = 'English frequency order: E T A O I N S H R D L U';
     freqDiv.appendChild(freqHint);
     area.appendChild(freqDiv);
 
-    // Mapping table A→?
+    // Mapping table
     const mapLbl = document.createElement('div');
     mapLbl.className = 'prompt-label';
     mapLbl.textContent = selectedEnc ? `Selected: ${selectedEnc} → click a letter below` : 'Mapping table (click to select)';
@@ -1342,7 +1509,6 @@ function startCipher() {
 
     const mapGrid = document.createElement('div');
     mapGrid.className = 'cipher-map-grid';
-    // Only show encoded letters that appear in the text
     const allEnc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => encLetters.has(l));
     allEnc.forEach(enc => {
       const cell = document.createElement('div');
@@ -1350,6 +1516,7 @@ function startCipher() {
       const mapped = prog.userMap[enc];
       const locked = mapped && isCorrect(enc, mapped);
       if (locked) cell.classList.add('locked');
+      if (enc === selectedEnc) cell.classList.add('selected');
 
       cell.innerHTML = `<div class="cipher-map-enc">${enc}</div><div class="cipher-map-arrow">↓</div><div class="cipher-map-dec">${mapped || '?'}</div>`;
       cell.onclick = () => {
@@ -1377,7 +1544,6 @@ function startCipher() {
     const keyboard = document.createElement('div');
     keyboard.className = 'cipher-keyboard';
 
-    // Track which decoded letters are locked
     const lockedDec = new Set();
     const usedDec = new Set();
     Object.entries(prog.userMap).forEach(([enc, dec]) => {
@@ -1389,18 +1555,14 @@ function startCipher() {
       const btn = document.createElement('div');
       btn.className = 'cipher-key';
       btn.textContent = letter;
-
-      if (lockedDec.has(letter)) {
-        btn.classList.add('locked');
-      } else if (usedDec.has(letter)) {
-        btn.classList.add('used');
-      }
+      if (lockedDec.has(letter)) btn.classList.add('locked');
+      else if (usedDec.has(letter)) btn.classList.add('used');
 
       btn.onclick = () => {
         if (!selectedEnc || lockedDec.has(letter)) return;
-        // Remove any existing mapping that uses this decoded letter
+        // Remove existing mapping for this decoded letter (unless locked)
         Object.keys(prog.userMap).forEach(k => {
-          if (prog.userMap[k] === letter && !(isCorrect(k, letter))) delete prog.userMap[k];
+          if (prog.userMap[k] === letter && !isCorrect(k, letter)) delete prog.userMap[k];
         });
         prog.userMap[selectedEnc] = letter;
         selectedEnc = null;
@@ -1411,102 +1573,121 @@ function startCipher() {
       keyboard.appendChild(btn);
     });
     area.appendChild(keyboard);
-
     content.appendChild(area);
   }
   render();
 }
 
 // ═══════════════════════════════════════════════
-// GAME 2: CHRONICLE
+// GAME 2: CHRONICLE (simplified: 1 round, all 5 events)
 // ═══════════════════════════════════════════════
 function renderChronicle() {
   howToPlay(`
-    <strong>Five historical events</strong> are shuffled below. Your job is to arrange them in <strong>chronological order</strong> — earliest at the top, most recent at the bottom.<br><br>
-    <strong>Drag and drop</strong> the events to reorder them, or use the arrow buttons.<br><br>
-    Hit <strong>Submit Order</strong> when you're ready. You get <strong>3 attempts</strong> per round — each wrong attempt reveals which events are correctly placed.<br><br>
-    There are 5 rounds of increasing difficulty. A new set of events every <strong>Monday</strong>.
+    <strong>Five historical events</strong> are shuffled below. Arrange them in <strong>chronological order</strong> — earliest at top, most recent at bottom.<br><br>
+    <strong>Drag and drop</strong> to reorder, or use the <strong>↑↓ arrows</strong>.<br><br>
+    Hit <strong>Submit Order</strong> when ready. You get <strong>3 attempts</strong>. After each wrong attempt, correctly-placed events are <span style="color:var(--sage)">highlighted in green</span> and locked in place.<br><br>
+    <strong>Scoring:</strong> 1st try = 3 pts, 2nd try = 2 pts, 3rd try = 1 pt.<br><br>
+    A new set of events every <strong>Monday</strong>.
   `, startChronicle);
 }
 
 function startChronicle() {
   const puzzle = CHRONICLE_POOL[getWeekIndex(CHRONICLE_POOL.length)];
-  const prog = loadProgress('chronicle') || { round: 0, scores: [], finished: false };
+  const prog = loadProgress('chronicle') || { attempts: 0, score: 0, finished: false };
   const content = document.getElementById('game-content');
 
-  function startRound(roundIdx) {
-    if (roundIdx >= puzzle.events.length) {
-      prog.finished = true;
-      saveProgress('chronicle', prog);
-      const total = prog.scores.reduce((a, b) => a + b, 0);
-      content.innerHTML = '';
-      const area = document.createElement('div');
-      area.className = 'game-area';
-      area.appendChild(scoreBar(prog.scores));
-      area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Historian!' : 'Keep studying!',
-        `${total} out of ${puzzle.events.length * 3} points`, 'New events every Monday'));
-      content.appendChild(area);
-      return;
-    }
-
-    const toSortCount = Math.min(roundIdx + 3, puzzle.events.length);
-    const toSort = puzzle.events.slice(0, toSortCount);
-
-    const seed = getWeekIndex(9999) + roundIdx * 13 + 5;
-    const shuffled = [...toSort];
-    let s = seed;
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      s = (s * 1664525 + 1013904223) & 0xffffffff;
-      const j = Math.abs(s) % (i + 1);
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-    let attempts = 0;
-    const maxAttempts = 3;
-    let currentOrder = [...shuffled];
-    let correctPositions = new Set();
-
+  if (prog.finished) {
     content.innerHTML = '';
     const area = document.createElement('div');
     area.className = 'game-area';
+    const scoreDiv = document.createElement('div');
+    scoreDiv.className = 'result-score';
+    scoreDiv.textContent = `${prog.score} / 3 points`;
+    area.appendChild(resultBanner(prog.score > 0, prog.score >= 2 ? 'Historian!' : 'Keep studying!',
+      `${prog.score} out of 3 points`, 'New events every Monday', scoreDiv));
+    content.appendChild(area);
+    return;
+  }
 
-    area.appendChild(roundProgress(prog.scores, puzzle.events.length));
-    const roundLbl = document.createElement('div');
-    roundLbl.className = 'prompt-label';
-    roundLbl.textContent = `Round ${roundIdx + 1} — Order ${toSort.length} events chronologically`;
-    area.appendChild(roundLbl);
+  // Get all 5 events, sort by year for correct order
+  const correctOrder = [...puzzle.events].sort((a, b) => a.year - b.year);
 
-    const attLbl = document.createElement('div');
-    attLbl.style.cssText = 'font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px;';
-    attLbl.textContent = `Attempts: ${attempts}/${maxAttempts}`;
-    area.appendChild(attLbl);
+  // Shuffle for display
+  const seed = getWeekIndex(9999) + 7;
+  const shuffled = [...correctOrder];
+  let s = seed;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const j = Math.abs(s) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
 
-    const fb = document.createElement('div');
-    fb.id = 'chronicle-fb';
-    area.appendChild(fb);
+  let attempts = prog.attempts || 0;
+  const maxAttempts = 3;
+  let currentOrder = [...shuffled];
+  let correctPositions = new Set();
 
-    const evtList = document.createElement('div');
-    evtList.className = 'chronicle-events';
-    area.appendChild(evtList);
+  content.innerHTML = '';
+  const area = document.createElement('div');
+  area.className = 'game-area';
 
-    let dragging = null;
+  const roundLbl = document.createElement('div');
+  roundLbl.className = 'prompt-label';
+  roundLbl.textContent = 'Order 5 events chronologically — earliest to most recent';
+  area.appendChild(roundLbl);
 
-    function renderEvents() {
-      evtList.innerHTML = '';
-      currentOrder.forEach((evt, i) => {
-        const row = document.createElement('div');
-        row.className = 'chronicle-event';
-        if (correctPositions.has(i)) row.classList.add('correct-pos');
+  const attLbl = document.createElement('div');
+  attLbl.style.cssText = 'font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px;';
+  attLbl.textContent = `Attempts: ${attempts} / ${maxAttempts}`;
+  area.appendChild(attLbl);
 
-        row.draggable = !correctPositions.has(i);
-        row.innerHTML = `<span class="event-handle">⠿</span><span class="event-num">${i + 1}</span><span>${evt.text}</span>`;
+  const fb = document.createElement('div');
+  fb.id = 'chronicle-fb';
+  area.appendChild(fb);
 
+  const submitBtn = document.createElement('button');
+  submitBtn.className = 'submit-btn';
+  submitBtn.style.marginBottom = '16px';
+  submitBtn.textContent = 'Submit Order';
+  area.appendChild(submitBtn);
+
+  const evtList = document.createElement('div');
+  evtList.className = 'chronicle-events';
+  area.appendChild(evtList);
+
+  let dragging = null;
+
+  function renderEvents() {
+    evtList.innerHTML = '';
+    currentOrder.forEach((evt, i) => {
+      const row = document.createElement('div');
+      row.className = 'chronicle-event';
+      if (correctPositions.has(i)) row.classList.add('correct-pos');
+
+      row.draggable = !correctPositions.has(i);
+
+      const handle = document.createElement('span');
+      handle.className = 'event-handle';
+      handle.textContent = correctPositions.has(i) ? '✓' : '⠿';
+      row.appendChild(handle);
+
+      const num = document.createElement('span');
+      num.className = 'event-num';
+      num.textContent = i + 1;
+      row.appendChild(num);
+
+      const txt = document.createElement('span');
+      txt.textContent = evt.text;
+      txt.style.flex = '1';
+      row.appendChild(txt);
+
+      if (!correctPositions.has(i)) {
         row.addEventListener('dragstart', () => { dragging = i; row.classList.add('dragging'); });
-        row.addEventListener('dragend', () => { row.classList.remove('dragging'); dragging = null; renderEvents(); });
+        row.addEventListener('dragend', () => { row.classList.remove('dragging'); dragging = null; });
         row.addEventListener('dragover', e => { e.preventDefault(); });
         row.addEventListener('drop', e => {
           e.preventDefault();
-          if (dragging !== null && dragging !== i) {
+          if (dragging !== null && dragging !== i && !correctPositions.has(dragging)) {
             const newOrder = [...currentOrder];
             const [removed] = newOrder.splice(dragging, 1);
             newOrder.splice(i, 0, removed);
@@ -1517,81 +1698,85 @@ function startChronicle() {
 
         const btnWrap = document.createElement('div');
         btnWrap.style.cssText = 'display:flex;gap:4px;margin-left:auto;flex-shrink:0;';
-        if (i > 0 && !correctPositions.has(i)) {
+        if (i > 0 && !correctPositions.has(i - 1)) {
           const up = document.createElement('button');
           up.textContent = '↑';
-          up.style.cssText = 'padding:2px 8px;background:var(--paper3);border:1px solid var(--border);cursor:pointer;font-size:12px;';
-          up.onclick = () => { [currentOrder[i], currentOrder[i-1]] = [currentOrder[i-1], currentOrder[i]]; renderEvents(); };
+          up.style.cssText = 'padding:4px 10px;background:var(--paper3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink);transition:all .15s;';
+          up.onmouseover = () => { up.style.borderColor = 'var(--accent)'; };
+          up.onmouseout = () => { up.style.borderColor = 'var(--border)'; };
+          up.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[i-1]] = [currentOrder[i-1], currentOrder[i]]; renderEvents(); };
           btnWrap.appendChild(up);
         }
-        if (i < currentOrder.length - 1 && !correctPositions.has(i)) {
+        if (i < currentOrder.length - 1 && !correctPositions.has(i + 1)) {
           const dn = document.createElement('button');
           dn.textContent = '↓';
-          dn.style.cssText = 'padding:2px 8px;background:var(--paper3);border:1px solid var(--border);cursor:pointer;font-size:12px;';
-          dn.onclick = () => { [currentOrder[i], currentOrder[i+1]] = [currentOrder[i+1], currentOrder[i]]; renderEvents(); };
+          dn.style.cssText = 'padding:4px 10px;background:var(--paper3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink);transition:all .15s;';
+          dn.onmouseover = () => { dn.style.borderColor = 'var(--accent)'; };
+          dn.onmouseout = () => { dn.style.borderColor = 'var(--border)'; };
+          dn.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[i+1]] = [currentOrder[i+1], currentOrder[i]]; renderEvents(); };
           btnWrap.appendChild(dn);
         }
         row.appendChild(btnWrap);
-        evtList.appendChild(row);
-      });
-    }
+      }
+
+      evtList.appendChild(row);
+    });
+  }
+  renderEvents();
+
+  submitBtn.onclick = () => {
+    attempts++;
+    attLbl.textContent = `Attempts: ${attempts} / ${maxAttempts}`;
+
+    const allCorrect = currentOrder.every((evt, i) => evt.year === correctOrder[i].year);
+    correctPositions = new Set();
+    currentOrder.forEach((evt, i) => {
+      if (evt.year === correctOrder[i].year) correctPositions.add(i);
+    });
     renderEvents();
 
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'submit-btn';
-    submitBtn.style.marginBottom = '16px';
-    submitBtn.textContent = 'Submit Order';
-    submitBtn.onclick = () => {
-      attempts++;
-      attLbl.textContent = `Attempts: ${attempts}/${maxAttempts}`;
-      const correct = currentOrder.every((evt, i) => evt.year === toSort[i].year);
-      correctPositions = new Set();
-      currentOrder.forEach((evt, i) => { if (evt.year === toSort[i].year) correctPositions.add(i); });
-      renderEvents();
+    if (allCorrect) {
+      const pts = Math.max(1, maxAttempts - attempts + 1);
+      prog.score = pts;
+      prog.finished = true;
+      prog.attempts = attempts;
+      saveProgress('chronicle', prog);
+      fb.className = 'feedback-msg good';
+      fb.textContent = `✓ Perfect order! +${pts} point${pts !== 1 ? 's' : ''}`;
+      submitBtn.disabled = true;
+      setTimeout(() => {
+        content.innerHTML = '';
+        const a2 = document.createElement('div');
+        a2.className = 'game-area';
+        const sd = document.createElement('div');
+        sd.className = 'result-score';
+        sd.textContent = `${pts} / 3 points`;
+        a2.appendChild(resultBanner(true, 'Historian!', `Solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}`, 'New events every Monday', sd));
+        content.appendChild(a2);
+      }, 1200);
+    } else if (attempts >= maxAttempts) {
+      prog.score = 0;
+      prog.finished = true;
+      prog.attempts = attempts;
+      saveProgress('chronicle', prog);
+      fb.className = 'feedback-msg bad';
+      fb.textContent = 'Out of attempts!';
+      submitBtn.disabled = true;
+      // Show correct order
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:12px;color:var(--muted);margin-top:12px;background:var(--paper2);border:1px solid var(--border);border-radius:12px;padding:16px;';
+      hint.innerHTML = '<div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--accent-light);margin-bottom:8px;">Correct Order</div>';
+      correctOrder.forEach(e => {
+        hint.innerHTML += `<div style="padding:4px 0;border-bottom:1px solid var(--border)">${e.year}: ${e.text}</div>`;
+      });
+      area.appendChild(hint);
+    } else {
+      fb.className = 'feedback-msg bad';
+      fb.textContent = `Not quite — ${correctPositions.size} of 5 in the right position. ${maxAttempts - attempts} attempt${maxAttempts - attempts !== 1 ? 's' : ''} left.`;
+    }
+  };
 
-      if (correct) {
-        const pts = Math.max(0, maxAttempts - attempts + 1);
-        prog.scores.push(pts);
-        prog.round = roundIdx + 1;
-        saveProgress('chronicle', prog);
-        fb.className = 'feedback-msg good';
-        fb.textContent = `✓ Correct! +${pts} point${pts !== 1 ? 's' : ''}`;
-        submitBtn.disabled = true;
-        setTimeout(() => startRound(roundIdx + 1), 1200);
-      } else if (attempts >= maxAttempts) {
-        prog.scores.push(0);
-        prog.round = roundIdx + 1;
-        saveProgress('chronicle', prog);
-        fb.className = 'feedback-msg bad';
-        fb.textContent = `Out of attempts. The correct order was by year.`;
-        submitBtn.disabled = true;
-        const hint = document.createElement('div');
-        hint.style.cssText = 'font-size:11px;color:var(--muted);margin-top:8px;';
-        toSort.sort((a,b)=>a.year-b.year).forEach(e => {
-          hint.innerHTML += `<div style="padding:3px 0">${e.year}: ${e.text.substring(0,50)}…</div>`;
-        });
-        area.appendChild(hint);
-        setTimeout(() => startRound(roundIdx + 1), 2500);
-      } else {
-        fb.className = 'feedback-msg bad';
-        fb.textContent = `Not quite. ${correctPositions.size}/${toSort.length} in the right position.`;
-      }
-    };
-    area.insertBefore(submitBtn, evtList);
-    content.appendChild(area);
-  }
-
-  if (prog.finished) {
-    const total = prog.scores.reduce((a, b) => a + b, 0);
-    const area = document.createElement('div');
-    area.className = 'game-area';
-    area.appendChild(scoreBar(prog.scores));
-    area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Historian!' : 'Keep studying!',
-      `${total} out of ${puzzle.events.length * 3} points`, 'New events every Monday'));
-    document.getElementById('game-content').appendChild(area);
-  } else {
-    startRound(prog.round);
-  }
+  content.appendChild(area);
 }
 
 // ═══════════════════════════════════════════════
@@ -1599,9 +1784,9 @@ function startChronicle() {
 // ═══════════════════════════════════════════════
 function renderWavelength() {
   howToPlay(`
-    A word appears on screen. You must place it on the <strong>correct position</strong> on a spectrum between two opposites.<br><br>
+    A word appears on screen. Place it on the <strong>correct position</strong> on a spectrum between two opposites.<br><br>
     For example: where does <strong>WARM</strong> fall between <em>Freezing</em> and <em>Boiling</em>?<br><br>
-    Drag the slider to your answer, then submit. The <strong>closer you are</strong> to the target, the more points you earn (up to 3 per round).<br><br>
+    Drag the slider to your answer, then submit. <strong>Scoring:</strong> 🎯 Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
     5 rounds · New spectrums every <strong>Monday</strong>.
   `, startWavelength);
 }
@@ -1620,8 +1805,11 @@ function startWavelength() {
       const area = document.createElement('div');
       area.className = 'game-area';
       area.appendChild(scoreBar(prog.scores));
+      const sd = document.createElement('div');
+      sd.className = 'result-score';
+      sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday'));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday', sd));
       content.appendChild(area);
       return;
     }
@@ -1631,7 +1819,7 @@ function startWavelength() {
     const area = document.createElement('div');
     area.className = 'game-area';
 
-    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length));
+    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length, roundIdx));
 
     const roundLbl = document.createElement('div');
     roundLbl.className = 'prompt-label';
@@ -1640,7 +1828,7 @@ function startWavelength() {
 
     const wordDiv = document.createElement('div');
     wordDiv.className = 'big-prompt';
-    wordDiv.innerHTML = `Where does <strong>${round.word}</strong> fall on this spectrum?`;
+    wordDiv.innerHTML = `Where does <strong style="color:var(--accent-light)">${round.word}</strong> fall on this spectrum?`;
     area.appendChild(wordDiv);
 
     const specWrap = document.createElement('div');
@@ -1664,9 +1852,7 @@ function startWavelength() {
     marker.style.left = '50%';
     specBar.appendChild(marker);
 
-    slider.oninput = () => {
-      marker.style.left = slider.value + '%';
-    };
+    slider.oninput = () => { marker.style.left = slider.value + '%'; };
     area.appendChild(slider);
 
     const fb = document.createElement('div');
@@ -1686,10 +1872,14 @@ function startWavelength() {
       else if (diff <= round.tolerance) { pts = 1; msg = '≈ Nearby'; }
       else { pts = 0; msg = `✗ Off — target was ${round.target <= 30 ? 'near the left' : round.target >= 70 ? 'near the right' : 'near the center'}`; }
 
+      // Show target marker
       const targetMarker = document.createElement('div');
       targetMarker.className = 'spectrum-target';
       targetMarker.style.left = round.target + '%';
       specBar.appendChild(targetMarker);
+
+      // Stop marker pulse
+      marker.style.animation = 'none';
 
       fb.className = 'feedback-msg ' + (pts > 0 ? 'good' : 'bad');
       fb.textContent = `${msg} · +${pts} point${pts !== 1 ? 's' : ''}`;
@@ -1699,7 +1889,7 @@ function startWavelength() {
       prog.scores.push(pts);
       prog.round = roundIdx + 1;
       saveProgress('wavelength', prog);
-      setTimeout(() => startRound(roundIdx + 1), 1400);
+      setTimeout(() => startRound(roundIdx + 1), 1600);
     };
     area.appendChild(submitBtn);
     content.appendChild(area);
@@ -1710,8 +1900,11 @@ function startWavelength() {
     const area = document.createElement('div');
     area.className = 'game-area';
     area.appendChild(scoreBar(prog.scores));
+    const sd = document.createElement('div');
+    sd.className = 'result-score';
+    sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday'));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday', sd));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
@@ -1724,11 +1917,9 @@ function startWavelength() {
 function renderMimic() {
   howToPlay(`
     A hidden <strong>5-letter word</strong> must be found using clues. Each round has <strong>3 clues</strong> of increasing specificity.<br><br>
-    You may guess after any clue. The fewer clues you use, the more points you earn:<br>
-    → After clue 1: <strong>3 points</strong><br>
-    → After clue 2: <strong>2 points</strong><br>
-    → After clue 3: <strong>1 point</strong><br><br>
-    You get <strong>2 guesses per clue level</strong>. Squares turn <span style="color:var(--sage)">green</span> for correct, <span style="color:var(--gold)">gold</span> for wrong-position, grey for absent.<br><br>
+    You may guess after any clue. The fewer clues you use, the more points:<br>
+    → After clue 1: <strong>3 points</strong> · After clue 2: <strong>2 points</strong> · After clue 3: <strong>1 point</strong><br><br>
+    You get <strong>2 guesses per clue level</strong>. Letters turn <span style="color:var(--sage)">green</span> (correct), <span style="color:var(--gold)">gold</span> (wrong position), or grey (absent).<br><br>
     5 rounds · New words every <strong>Monday</strong>.
   `, startMimic);
 }
@@ -1747,8 +1938,11 @@ function startMimic() {
       const area = document.createElement('div');
       area.className = 'game-area';
       area.appendChild(scoreBar(prog.scores));
+      const sd = document.createElement('div');
+      sd.className = 'result-score';
+      sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday'));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday', sd));
       content.appendChild(area);
       return;
     }
@@ -1759,17 +1953,16 @@ function startMimic() {
     let guessesThisLevel = 0;
     const maxGuessesPerLevel = 2;
     let allGuesses = [];
-    let pts = 3;
 
     content.innerHTML = '';
     const area = document.createElement('div');
     area.className = 'game-area';
 
-    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length));
+    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length, roundIdx));
 
     const rl = document.createElement('div');
     rl.className = 'prompt-label';
-    rl.textContent = `Round ${roundIdx + 1} · 5-letter word`;
+    rl.textContent = `Round ${roundIdx + 1} of ${puzzle.rounds.length} · 5-letter word`;
     area.appendChild(rl);
 
     const diffDiv = document.createElement('div');
@@ -1808,20 +2001,23 @@ function startMimic() {
     const nextClueBtn = document.createElement('button');
     nextClueBtn.className = 'back-btn';
     nextClueBtn.style.marginTop = '8px';
-    nextClueBtn.textContent = 'Get Next Clue (costs 1 pt)';
+    nextClueBtn.textContent = 'Get Next Clue (−1 pt)';
     nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
     area.appendChild(nextClueBtn);
+
+    function getPts() { return Math.max(1, 3 - clueLevel); }
 
     function renderGuessRow(guess) {
       const row = document.createElement('div');
       row.className = 'mimic-blanks';
-      row.style.marginBottom = '8px';
       const colors = Array(5).fill('absent');
       const remaining = {};
       for (let i = 0; i < 5; i++) remaining[word[i]] = (remaining[word[i]] || 0) + 1;
+      // Green pass
       for (let i = 0; i < 5; i++) {
         if (guess[i] === word[i]) { colors[i] = 'correct'; remaining[guess[i]]--; }
       }
+      // Gold pass
       for (let i = 0; i < 5; i++) {
         if (colors[i] !== 'correct' && guess[i] && remaining[guess[i]] > 0) {
           colors[i] = 'present'; remaining[guess[i]]--;
@@ -1832,6 +2028,7 @@ function startMimic() {
         box.className = 'letter-box';
         box.textContent = guess[i] || '';
         if (guess[i]) box.classList.add(colors[i]);
+        box.style.animationDelay = (i * 0.08) + 's';
         row.appendChild(box);
       }
       guessesArea.appendChild(row);
@@ -1844,6 +2041,19 @@ function startMimic() {
       diffDiv.textContent = labels[clueLevel];
     }
 
+    function advanceClue() {
+      if (clueLevel < 2) {
+        clueLevel++;
+        guessesThisLevel = 0;
+        clueDiv.textContent = round.clues[clueLevel];
+        clueDiv.style.animation = 'none';
+        clueDiv.offsetHeight;
+        clueDiv.style.animation = 'fadeIn 0.3s ease';
+        updateDiffLabel();
+        nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
+      }
+    }
+
     function doGuess() {
       const guess = inp.value.trim().toUpperCase();
       if (guess.length !== 5) { fb.className = 'feedback-msg bad'; fb.textContent = 'Enter a 5-letter word.'; return; }
@@ -1851,8 +2061,10 @@ function startMimic() {
       allGuesses.push(guess);
       renderGuessRow(guess);
       inp.value = '';
+      inp.focus();
 
       if (guess === word) {
+        const pts = getPts();
         fb.className = 'feedback-msg good';
         fb.textContent = `✓ ${word}! +${pts} point${pts !== 1 ? 's' : ''}`;
         inputRow.style.display = 'none';
@@ -1866,17 +2078,13 @@ function startMimic() {
 
       if (guessesThisLevel >= maxGuessesPerLevel) {
         if (clueLevel < 2) {
-          clueLevel++;
-          pts = Math.max(1, 3 - clueLevel);
-          guessesThisLevel = 0;
-          clueDiv.textContent = round.clues[clueLevel];
-          updateDiffLabel();
-          nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
+          advanceClue();
           fb.className = 'feedback-msg bad';
-          fb.textContent = `Next clue unlocked.`;
+          fb.textContent = 'Out of guesses at this level — next clue unlocked.';
         } else {
+          // All guesses exhausted
           fb.className = 'feedback-msg bad';
-          fb.textContent = `Word was: ${word}`;
+          fb.textContent = `The word was: ${word}`;
           inputRow.style.display = 'none';
           nextClueBtn.style.display = 'none';
           prog.scores.push(0);
@@ -1886,7 +2094,7 @@ function startMimic() {
         }
       } else {
         fb.className = 'feedback-msg bad';
-        fb.textContent = `Not quite. ${maxGuessesPerLevel - guessesThisLevel} guess${maxGuessesPerLevel - guessesThisLevel !== 1 ? 'es' : ''} left at this clue level.`;
+        fb.textContent = `Not quite. ${maxGuessesPerLevel - guessesThisLevel} guess left at this clue level.`;
       }
     }
 
@@ -1895,17 +2103,13 @@ function startMimic() {
 
     nextClueBtn.onclick = () => {
       if (clueLevel >= 2) return;
-      clueLevel++;
-      pts = Math.max(1, 3 - clueLevel);
-      guessesThisLevel = 0;
-      clueDiv.textContent = round.clues[clueLevel];
-      updateDiffLabel();
-      nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
-      fb.className = 'feedback-msg';
+      advanceClue();
+      fb.className = '';
       fb.textContent = '';
     };
 
     content.appendChild(area);
+    inp.focus();
   }
 
   if (prog.finished) {
@@ -1913,8 +2117,11 @@ function startMimic() {
     const area = document.createElement('div');
     area.className = 'game-area';
     area.appendChild(scoreBar(prog.scores));
+    const sd = document.createElement('div');
+    sd.className = 'result-score';
+    sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday'));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday', sd));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
