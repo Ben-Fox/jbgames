@@ -673,8 +673,10 @@
         const dots = results.map(r => r ? '🟩' : '🟥').join('');
         const text = `⚖️ Heavy Eye ${modeStr}\n${score}/${rounds.length} ${dots}`;
         navigator.clipboard.writeText(text).then(() => {
-            $('share-btn').classList.add('copied');
-            setTimeout(() => $('share-btn').classList.remove('copied'), 2000);
+            if ($('share-btn')) {
+                $('share-btn').classList.add('copied');
+                setTimeout(() => $('share-btn').classList.remove('copied'), 2000);
+            }
         });
     }
 
