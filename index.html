@@ -50,32 +50,36 @@ a{text-decoration:none;color:inherit}
 .daily-title{font-size:1.6rem;font-weight:700;color:#fff;margin-bottom:.3rem}
 .daily-sub{color:rgba(255,255,255,.45);font-size:.9rem}
 
-.daily-games{display:flex;gap:.7rem;overflow-x:auto;padding:.5rem 0;scrollbar-width:none;-ms-overflow-style:none;position:relative}
-.daily-games::-webkit-scrollbar{display:none}
+.daily-games{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;position:relative}
 
-.daily-card{display:flex;align-items:center;gap:.75rem;flex:1;min-width:200px;padding:.85rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;transition:all .25s;cursor:pointer;text-decoration:none;color:inherit;position:relative}
-.daily-card:hover{background:rgba(255,255,255,.08);border-color:rgba(139,92,246,.35);transform:translateY(-3px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
-.daily-card--nexus:hover{border-color:rgba(184,134,11,.4)}
-.daily-card--cipher:hover{border-color:rgba(74,103,65,.4)}
-.daily-card--chronicle:hover{border-color:rgba(61,79,92,.5)}
-.daily-card--wavelength:hover{border-color:rgba(139,58,42,.4)}
-.daily-card--mimic:hover{border-color:rgba(107,58,125,.4)}
+.daily-card{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;transition:transform .3s cubic-bezier(.25,.46,.45,.94),box-shadow .3s;cursor:pointer;text-decoration:none;color:inherit;position:relative;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.daily-card:hover{transform:translateY(-8px) scale(1.03);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.daily-card--nexus{border-color:rgba(184,134,11,.15)}.daily-card--nexus:hover{border-color:rgba(184,134,11,.4);box-shadow:0 8px 32px rgba(184,134,11,.15)}
+.daily-card--cipher{border-color:rgba(74,103,65,.15)}.daily-card--cipher:hover{border-color:rgba(74,103,65,.4);box-shadow:0 8px 32px rgba(74,103,65,.15)}
+.daily-card--chronicle{border-color:rgba(61,79,92,.2)}.daily-card--chronicle:hover{border-color:rgba(61,79,92,.5);box-shadow:0 8px 32px rgba(61,79,92,.15)}
+.daily-card--wavelength{border-color:rgba(139,58,42,.15)}.daily-card--wavelength:hover{border-color:rgba(139,58,42,.4);box-shadow:0 8px 32px rgba(139,58,42,.15)}
+.daily-card--mimic{border-color:rgba(107,58,125,.15)}.daily-card--mimic:hover{border-color:rgba(107,58,125,.4);box-shadow:0 8px 32px rgba(107,58,125,.15)}
 
-.daily-icon{font-size:1.6rem;flex-shrink:0}
-.daily-info{flex:1;min-width:0}
-.daily-name{font-weight:700;font-size:.95rem;color:#fff;margin-bottom:.15rem}
-.daily-desc{font-size:.72rem;color:rgba(255,255,255,.4);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.daily-arrow{font-size:1.1rem;color:rgba(255,255,255,.2);transition:color .2s,transform .2s;flex-shrink:0}
-.daily-card:hover .daily-arrow{color:rgba(255,255,255,.6);transform:translateX(3px)}
+.daily-thumb{height:100px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(0,0,0,.15)}
+.daily-thumb svg{filter:drop-shadow(0 2px 8px rgba(0,0,0,.3))}
 
-.daily-play-all{display:block;text-align:center;margin-top:1.2rem;color:#a78bfa;font-weight:700;font-size:.95rem;letter-spacing:.3px;transition:color .2s;position:relative}
-.daily-play-all:hover{color:#c4b5fd}
+.daily-body{padding:.8rem 1rem 1rem;display:flex;flex-direction:column;flex:1}
+.daily-name{font-weight:700;font-size:1rem;color:#fff;margin-bottom:.25rem}
+.daily-desc{font-size:.78rem;color:rgba(255,255,255,.45);line-height:1.4;flex:1}
+.daily-play{display:block;margin-top:.6rem;padding:.45rem;border-radius:8px;font-weight:700;font-size:.8rem;text-align:center;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;transition:filter .2s,transform .15s;letter-spacing:.3px}
+.daily-play:hover{filter:brightness(1.2);transform:scale(1.03)}
 
+.daily-play-all{display:block;text-align:center;margin-top:1.5rem;color:#a78bfa;font-weight:700;font-size:1rem;letter-spacing:.3px;transition:color .2s,transform .2s;position:relative}
+.daily-play-all:hover{color:#c4b5fd;transform:translateX(4px)}
+
+@media (max-width: 900px){
+  .daily-games{grid-template-columns:repeat(3,1fr)}
+}
 @media (max-width: 600px){
   .daily-inner{padding:1.5rem 1.2rem}
-  .daily-games{flex-direction:column}
-  .daily-card{min-width:auto}
+  .daily-games{grid-template-columns:repeat(2,1fr)}
   .daily-title{font-size:1.3rem}
+  .daily-thumb{height:80px}
 }
 
 /* GRID */
@@ -287,49 +291,107 @@ footer p+p{margin-top:.3rem}
   <div class="daily-inner">
     <div class="daily-header">
       <div class="daily-badge">DAILY</div>
-      <h2 class="daily-title">Today's Puzzles</h2>
-      <p class="daily-sub">Fresh challenges every week — how sharp is your brain?</p>
+      <h2 class="daily-title">Daily Puzzles</h2>
+      <p class="daily-sub">Fresh puzzles every week</p>
     </div>
     <div class="daily-games">
       <a href="/fivefold/" class="daily-card daily-card--nexus">
-        <div class="daily-icon">🔗</div>
-        <div class="daily-info">
-          <div class="daily-name">Nexus</div>
-          <div class="daily-desc">Group 16 words into 4 hidden categories</div>
+        <div class="daily-thumb">
+          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
+            <rect x="10" y="10" width="44" height="26" rx="4" fill="rgba(184,134,11,.2)" stroke="rgba(184,134,11,.4)" stroke-width="1"/>
+            <rect x="66" y="10" width="44" height="26" rx="4" fill="rgba(74,103,65,.2)" stroke="rgba(74,103,65,.4)" stroke-width="1"/>
+            <rect x="10" y="44" width="44" height="26" rx="4" fill="rgba(61,79,92,.2)" stroke="rgba(61,79,92,.4)" stroke-width="1"/>
+            <rect x="66" y="44" width="44" height="26" rx="4" fill="rgba(139,58,42,.2)" stroke="rgba(139,58,42,.4)" stroke-width="1"/>
+            <text x="32" y="27" text-anchor="middle" font-size="8" fill="#b8860b" font-weight="600">TAP</text>
+            <text x="88" y="27" text-anchor="middle" font-size="8" fill="#4a6741" font-weight="600">MOON</text>
+            <text x="32" y="61" text-anchor="middle" font-size="8" fill="#3d4f5c" font-weight="600">BIRD</text>
+            <text x="88" y="61" text-anchor="middle" font-size="8" fill="#8b3a2a" font-weight="600">JAZZ</text>
+          </svg>
         </div>
-        <div class="daily-arrow">→</div>
+        <div class="daily-body">
+          <div class="daily-name">Nexus</div>
+          <p class="daily-desc">Group 16 words into 4 hidden categories</p>
+          <span class="daily-play">▶ Play</span>
+        </div>
       </a>
       <a href="/fivefold/" class="daily-card daily-card--cipher">
-        <div class="daily-icon">🔐</div>
-        <div class="daily-info">
-          <div class="daily-name">Cipher</div>
-          <div class="daily-desc">Crack the letter substitution code</div>
+        <div class="daily-thumb">
+          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
+            <rect x="8" y="15" width="104" height="50" rx="4" fill="rgba(74,103,65,.08)" stroke="rgba(74,103,65,.2)" stroke-width="1"/>
+            <text x="60" y="36" text-anchor="middle" font-size="10" fill="rgba(74,103,65,.6)" font-family="serif" font-style="italic" letter-spacing="3">QEB LKIV</text>
+            <text x="60" y="52" text-anchor="middle" font-size="10" fill="rgba(74,103,65,.4)" font-family="serif" font-style="italic" letter-spacing="3">T▯▯ QL AL</text>
+            <line x1="15" y1="65" x2="28" y2="65" stroke="#4a6741" stroke-width="1.5" opacity=".5"/>
+            <text x="21" y="73" text-anchor="middle" font-size="6" fill="#4a6741" opacity=".6">A→Q</text>
+          </svg>
         </div>
-        <div class="daily-arrow">→</div>
+        <div class="daily-body">
+          <div class="daily-name">Cipher</div>
+          <p class="daily-desc">Crack the letter substitution code</p>
+          <span class="daily-play">▶ Play</span>
+        </div>
       </a>
       <a href="/fivefold/" class="daily-card daily-card--chronicle">
-        <div class="daily-icon">📜</div>
-        <div class="daily-info">
-          <div class="daily-name">Chronicle</div>
-          <div class="daily-desc">Order historical events by date</div>
+        <div class="daily-thumb">
+          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
+            <line x1="25" y1="12" x2="25" y2="68" stroke="rgba(61,79,92,.4)" stroke-width="2"/>
+            <circle cx="25" cy="18" r="3" fill="#3d4f5c"/>
+            <circle cx="25" cy="33" r="3" fill="#3d4f5c"/>
+            <circle cx="25" cy="48" r="3" fill="#3d4f5c"/>
+            <circle cx="25" cy="63" r="3" fill="rgba(61,79,92,.3)"/>
+            <rect x="35" y="12" width="72" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
+            <rect x="35" y="27" width="60" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
+            <rect x="35" y="42" width="68" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
+            <rect x="35" y="57" width="55" height="10" rx="3" fill="rgba(61,79,92,.08)" stroke="rgba(61,79,92,.15)" stroke-width=".5" stroke-dasharray="2 2"/>
+            <text x="71" y="20" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.6)">1903</text>
+            <text x="65" y="35" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.6)">1928</text>
+            <text x="69" y="50" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.6)">1953</text>
+          </svg>
         </div>
-        <div class="daily-arrow">→</div>
+        <div class="daily-body">
+          <div class="daily-name">Chronicle</div>
+          <p class="daily-desc">Order historical events by date</p>
+          <span class="daily-play">▶ Play</span>
+        </div>
       </a>
       <a href="/fivefold/" class="daily-card daily-card--wavelength">
-        <div class="daily-icon">🌊</div>
-        <div class="daily-info">
-          <div class="daily-name">Wavelength</div>
-          <div class="daily-desc">Place a word on the right spectrum</div>
+        <div class="daily-thumb">
+          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
+            <defs><linearGradient id="specG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#3d4f5c"/><stop offset="50%" stop-color="#f5f0e8"/><stop offset="100%" stop-color="#8b3a2a"/></linearGradient></defs>
+            <rect x="10" y="30" width="100" height="18" rx="9" fill="url(#specG)" opacity=".6"/>
+            <circle cx="62" cy="39" r="7" fill="none" stroke="#fff" stroke-width="2"/>
+            <line x1="62" y1="26" x2="62" y2="52" stroke="rgba(255,255,255,.3)" stroke-width="1" stroke-dasharray="2 2"/>
+            <text x="10" y="64" font-size="6" fill="rgba(255,255,255,.4)">COLD</text>
+            <text x="110" y="64" text-anchor="end" font-size="6" fill="rgba(255,255,255,.4)">HOT</text>
+            <text x="62" y="22" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">TEPID</text>
+          </svg>
         </div>
-        <div class="daily-arrow">→</div>
+        <div class="daily-body">
+          <div class="daily-name">Wavelength</div>
+          <p class="daily-desc">Place a word on the right spectrum</p>
+          <span class="daily-play">▶ Play</span>
+        </div>
       </a>
       <a href="/fivefold/" class="daily-card daily-card--mimic">
-        <div class="daily-icon">🪞</div>
-        <div class="daily-info">
-          <div class="daily-name">Mimic</div>
-          <div class="daily-desc">Guess the word from progressive clues</div>
+        <div class="daily-thumb">
+          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
+            <rect x="12" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.15)" stroke="rgba(107,58,125,.4)" stroke-width="1.5"/>
+            <rect x="33" y="25" width="17" height="22" rx="3" fill="rgba(74,103,65,.15)" stroke="rgba(74,103,65,.5)" stroke-width="1.5"/>
+            <rect x="54" y="25" width="17" height="22" rx="3" fill="rgba(184,134,11,.15)" stroke="rgba(184,134,11,.5)" stroke-width="1.5"/>
+            <rect x="75" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.08)" stroke="rgba(107,58,125,.2)" stroke-width="1.5"/>
+            <rect x="96" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.08)" stroke="rgba(107,58,125,.2)" stroke-width="1.5"/>
+            <text x="20" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.7)" font-weight="700">C</text>
+            <text x="41" y="40" text-anchor="middle" font-size="11" fill="#4a6741" font-weight="700">R</text>
+            <text x="62" y="40" text-anchor="middle" font-size="11" fill="#b8860b" font-weight="700">A</text>
+            <text x="83" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.3)" font-weight="700">_</text>
+            <text x="104" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.3)" font-weight="700">_</text>
+            <text x="60" y="62" text-anchor="middle" font-size="7" fill="rgba(107,58,125,.4)">5 letters · 3 clues</text>
+          </svg>
         </div>
-        <div class="daily-arrow">→</div>
+        <div class="daily-body">
+          <div class="daily-name">Mimic</div>
+          <p class="daily-desc">Guess the word from progressive clues</p>
+          <span class="daily-play">▶ Play</span>
+        </div>
       </a>
     </div>
     <a href="/fivefold/" class="daily-play-all">Play All Five →</a>
