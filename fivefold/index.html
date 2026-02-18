@@ -720,7 +720,7 @@ const NEXUS_POOL = [
     groups: [
       { theme: "Can follow 'fire'", words: ["PLACE", "SIDE", "WORK", "FLY"], color: 1 },
       { theme: "Types of bridges", words: ["ARCH", "SWING", "ROPE", "DRAW"], color: 2 },
-      { theme: "Famous Willies", words: ["WONKA", "NELSON", "SHAKESPEARE", "LINCOLN"], color: 3 },
+      { theme: "Famous Willies", words: ["WONKA", "NELSON", "SHAKESPEARE", "SHATNER"], color: 3 },
       { theme: "Things that shine", words: ["GLIMMER", "GLEAM", "GLOW", "GLINT"], color: 4 },
     ]
   },
@@ -1350,8 +1350,7 @@ function startChronicle() {
       return;
     }
 
-    // For chronicle, show all events at once in shuffled order
-    const correctOrder = [...puzzle.events].slice(0, roundIdx + 2); // Add more events as rounds progress
+    // For chronicle, show increasing numbers of events per round
     const toSortCount = Math.min(roundIdx + 3, puzzle.events.length);
     const toSort = puzzle.events.slice(0, toSortCount);
 
@@ -1723,17 +1722,25 @@ function startMimic() {
       const row = document.createElement('div');
       row.className = 'mimic-blanks';
       row.style.marginBottom = '8px';
+      // Wordle-accurate coloring: green pass first, then gold with remaining counts
+      const colors = Array(5).fill('absent');
+      const remaining = {};
+      for (let i = 0; i < 5; i++) remaining[word[i]] = (remaining[word[i]] || 0) + 1;
+      // Green pass
+      for (let i = 0; i < 5; i++) {
+        if (guess[i] === word[i]) { colors[i] = 'correct'; remaining[guess[i]]--; }
+      }
+      // Gold pass
+      for (let i = 0; i < 5; i++) {
+        if (colors[i] !== 'correct' && guess[i] && remaining[guess[i]] > 0) {
+          colors[i] = 'present'; remaining[guess[i]]--;
+        }
+      }
       for (let i = 0; i < 5; i++) {
         const box = document.createElement('div');
         box.className = 'letter-box';
-        const g = guess[i] || '';
-        const w = word[i];
-        box.textContent = g;
-        if (g) {
-          if (g === w) box.classList.add('correct');
-          else if (word.includes(g)) box.classList.add('present');
-          else box.classList.add('absent');
-        }
+        box.textContent = guess[i] || '';
+        if (guess[i]) box.classList.add(colors[i]);
         row.appendChild(box);
       }
       guessesArea.appendChild(row);
