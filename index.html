@@ -40,6 +40,44 @@ a{text-decoration:none;color:inherit}
 .tagline{font-size:1.4rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .8s ease .1s both}
 .subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
 
+/* DAILY BANNER */
+.daily-banner{width:100%;padding:0 1.5rem;margin-bottom:2rem;animation:fadeUp .7s ease .15s both}
+.daily-inner{max-width:1200px;margin:0 auto;background:linear-gradient(160deg,#1a1128 0%,#0f0a1a 50%,#1a0a2e 100%);border:1px solid rgba(139,92,246,.2);border-radius:24px;padding:2rem 2.5rem;position:relative;overflow:hidden}
+.daily-inner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(139,92,246,.12),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(184,134,11,.08),transparent 50%);pointer-events:none}
+.daily-header{text-align:center;margin-bottom:1.5rem;position:relative}
+.daily-badge{display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-size:.65rem;font-weight:700;padding:4px 14px;border-radius:20px;letter-spacing:2px;text-transform:uppercase;margin-bottom:.6rem;animation:dailyPulse 3s ease-in-out infinite}
+@keyframes dailyPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}}
+.daily-title{font-size:1.6rem;font-weight:700;color:#fff;margin-bottom:.3rem}
+.daily-sub{color:rgba(255,255,255,.45);font-size:.9rem}
+
+.daily-games{display:flex;gap:.7rem;overflow-x:auto;padding:.5rem 0;scrollbar-width:none;-ms-overflow-style:none;position:relative}
+.daily-games::-webkit-scrollbar{display:none}
+
+.daily-card{display:flex;align-items:center;gap:.75rem;flex:1;min-width:200px;padding:.85rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;transition:all .25s;cursor:pointer;text-decoration:none;color:inherit;position:relative}
+.daily-card:hover{background:rgba(255,255,255,.08);border-color:rgba(139,92,246,.35);transform:translateY(-3px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.daily-card--nexus:hover{border-color:rgba(184,134,11,.4)}
+.daily-card--cipher:hover{border-color:rgba(74,103,65,.4)}
+.daily-card--chronicle:hover{border-color:rgba(61,79,92,.5)}
+.daily-card--wavelength:hover{border-color:rgba(139,58,42,.4)}
+.daily-card--mimic:hover{border-color:rgba(107,58,125,.4)}
+
+.daily-icon{font-size:1.6rem;flex-shrink:0}
+.daily-info{flex:1;min-width:0}
+.daily-name{font-weight:700;font-size:.95rem;color:#fff;margin-bottom:.15rem}
+.daily-desc{font-size:.72rem;color:rgba(255,255,255,.4);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daily-arrow{font-size:1.1rem;color:rgba(255,255,255,.2);transition:color .2s,transform .2s;flex-shrink:0}
+.daily-card:hover .daily-arrow{color:rgba(255,255,255,.6);transform:translateX(3px)}
+
+.daily-play-all{display:block;text-align:center;margin-top:1.2rem;color:#a78bfa;font-weight:700;font-size:.95rem;letter-spacing:.3px;transition:color .2s;position:relative}
+.daily-play-all:hover{color:#c4b5fd}
+
+@media (max-width: 600px){
+  .daily-inner{padding:1.5rem 1.2rem}
+  .daily-games{flex-direction:column}
+  .daily-card{min-width:auto}
+  .daily-title{font-size:1.3rem}
+}
+
 /* GRID */
 .games{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;max-width:1200px;margin:2rem auto 4rem;padding:0 1.5rem}
 
@@ -242,6 +280,60 @@ footer p+p{margin-top:.3rem}
   </div>
   <p class="tagline">Games that hit different</p>
   <p class="subtitle">Free browser games. No downloads. Just play.</p>
+</section>
+
+<!-- DAILY GAMES BANNER -->
+<section class="daily-banner">
+  <div class="daily-inner">
+    <div class="daily-header">
+      <div class="daily-badge">DAILY</div>
+      <h2 class="daily-title">Today's Puzzles</h2>
+      <p class="daily-sub">Fresh challenges every week — how sharp is your brain?</p>
+    </div>
+    <div class="daily-games">
+      <a href="/fivefold/" class="daily-card daily-card--nexus">
+        <div class="daily-icon">🔗</div>
+        <div class="daily-info">
+          <div class="daily-name">Nexus</div>
+          <div class="daily-desc">Group 16 words into 4 hidden categories</div>
+        </div>
+        <div class="daily-arrow">→</div>
+      </a>
+      <a href="/fivefold/" class="daily-card daily-card--cipher">
+        <div class="daily-icon">🔐</div>
+        <div class="daily-info">
+          <div class="daily-name">Cipher</div>
+          <div class="daily-desc">Crack the letter substitution code</div>
+        </div>
+        <div class="daily-arrow">→</div>
+      </a>
+      <a href="/fivefold/" class="daily-card daily-card--chronicle">
+        <div class="daily-icon">📜</div>
+        <div class="daily-info">
+          <div class="daily-name">Chronicle</div>
+          <div class="daily-desc">Order historical events by date</div>
+        </div>
+        <div class="daily-arrow">→</div>
+      </a>
+      <a href="/fivefold/" class="daily-card daily-card--wavelength">
+        <div class="daily-icon">🌊</div>
+        <div class="daily-info">
+          <div class="daily-name">Wavelength</div>
+          <div class="daily-desc">Place a word on the right spectrum</div>
+        </div>
+        <div class="daily-arrow">→</div>
+      </a>
+      <a href="/fivefold/" class="daily-card daily-card--mimic">
+        <div class="daily-icon">🪞</div>
+        <div class="daily-info">
+          <div class="daily-name">Mimic</div>
+          <div class="daily-desc">Guess the word from progressive clues</div>
+        </div>
+        <div class="daily-arrow">→</div>
+      </a>
+    </div>
+    <a href="/fivefold/" class="daily-play-all">Play All Five →</a>
+  </div>
 </section>
 
 <section class="games">
