@@ -74,7 +74,7 @@
     let musicPlaying = false;
     let musicNodes = [];
 
-    function startMusic() {
+    function startMusic() { return; // music disabled
         if (musicPlaying) return;
         const ctx = getAudio();
         musicPlaying = true;
