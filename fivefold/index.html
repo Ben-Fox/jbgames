@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fivefold — Five Weekly Puzzle Games | BrainSmacks</title>
+<meta name="description" content="Play Fivefold — five free weekly puzzle games: word groups, ciphers, history ordering, spectrum guessing, and word clues. No download needed.">
+<link rel="canonical" href="https://brainsmacks.com/fivefold/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Fivefold — Five Weekly Puzzle Games | BrainSmacks">
+<meta property="og:description" content="Five games, one week, infinite curiosity. Free browser puzzle games — play instantly.">
+<meta property="og:url" content="https://brainsmacks.com/fivefold/">
+<meta property="og:site_name" content="BrainSmacks">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fivefold — Five Weekly Puzzle Games | BrainSmacks">
+<meta name="twitter:description" content="Five games, one week, infinite curiosity. Free browser puzzle games.">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300;1,600&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --ink: #1a1814;
+  --paper: #f5f0e8;
+  --paper2: #ede8db;
+  --paper3: #e4ddd0;
+  --gold: #b8860b;
+  --gold-light: #d4a017;
+  --rust: #8b3a2a;
+  --sage: #4a6741;
+  --slate: #3d4f5c;
+  --muted: #8a7f70;
+  --border: rgba(26,24,20,0.15);
+  --shadow: 0 2px 20px rgba(26,24,20,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Azeret Mono', monospace;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(ellipse at 20% 50%, rgba(184,134,11,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(61,79,92,0.05) 0%, transparent 50%);
+}
+
+/* ── HUB ── */
+#hub {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.hub-masthead {
+  text-align: center;
+  padding: 56px 20px 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+
+.hub-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(52px, 8vw, 88px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.hub-logo span {
+  color: var(--gold);
+}
+
+.hub-tagline {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+.week-badge {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--paper2);
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.game-card {
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  padding: 28px 24px 24px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--card-accent, var(--gold));
+}
+
+.game-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  background: var(--paper);
+}
+
+.game-card.done {
+  opacity: 0.6;
+}
+
+.card-emoji { font-size: 28px; display: block; margin-bottom: 12px; }
+.card-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.card-type {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.card-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.card-cta {
+  margin-top: 18px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--card-accent, var(--gold));
+}
+.card-cta.done-label { color: var(--sage); }
+
+/* ── GAME SHELL ── */
+#game-shell {
+  display: none;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.back-btn {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.back-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+.game-title-bar {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.round-indicator {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── HOW TO PLAY ── */
+.how-to-play {
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  padding: 24px 28px;
+  margin-bottom: 28px;
+}
+
+.htp-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.htp-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.htp-text strong { color: var(--gold); }
+
+.htp-dismiss {
+  margin-top: 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 10px 24px;
+  font-family: 'Azeret Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.htp-dismiss:hover { background: var(--gold); }
+
+/* ── GAME CONTENT ── */
+.game-area { animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+.prompt-label {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.big-prompt {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  background: var(--paper3);
+  border-left: 3px solid var(--gold);
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.game-input {
+  flex: 1;
+  padding: 12px 16px;
+  font-family: 'Azeret Mono', monospace;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.game-input:focus { border-color: var(--gold); }
+
+.submit-btn {
+  padding: 12px 20px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  font-family: 'Azeret Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.submit-btn:hover { background: var(--gold); }
+.submit-btn:disabled { background: var(--muted); cursor: default; }
+
+.feedback-msg {
+  font-size: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--muted);
+}
+.feedback-msg.good { border-color: var(--sage); color: var(--sage); background: rgba(74,103,65,0.06); }
+.feedback-msg.bad { border-color: var(--rust); color: var(--rust); background: rgba(139,58,42,0.06); animation: shake 0.4s; }
+
+.guesses-list { margin-bottom: 16px; }
+.guess-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.guess-mark { font-size: 14px; }
+.guess-mark.correct { color: var(--sage); }
+.guess-mark.wrong { color: var(--rust); }
+
+.clue-reveal {
+  padding: 10px 14px;
+  background: var(--paper3);
+  border-left: 3px solid var(--slate);
+  font-size: 12px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.3s;
+}
+.clue-num { color: var(--muted); font-size: 10px; margin-right: 6px; }
+
+.round-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.round-dot {
+  width: 28px;
+  height: 6px;
+  background: var(--paper3);
+  border: 1px solid var(--border);
+  transition: background 0.3s;
+}
+.round-dot.active { background: var(--gold); }
+.round-dot.won { background: var(--sage); }
+.round-dot.lost { background: var(--rust); }
+
+/* ── RESULT BANNER ── */
+.result-banner {
+  text-align: center;
+  padding: 36px 24px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  animation: fadeIn 0.4s;
+}
+.result-banner.won { border-top: 3px solid var(--sage); }
+.result-banner.lost { border-top: 3px solid var(--rust); }
+.result-emoji { font-size: 40px; margin-bottom: 12px; }
+.result-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.result-answer {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.result-score {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--gold);
+  margin: 12px 0;
+}
+.result-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+/* ── NEXUS (Connections-style) ── */
+.nexus-words {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.nexus-word {
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--paper2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.nexus-word:hover { border-color: var(--gold); }
+.nexus-word.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.nexus-word.solved-1 { background: #c9a84c22; border-color: var(--gold); color: var(--gold); cursor: default; }
+.nexus-word.solved-2 { background: rgba(74,103,65,0.15); border-color: var(--sage); color: var(--sage); cursor: default; }
+.nexus-word.solved-3 { background: rgba(61,79,92,0.15); border-color: var(--slate); color: var(--slate); cursor: default; }
+.nexus-word.solved-4 { background: rgba(139,58,42,0.15); border-color: var(--rust); color: var(--rust); cursor: default; }
+.nexus-word.wrong-shake { animation: shake 0.4s; }
+
+.nexus-submit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.nexus-mistakes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.mistake-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--rust);
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+.mistake-dot.used { opacity: 1; }
+
+.solved-row {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  animation: pop 0.3s;
+}
+
+/* ── CIPHER ── */
+.cipher-display {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(16px, 2.5vw, 20px);
+  font-style: italic;
+  line-height: 2;
+  padding: 20px;
+  background: var(--paper3);
+  border-left: 3px solid var(--gold);
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+
+.cipher-char {
+  display: inline-block;
+  position: relative;
+  min-width: 14px;
+  text-align: center;
+}
+.cipher-char.solved { color: var(--sage); }
+.cipher-char.selected { color: var(--gold); text-decoration: underline; }
+
+.cipher-keyboard {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  margin-bottom: 16px;
+}
+.cipher-key {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+.cipher-key:hover { background: var(--ink); color: var(--paper); }
+.cipher-key.used { background: var(--paper3); color: var(--muted); text-decoration: line-through; cursor: default; }
+.cipher-key.correct-mapped { background: rgba(74,103,65,0.15); color: var(--sage); cursor: default; }
+
+.cipher-mapping-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.mapping-pair {
+  text-align: center;
+  padding: 6px 4px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  font-size: 10px;
+}
+.mapping-encoded { color: var(--muted); font-size: 9px; }
+.mapping-decoded { font-weight: 600; color: var(--sage); min-height: 14px; }
+
+/* ── CHRONICLE ── */
+.chronicle-events {
+  margin-bottom: 20px;
+}
+.chronicle-event {
+  padding: 14px 16px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+  cursor: grab;
+  transition: all 0.15s;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+.chronicle-event:hover { border-color: var(--gold); }
+.chronicle-event.dragging { opacity: 0.5; }
+.chronicle-event.correct-pos { border-color: var(--sage); background: rgba(74,103,65,0.08); cursor: default; }
+.chronicle-event.wrong-pos { border-color: var(--rust); background: rgba(139,58,42,0.08); }
+.event-handle { color: var(--muted); font-size: 16px; cursor: grab; }
+.event-num {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+/* ── WAVELENGTH ── */
+.spectrum-bar {
+  position: relative;
+  height: 48px;
+  background: linear-gradient(90deg, var(--slate), var(--paper3), var(--rust));
+  border-radius: 4px;
+  margin-bottom: 8px;
+  overflow: visible;
+}
+.spectrum-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+.spectrum-target {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 60px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+.spectrum-guess-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  background: var(--paper);
+  cursor: pointer;
+  transition: left 0.1s;
+}
+.spectrum-slider {
+  width: 100%;
+  margin-bottom: 16px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+/* ── MIMIC ── */
+.mimic-blanks {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.letter-box {
+  width: 38px;
+  height: 48px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.letter-box.correct { border-color: var(--sage); background: rgba(74,103,65,0.1); color: var(--sage); }
+.letter-box.present { border-color: var(--gold); background: rgba(184,134,11,0.1); color: var(--gold); }
+.letter-box.absent { border-color: var(--muted); background: var(--paper3); color: var(--muted); }
+.letter-box.empty { border-color: var(--border); }
+
+.mimic-difficulty {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.mimic-difficulty.easy { color: var(--sage); }
+.mimic-difficulty.medium { color: var(--gold); }
+.mimic-difficulty.hard { color: var(--rust); }
+
+/* ── SCORE BAR ── */
+.score-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+.score-pip {
+  width: 20px; height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+.score-pip.won { background: var(--sage); color: white; border-color: var(--sage); }
+.score-pip.lost { background: var(--rust); color: white; border-color: var(--rust); }
+.score-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-left: 8px; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .nexus-words { grid-template-columns: repeat(2, 1fr); }
+  .cipher-keyboard { grid-template-columns: repeat(7, 1fr); }
+  .hub-logo { font-size: 42px; }
+}
+</style>
+</head>
+<body>
+
+<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+
+<!-- HUB -->
+<div id="hub">
+  <div class="hub-masthead">
+    <div class="hub-logo">Five<span>fold</span></div>
+    <div class="hub-tagline">Five games · One week · Infinite curiosity</div>
+    <div class="week-badge" id="week-badge"></div>
+  </div>
+  <div class="game-grid" id="game-grid"></div>
+</div>
+
+<!-- GAME SHELL -->
+<div id="game-shell">
+  <div class="game-header">
+    <button class="back-btn" onclick="showHub()">← Back</button>
+    <div class="game-title-bar" id="shell-title"></div>
+    <div class="round-indicator" id="shell-round"></div>
+  </div>
+  <div id="game-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// WEEK CALCULATION
+// ═══════════════════════════════════════════════
+function getWeekIndex(poolSize) {
+  const epoch = new Date("2024-01-01");
+  const now = new Date();
+  const msPerWeek = 1000 * 60 * 60 * 24 * 7;
+  const weeks = Math.floor((now - epoch) / msPerWeek);
+  return weeks % poolSize;
+}
+
+function getWeekLabel() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `Week of ${fmt(start)} – ${fmt(end)}`;
+}
+
+function saveProgress(gameId, data) {
+  const key = `fivefold_${gameId}_week${getWeekIndex(1000)}`;
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function loadProgress(gameId) {
+  const key = `fivefold_${gameId}_week${getWeekIndex(1000)}`;
+  try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; }
+}
+
+// ═══════════════════════════════════════════════
+// PUZZLE DATA POOLS
+// ═══════════════════════════════════════════════
+
+// NEXUS — 4 groups of 4 words sharing a theme
+const NEXUS_POOL = [
+  {
+    groups: [
+      { theme: "Things that can 'run'", words: ["TAP", "NOSE", "RIVER", "CLOCK"], color: 1 },
+      { theme: "Types of 'light'", words: ["MOON", "CANDLE", "FLASH", "STAR"], color: 2 },
+      { theme: "Can follow 'black'", words: ["BIRD", "BOARD", "BERRY", "SMITH"], color: 3 },
+      { theme: "Types of music", words: ["SOUL", "JAZZ", "BLUES", "FOLK"], color: 4 },
+    ]
+  },
+  {
+    groups: [
+      { theme: "Things with keys", words: ["PIANO", "LOCK", "CAR", "MAP"], color: 1 },
+      { theme: "Can precede 'stone'", words: ["LIME", "SAND", "COBBLE", "KEY"], color: 2 },
+      { theme: "Shades of red", words: ["CRIMSON", "SCARLET", "RUBY", "VERMILLION"], color: 3 },
+      { theme: "Parts of an eye", words: ["IRIS", "PUPIL", "LENS", "CORNEA"], color: 4 },
+    ]
+  },
+  {
+    groups: [
+      { theme: "Can follow 'fire'", words: ["PLACE", "SIDE", "WORK", "FLY"], color: 1 },
+      { theme: "Types of bridges", words: ["ARCH", "SWING", "ROPE", "DRAW"], color: 2 },
+      { theme: "Famous Willies", words: ["WONKA", "NELSON", "SHAKESPEARE", "LINCOLN"], color: 3 },
+      { theme: "Things that shine", words: ["GLIMMER", "GLEAM", "GLOW", "GLINT"], color: 4 },
+    ]
+  },
+  {
+    groups: [
+      { theme: "Can precede 'house'", words: ["TREE", "POWER", "GREEN", "FULL"], color: 1 },
+      { theme: "Types of bread", words: ["RYE", "SOURDOUGH", "BRIOCHE", "NAAN"], color: 2 },
+      { theme: "Space words", words: ["ORBIT", "LUNAR", "SOLAR", "COSMIC"], color: 3 },
+      { theme: "Old measures of time", words: ["EPOCH", "ERA", "EON", "AGE"], color: 4 },
+    ]
+  },
+  {
+    groups: [
+      { theme: "Synonyms for 'cold'", words: ["FRIGID", "ARCTIC", "BRISK", "NIPPY"], color: 1 },
+      { theme: "Famous Maries", words: ["CURIE", "KONDO", "ANTOINETTE", "SHELLEY"], color: 2 },
+      { theme: "Can follow 'thunder'", words: ["BOLT", "STORM", "CLOUD", "BIRD"], color: 3 },
+      { theme: "Parts of a boat", words: ["BOW", "STERN", "HULL", "KEEL"], color: 4 },
+    ]
+  },
+];
+
+// CIPHER — scrambled quotes (substitution cipher — Caesar shift 7)
+const CIPHER_POOL = [
+  { plain: "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO", author: "Steve Jobs" },
+  { plain: "IN THE MIDDLE OF DIFFICULTY LIES OPPORTUNITY", author: "Albert Einstein" },
+  { plain: "IT DOES NOT MATTER HOW SLOWLY YOU GO AS LONG AS YOU DO NOT STOP", author: "Confucius" },
+  { plain: "YOU MISS ONE HUNDRED PERCENT OF THE SHOTS YOU DO NOT TAKE", author: "Wayne Gretzky" },
+  { plain: "LIFE IS WHAT HAPPENS WHEN YOU ARE BUSY MAKING OTHER PLANS", author: "John Lennon" },
+];
+
+function makeCipher(plain) {
+  // Random substitution based on week seed
+  const week = getWeekIndex(997);
+  const shuffle = (arr, seed) => {
+    const a = [...arr];
+    let s = seed;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = Math.abs(s) % (i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const shuffled = shuffle([...letters], week + 42);
+  const encMap = {};
+  const decMap = {};
+  letters.forEach((l, i) => { encMap[l] = shuffled[i]; decMap[shuffled[i]] = l; });
+  const encoded = plain.split('').map(c => c === ' ' ? ' ' : (encMap[c] || c)).join('');
+  return { plain, encoded, encMap, decMap, author: '' };
+}
+
+// CHRONICLE — ordering events
+const CHRONICLE_POOL = [
+  {
+    events: [
+      { text: "The Wright Brothers achieve the first powered flight at Kitty Hawk", year: 1903 },
+      { text: "Alexander Fleming discovers penicillin in his London lab", year: 1928 },
+      { text: "Edmund Hillary and Tenzing Norgay summit Mount Everest", year: 1953 },
+      { text: "The first human heart transplant is performed by Christiaan Barnard", year: 1967 },
+      { text: "The World Wide Web is invented by Tim Berners-Lee at CERN", year: 1989 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Titanic sinks on its maiden voyage in the North Atlantic", year: 1912 },
+      { text: "Charles Lindbergh completes the first solo transatlantic flight", year: 1927 },
+      { text: "Alan Turing proposes his famous test for artificial intelligence", year: 1950 },
+      { text: "Four students are killed during a protest at Kent State University", year: 1970 },
+      { text: "The Human Genome Project is declared complete", year: 2003 },
+    ]
+  },
+  {
+    events: [
+      { text: "Marie Curie becomes the first woman to win a Nobel Prize", year: 1903 },
+      { text: "The first television broadcast is demonstrated by John Logie Baird", year: 1926 },
+      { text: "DNA's double-helix structure is described by Watson and Crick", year: 1953 },
+      { text: "The first email is sent by Ray Tomlinson over the ARPANET", year: 1971 },
+      { text: "Dolly the sheep becomes the first mammal cloned from adult cells", year: 1996 },
+    ]
+  },
+  {
+    events: [
+      { text: "Mahatma Gandhi leads the Salt March in protest of British rule", year: 1930 },
+      { text: "The United Nations is officially established in San Francisco", year: 1945 },
+      { text: "Yuri Gagarin becomes the first human to travel to outer space", year: 1961 },
+      { text: "The first Apple Macintosh personal computer is introduced", year: 1984 },
+      { text: "Wikipedia is launched as a free online encyclopedia", year: 2001 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Eiffel Tower is completed in Paris for the World's Fair", year: 1889 },
+      { text: "The Panama Canal opens, connecting the Atlantic and Pacific Oceans", year: 1914 },
+      { text: "The first antibiotic treatment, penicillin, is used on a human patient", year: 1942 },
+      { text: "The Berlin Wall falls, reuniting East and West Germany", year: 1989 },
+      { text: "The Mars Curiosity rover successfully lands on the red planet", year: 2012 },
+    ]
+  },
+];
+
+// WAVELENGTH — guess where a word falls on a spectrum
+const WAVELENGTH_POOL = [
+  {
+    rounds: [
+      { word: "TEPID", left: "FREEZING", right: "BOILING", target: 38, tolerance: 12 },
+      { word: "WHISPER", left: "SILENCE", right: "THUNDER", target: 20, tolerance: 10 },
+      { word: "DUSK", left: "MIDNIGHT", right: "NOON", target: 70, tolerance: 12 },
+      { word: "BRONZE", left: "WORST", right: "BEST", target: 35, tolerance: 12 },
+      { word: "SKYSCRAPER", left: "ANTHILL", right: "MOUNT EVEREST", target: 72, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "DRIZZLE", left: "BONE DRY", right: "MONSOON", target: 32, tolerance: 12 },
+      { word: "JOG", left: "SLEEPING", right: "SPRINTING", target: 42, tolerance: 12 },
+      { word: "CONTENT", left: "MISERABLE", right: "ECSTATIC", target: 60, tolerance: 12 },
+      { word: "ANTIQUE", left: "BRAND NEW", right: "ANCIENT", target: 68, tolerance: 12 },
+      { word: "COTTAGE", left: "TENT", right: "PALACE", target: 35, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "LAUGHTER", left: "TEARS", right: "JOY", target: 75, tolerance: 12 },
+      { word: "BREEZE", left: "STILL AIR", right: "HURRICANE", target: 22, tolerance: 12 },
+      { word: "NOON", left: "MIDNIGHT", right: "SUNSET", target: 60, tolerance: 12 },
+      { word: "SILVER", left: "COAL", right: "DIAMOND", target: 65, tolerance: 12 },
+      { word: "BIOGRAPHY", left: "PURE FICTION", right: "ABSOLUTE TRUTH", target: 78, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "RUST", left: "BRAND NEW", right: "ANCIENT RUIN", target: 55, tolerance: 12 },
+      { word: "LIBRARY", left: "CHAOS", right: "PERFECT ORDER", target: 72, tolerance: 12 },
+      { word: "DEBATE", left: "AGREEMENT", right: "ALL-OUT WAR", target: 40, tolerance: 12 },
+      { word: "CANDLE", left: "DARKNESS", right: "SUN", target: 18, tolerance: 12 },
+      { word: "TEENAGER", left: "NEWBORN", right: "CENTENARIAN", target: 20, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "ENCYCLOPEDIA", left: "IGNORANCE", right: "OMNISCIENCE", target: 60, tolerance: 12 },
+      { word: "SIGH", left: "LAUGHTER", right: "SOBBING", target: 38, tolerance: 12 },
+      { word: "PEBBLE", left: "DUST PARTICLE", right: "BOULDER", target: 28, tolerance: 12 },
+      { word: "SPRING", left: "DEAD WINTER", right: "HIGH SUMMER", target: 35, tolerance: 12 },
+      { word: "JOURNALIST", left: "LIES", right: "PURE TRUTH", target: 65, tolerance: 12 },
+    ]
+  },
+];
+
+// MIMIC — 5-letter words with clues (Wordle-inspired but clue-based)
+const MIMIC_POOL = [
+  {
+    rounds: [
+      { word: "CRANE", clues: ["Easy: A large bird with a long neck", "Medium: Also a machine used on construction sites", "Hard: This word can describe rotating your neck to see better"] },
+      { word: "BLAZE", clues: ["Easy: A very bright, intense fire", "Medium: Also means to mark a trail through wilderness", "Hard: This word appears in the names of several sports teams"] },
+      { word: "PRISM", clues: ["Easy: A transparent shape that bends light into a rainbow", "Medium: Also a metaphor for different perspectives on one thing", "Hard: Pink Floyd used one on a famous album cover"] },
+      { word: "GROVE", clues: ["Easy: A small group of trees", "Medium: A famous classical composer's first name is also this", "Hard: There is a city in California with this name that was once famous for citrus"] },
+      { word: "FLINT", clues: ["Easy: A hard rock used to make fire by striking", "Medium: A city in Michigan known for a water crisis", "Hard: Also a first name — one cowboy character uses it"] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "FROST", clues: ["Easy: Ice crystals that form on cold surfaces", "Medium: A famous American poet shares this name", "Hard: Can describe a cold, unfriendly personality"] },
+      { word: "LATCH", clues: ["Easy: A small catch that fastens a door or gate", "Medium: To 'latch onto' something means to cling to it", "Hard: Babies do this when beginning to breastfeed"] },
+      { word: "QUIRK", clues: ["Easy: An unusual habit or feature of someone", "Medium: A small, unexpected twist in a design or system", "Hard: Rhymes with 'work' and 'smirk'"] },
+      { word: "SHAWL", clues: ["Easy: A piece of fabric wrapped around the shoulders", "Medium: Often associated with grandmothers and cold evenings", "Hard: One letter different from a place to fish"] },
+      { word: "KNEEL", clues: ["Easy: To go down on one or both knees", "Medium: Athletes do this as a form of protest or respect", "Hard: A knight does this before a king"] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "DWARF", clues: ["Easy: A mythical small being, often a miner in fairy tales", "Medium: What astronomers call a small type of star", "Hard: Snow White's companions are seven of these"] },
+      { word: "PLUCK", clues: ["Easy: To pull something off or out sharply", "Medium: Also means courage and determination", "Hard: A musician does this to a guitar string"] },
+      { word: "GRAZE", clues: ["Easy: When animals eat grass directly from a field", "Medium: Also means to lightly scrape skin", "Hard: Cows, sheep, and horses all do this daily"] },
+      { word: "SHARD", clues: ["Easy: A sharp, broken piece of glass or pottery", "Medium: A famous London skyscraper shares this name", "Hard: Archaeologists spend hours sorting these from dig sites"] },
+      { word: "TROVE", clues: ["Easy: A collection of valuable things", "Medium: Usually paired with the word 'treasure'", "Hard: From Old French, related to the verb 'to find'"] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BRINE", clues: ["Easy: Very salty water, like the ocean", "Medium: Used to preserve food like pickles and olives", "Hard: Rhymes with 'wine' and 'mine'"] },
+      { word: "CLEFT", clues: ["Easy: A narrow opening or split in rock or a surface", "Medium: A medical condition affecting the lip or palate", "Hard: Also describes a dimple-like feature on a chin"] },
+      { word: "SMELT", clues: ["Easy: Past tense of 'smell' (informal)", "Medium: Also a small silver fish found in cold waters", "Hard: The process of extracting metal from ore"] },
+      { word: "GLYPH", clues: ["Easy: A carved or written symbol, like ancient Egyptian writing", "Medium: In design, any visual character or icon", "Hard: Emojis are sometimes called this in typography"] },
+      { word: "NOTCH", clues: ["Easy: A small V-shaped cut in a surface", "Medium: A level or degree — 'up a notch' means better", "Hard: The gap between mountains in a ridge is this"] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "VIVID", clues: ["Easy: Very bright, clear, or lifelike", "Medium: Often used to describe a striking dream", "Hard: From Latin 'vivere', meaning to live"] },
+      { word: "SCALD", clues: ["Easy: To burn with hot liquid or steam", "Medium: A sharp, severe criticism is also called this", "Hard: You do this to milk before adding it to some recipes"] },
+      { word: "KNOLL", clues: ["Easy: A small round hill", "Medium: The Grassy ___ is famous from JFK conspiracy theories", "Hard: Rhymes with 'toll' and 'roll'"] },
+      { word: "BROTH", clues: ["Easy: A thin soup made from simmered meat or vegetables", "Medium: The base for many soups and risottos", "Hard: In Scotland, a traditional soup is called 'cock-a-leekie'—this is its liquid component"] },
+      { word: "WRATH", clues: ["Easy: Extreme anger or fury", "Medium: One of the seven deadly sins", "Hard: The Grapes of ___: a Steinbeck classic"] },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════
+// GAME REGISTRY
+// ═══════════════════════════════════════════════
+const GAMES = [
+  { id: "nexus",      name: "Nexus",      emoji: "🔗", type: "Single Puzzle", desc: "Group 16 words into four hidden categories. One wrong guess costs a life.", accent: "#b8860b", render: renderNexus },
+  { id: "cipher",     name: "Cipher",     emoji: "🔐", type: "Single Puzzle", desc: "Decode an encrypted quote by cracking the letter substitution cipher.", accent: "#4a6741", render: renderCipher },
+  { id: "chronicle",  name: "Chronicle",  emoji: "📜", type: "5 Rounds",      desc: "Arrange five historical events in the correct chronological order.", accent: "#3d4f5c", render: renderChronicle },
+  { id: "wavelength", name: "Wavelength", emoji: "🌊", type: "5 Rounds",      desc: "Place a word on the correct spot of a spectrum. Closer = more points.", accent: "#8b3a2a", render: renderWavelength },
+  { id: "mimic",      name: "Mimic",      emoji: "🪞", type: "5 Rounds",      desc: "Guess the hidden 5-letter word from three progressive clues.", accent: "#6b3a7d", render: renderMimic },
+];
+
+// ═══════════════════════════════════════════════
+// HUB
+// ═══════════════════════════════════════════════
+function buildHub() {
+  document.getElementById('week-badge').textContent = getWeekLabel();
+  const grid = document.getElementById('game-grid');
+  grid.innerHTML = '';
+  GAMES.forEach(g => {
+    const prog = loadProgress(g.id);
+    const done = prog && prog.finished;
+    const card = document.createElement('div');
+    card.className = 'game-card' + (done ? ' done' : '');
+    card.style.setProperty('--card-accent', g.accent);
+    card.innerHTML = `
+      <span class="card-emoji">${g.emoji}</span>
+      <div class="card-name">${g.name}</div>
+      <div class="card-type">${g.type}</div>
+      <div class="card-desc">${g.desc}</div>
+      <div class="card-cta ${done ? 'done-label' : ''}">${done ? '✓ Completed' : '▶ Play'}</div>
+    `;
+    card.onclick = () => launchGame(g);
+    grid.appendChild(card);
+  });
+}
+
+function launchGame(g) {
+  document.getElementById('hub').style.display = 'none';
+  document.getElementById('game-shell').style.display = 'block';
+  document.getElementById('shell-title').textContent = g.emoji + ' ' + g.name;
+  document.getElementById('shell-round').textContent = g.type;
+  g.render();
+}
+
+function showHub() {
+  document.getElementById('hub').style.display = 'block';
+  document.getElementById('game-shell').style.display = 'none';
+  buildHub();
+}
+
+// ═══════════════════════════════════════════════
+// SHARED HELPERS
+// ═══════════════════════════════════════════════
+function norm(s) { return s.trim().toUpperCase(); }
+
+function howToPlay(html, onDismiss) {
+  const prog = loadProgress('__htp__' + onDismiss.name.slice(0,8));
+  if (prog && prog.seen) { onDismiss(); return; }
+  const div = document.createElement('div');
+  div.className = 'how-to-play';
+  div.innerHTML = `<div class="htp-title">How to Play</div><div class="htp-text">${html}</div>
+    <button class="htp-dismiss" id="htp-btn">Got it — Let's Play!</button>`;
+  document.getElementById('game-content').innerHTML = '';
+  document.getElementById('game-content').appendChild(div);
+  document.getElementById('htp-btn').onclick = () => {
+    saveProgress('__htp__' + onDismiss.name.slice(0,8), { seen: true });
+    onDismiss();
+  };
+}
+
+function roundProgress(scores, total) {
+  const bar = document.createElement('div');
+  bar.className = 'round-progress';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'round-dot ' + (scores[i] === undefined ? '' : scores[i] > 0 ? 'won' : 'lost');
+    bar.appendChild(d);
+  }
+  return bar;
+}
+
+function scoreBar(scores) {
+  const bar = document.createElement('div');
+  bar.className = 'score-bar';
+  scores.forEach((s, i) => {
+    const pip = document.createElement('div');
+    pip.className = 'score-pip ' + (s > 0 ? 'won' : 'lost');
+    pip.textContent = s > 0 ? s : '✗';
+    bar.appendChild(pip);
+  });
+  const lbl = document.createElement('span');
+  lbl.className = 'score-label';
+  const total = scores.reduce((a,b) => a+b, 0);
+  lbl.textContent = `Total: ${total} pts`;
+  bar.appendChild(lbl);
+  return bar;
+}
+
+function resultBanner(won, title, answer, sub, scoreEl) {
+  const div = document.createElement('div');
+  div.className = 'result-banner ' + (won ? 'won' : 'lost');
+  div.innerHTML = `<div class="result-emoji">${won ? '🎉' : '😔'}</div>
+    <div class="result-title">${title}</div>
+    <div class="result-answer">${answer}</div>`;
+  if (scoreEl) div.appendChild(scoreEl);
+  const sub2 = document.createElement('div');
+  sub2.className = 'result-sub';
+  sub2.textContent = sub;
+  div.appendChild(sub2);
+  return div;
+}
+
+// ═══════════════════════════════════════════════
+// GAME 1: NEXUS
+// ═══════════════════════════════════════════════
+function renderNexus() {
+  howToPlay(`
+    <strong>16 words</strong> are hidden on the board. Your job is to find <strong>four groups of four</strong> words that share a hidden category.<br><br>
+    Click words to select them, then hit <strong>Submit</strong>. If all four belong to the same group, they're removed from the board.<br><br>
+    You have <strong>4 mistakes</strong> allowed. Groups can be tricky — words may seem to fit multiple categories. Think carefully!<br><br>
+    A new puzzle appears every <strong>Monday</strong>.
+  `, startNexus);
+}
+
+function startNexus() {
+  const puzzle = NEXUS_POOL[getWeekIndex(NEXUS_POOL.length)];
+  const prog = loadProgress('nexus') || { mistakes: 0, solved: [], finished: false };
+
+  const allWords = puzzle.groups.flatMap(g => g.words);
+  // Stable weekly shuffle
+  const seed = getWeekIndex(9999) * 31 + 7;
+  const shuffled = [...allWords];
+  let s = seed;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const j = Math.abs(s) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const content = document.getElementById('game-content');
+  const colors = ['#c9a84c40','rgba(74,103,65,0.25)','rgba(61,79,92,0.25)','rgba(139,58,42,0.25)'];
+  const borderColors = ['var(--gold)','var(--sage)','var(--slate)','var(--rust)'];
+
+  function render() {
+    content.innerHTML = '';
+    const area = document.createElement('div');
+    area.className = 'game-area';
+
+    // Solved rows
+    prog.solved.forEach(si => {
+      const g = puzzle.groups[si];
+      const row = document.createElement('div');
+      row.className = 'solved-row';
+      row.style.background = colors[g.color - 1];
+      row.style.borderLeft = `3px solid ${borderColors[g.color - 1]}`;
+      row.textContent = g.theme + ': ' + g.words.join(', ');
+      area.appendChild(row);
+    });
+
+    if (prog.finished) {
+      const won = prog.mistakes < 4;
+      area.appendChild(resultBanner(won,
+        won ? 'Brilliant!' : 'Tough one!',
+        won ? `Solved with ${prog.mistakes} mistake${prog.mistakes !== 1 ? 's' : ''}` : 'Better luck next week',
+        'New puzzle every Monday'
+      ));
+      content.appendChild(area);
+      return;
+    }
+
+    // Mistakes
+    const mistakeRow = document.createElement('div');
+    mistakeRow.innerHTML = `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Mistakes remaining</div>`;
+    const dots = document.createElement('div');
+    dots.className = 'nexus-mistakes';
+    for (let i = 0; i < 4; i++) {
+      const d = document.createElement('div');
+      d.className = 'mistake-dot' + (i < prog.mistakes ? ' used' : '');
+      dots.appendChild(d);
+    }
+    mistakeRow.appendChild(dots);
+    area.appendChild(mistakeRow);
+
+    // Word grid
+    let selected = [];
+    const remainingWords = shuffled.filter(w => {
+      const grpIdx = puzzle.groups.findIndex(g => g.words.includes(w));
+      return !prog.solved.includes(grpIdx);
+    });
+
+    const grid = document.createElement('div');
+    grid.className = 'nexus-words';
+    grid.style.marginTop = '16px';
+
+    const wordEls = {};
+    remainingWords.forEach(w => {
+      const el = document.createElement('div');
+      el.className = 'nexus-word';
+      el.textContent = w;
+      el.onclick = () => {
+        if (el.classList.contains('solved-1') || el.classList.contains('solved-2')) return;
+        const idx = selected.indexOf(w);
+        if (idx === -1) {
+          if (selected.length < 4) { selected.push(w); el.classList.add('selected'); }
+        } else {
+          selected.splice(idx, 1); el.classList.remove('selected');
+        }
+        submitBtn.disabled = selected.length !== 4;
+      };
+      wordEls[w] = el;
+      grid.appendChild(el);
+    });
+    area.appendChild(grid);
+
+    // Submit row
+    const submitRow = document.createElement('div');
+    submitRow.className = 'nexus-submit-row';
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'submit-btn';
+    submitBtn.textContent = 'Submit Group';
+    submitBtn.disabled = true;
+    submitBtn.onclick = () => {
+      const grpIdx = puzzle.groups.findIndex(g => selected.every(w => g.words.includes(w)) && g.words.every(w => selected.includes(w)));
+      if (grpIdx !== -1 && !prog.solved.includes(grpIdx)) {
+        prog.solved.push(grpIdx);
+        if (prog.solved.length === puzzle.groups.length) { prog.finished = true; }
+        saveProgress('nexus', prog);
+        selected = [];
+        render();
+      } else {
+        prog.mistakes++;
+        if (prog.mistakes >= 4) { prog.solved = [0,1,2,3]; prog.finished = true; }
+        saveProgress('nexus', prog);
+        selected.forEach(w => { wordEls[w].classList.add('wrong-shake'); setTimeout(() => wordEls[w].classList.remove('wrong-shake'), 500); });
+        selected = [];
+        submitBtn.disabled = true;
+        setTimeout(render, 600);
+      }
+    };
+    submitRow.appendChild(submitBtn);
+
+    const deselBtn = document.createElement('button');
+    deselBtn.className = 'back-btn';
+    deselBtn.textContent = 'Deselect All';
+    deselBtn.onclick = () => {
+      selected = [];
+      Object.values(wordEls).forEach(el => el.classList.remove('selected'));
+      submitBtn.disabled = true;
+    };
+    submitRow.appendChild(deselBtn);
+    area.appendChild(submitRow);
+
+    const fbDiv = document.createElement('div');
+    fbDiv.id = 'nexus-fb';
+    area.appendChild(fbDiv);
+
+    content.appendChild(area);
+  }
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// GAME 2: CIPHER
+// ═══════════════════════════════════════════════
+function renderCipher() {
+  howToPlay(`
+    A famous quote has been <strong>encrypted</strong> using a letter substitution cipher — every letter in the alphabet has been swapped with a different letter.<br><br>
+    Click a <strong>coded letter</strong> in the quote to select it, then click the letter you think it <strong>decodes to</strong> on the keyboard below.<br><br>
+    Spaces and punctuation are left unchanged. Use logic and context to work out the full quote!<br><br>
+    A new cipher appears every <strong>Monday</strong>.
+  `, startCipher);
+}
+
+function startCipher() {
+  const raw = CIPHER_POOL[getWeekIndex(CIPHER_POOL.length)];
+  const { plain, author } = raw;
+  const cipherData = makeCipher(plain);
+
+  const prog = loadProgress('cipher') || { userMap: {}, finished: false };
+  const content = document.getElementById('game-content');
+
+  function isComplete() {
+    return plain.split('').every((c, i) => {
+      if (c === ' ') return true;
+      return prog.userMap[cipherData.encoded[i]] === c;
+    });
+  }
+
+  function render() {
+    content.innerHTML = '';
+    const area = document.createElement('div');
+    area.className = 'game-area';
+
+    if (prog.finished || isComplete()) {
+      prog.finished = true;
+      saveProgress('cipher', prog);
+      area.appendChild(resultBanner(true, 'Decoded!', `"${plain}"`, `— ${author} · New cipher every Monday`));
+      content.appendChild(area);
+      return;
+    }
+
+    // Quote display
+    const lbl = document.createElement('div');
+    lbl.className = 'prompt-label';
+    lbl.textContent = 'Decode the quote';
+    area.appendChild(lbl);
+
+    let selectedEncLetter = null;
+
+    const display = document.createElement('div');
+    display.className = 'cipher-display';
+
+    const updateDisplay = () => {
+      display.innerHTML = '';
+      let i = 0;
+      while (i < cipherData.encoded.length) {
+        if (cipherData.encoded[i] === ' ') {
+          display.appendChild(document.createTextNode(' '));
+        } else {
+          const enc = cipherData.encoded[i];
+          const decoded = prog.userMap[enc];
+          const correct = plain[i];
+          const span = document.createElement('span');
+          span.className = 'cipher-char';
+          if (decoded) {
+            span.textContent = decoded;
+            span.classList.add(decoded === correct ? 'solved' : '');
+          } else {
+            span.textContent = enc;
+          }
+          if (enc === selectedEncLetter) span.classList.add('selected');
+          span.onclick = () => {
+            selectedEncLetter = enc;
+            updateDisplay();
+            updateKeyboard();
+          };
+          display.appendChild(span);
+        }
+        i++;
+      }
+    };
+    updateDisplay();
+    area.appendChild(display);
+
+    const authorDiv = document.createElement('div');
+    authorDiv.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:1px;';
+    authorDiv.textContent = `— ${author}`;
+    area.appendChild(authorDiv);
+
+    // Keyboard
+    const kbLbl = document.createElement('div');
+    kbLbl.className = 'prompt-label';
+    kbLbl.textContent = selectedEncLetter ? `Select the real letter for: ${selectedEncLetter}` : 'Click a letter in the quote first';
+    area.appendChild(kbLbl);
+
+    const keyboard = document.createElement('div');
+    keyboard.className = 'cipher-keyboard';
+
+    const updateKeyboard = () => {
+      kbLbl.textContent = selectedEncLetter ? `Decode: ${selectedEncLetter} →` : 'Click a letter in the quote first';
+      keyboard.innerHTML = '';
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
+        const btn = document.createElement('div');
+        btn.className = 'cipher-key';
+        btn.textContent = letter;
+        // Check if this mapping is confirmed correct
+        const isCorrectMapped = Object.entries(prog.userMap).some(([k, v]) => {
+          return v === letter && plain.includes(letter) && cipherData.decMap[k] === letter;
+        });
+        if (isCorrectMapped) btn.classList.add('correct-mapped');
+        btn.onclick = () => {
+          if (!selectedEncLetter || isCorrectMapped) return;
+          // Remove old assignment of this letter
+          Object.keys(prog.userMap).forEach(k => { if (prog.userMap[k] === letter) delete prog.userMap[k]; });
+          prog.userMap[selectedEncLetter] = letter;
+          selectedEncLetter = null;
+          if (isComplete()) { prog.finished = true; }
+          saveProgress('cipher', prog);
+          render();
+        };
+        keyboard.appendChild(btn);
+      });
+    };
+    updateKeyboard();
+    area.appendChild(keyboard);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'back-btn';
+    clearBtn.style.marginTop = '12px';
+    clearBtn.textContent = 'Clear Selection';
+    clearBtn.onclick = () => { selectedEncLetter = null; updateDisplay(); updateKeyboard(); };
+    area.appendChild(clearBtn);
+
+    content.appendChild(area);
+  }
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// GAME 3: CHRONICLE
+// ═══════════════════════════════════════════════
+function renderChronicle() {
+  howToPlay(`
+    <strong>Five historical events</strong> are shuffled below. Your job is to arrange them in <strong>chronological order</strong> — earliest at the top, most recent at the bottom.<br><br>
+    <strong>Drag and drop</strong> the events to reorder them, or use the arrow buttons.<br><br>
+    Hit <strong>Submit Order</strong> when you're ready. You get <strong>3 attempts</strong> per round — each wrong attempt reveals which events are correctly placed.<br><br>
+    There are 5 rounds of increasing difficulty. A new set of events every <strong>Monday</strong>.
+  `, startChronicle);
+}
+
+function startChronicle() {
+  const puzzle = CHRONICLE_POOL[getWeekIndex(CHRONICLE_POOL.length)];
+  const prog = loadProgress('chronicle') || { round: 0, scores: [], finished: false };
+  const content = document.getElementById('game-content');
+
+  function startRound(roundIdx) {
+    if (roundIdx >= puzzle.events.length) {
+      prog.finished = true;
+      saveProgress('chronicle', prog);
+      const total = prog.scores.reduce((a, b) => a + b, 0);
+      content.innerHTML = '';
+      const area = document.createElement('div');
+      area.className = 'game-area';
+      area.appendChild(scoreBar(prog.scores));
+      area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Historian!' : 'Keep studying!',
+        `${total} out of ${puzzle.events.length * 3} points`, 'New events every Monday'));
+      content.appendChild(area);
+      return;
+    }
+
+    // For chronicle, show all events at once in shuffled order
+    const correctOrder = [...puzzle.events].slice(0, roundIdx + 2); // Add more events as rounds progress
+    const toSortCount = Math.min(roundIdx + 3, puzzle.events.length);
+    const toSort = puzzle.events.slice(0, toSortCount);
+
+    // Shuffle for this round
+    const seed = getWeekIndex(9999) + roundIdx * 13 + 5;
+    const shuffled = [...toSort];
+    let s = seed;
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = Math.abs(s) % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    let attempts = 0;
+    const maxAttempts = 3;
+    let currentOrder = [...shuffled];
+    let correctPositions = new Set();
+
+    content.innerHTML = '';
+    const area = document.createElement('div');
+    area.className = 'game-area';
+
+    area.appendChild(roundProgress(prog.scores, puzzle.events.length));
+    const roundLbl = document.createElement('div');
+    roundLbl.className = 'prompt-label';
+    roundLbl.textContent = `Round ${roundIdx + 1} — Order ${toSort.length} events chronologically`;
+    area.appendChild(roundLbl);
+
+    const attLbl = document.createElement('div');
+    attLbl.style.cssText = 'font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px;';
+    attLbl.textContent = `Attempts: ${attempts}/${maxAttempts}`;
+    area.appendChild(attLbl);
+
+    const fb = document.createElement('div');
+    fb.id = 'chronicle-fb';
+    area.appendChild(fb);
+
+    const evtList = document.createElement('div');
+    evtList.className = 'chronicle-events';
+    area.appendChild(evtList);
+
+    let dragging = null;
+
+    function renderEvents() {
+      evtList.innerHTML = '';
+      currentOrder.forEach((evt, i) => {
+        const row = document.createElement('div');
+        row.className = 'chronicle-event';
+        if (correctPositions.has(i)) row.classList.add('correct-pos');
+
+        row.draggable = !correctPositions.has(i);
+        row.innerHTML = `<span class="event-handle">⠿</span><span class="event-num">${i + 1}</span><span>${evt.text}</span>`;
+
+        row.addEventListener('dragstart', () => { dragging = i; row.classList.add('dragging'); });
+        row.addEventListener('dragend', () => { row.classList.remove('dragging'); dragging = null; renderEvents(); });
+        row.addEventListener('dragover', e => { e.preventDefault(); });
+        row.addEventListener('drop', e => {
+          e.preventDefault();
+          if (dragging !== null && dragging !== i) {
+            const newOrder = [...currentOrder];
+            const [removed] = newOrder.splice(dragging, 1);
+            newOrder.splice(i, 0, removed);
+            currentOrder = newOrder;
+            renderEvents();
+          }
+        });
+
+        // Move buttons
+        const btnWrap = document.createElement('div');
+        btnWrap.style.cssText = 'display:flex;gap:4px;margin-left:auto;flex-shrink:0;';
+        if (i > 0 && !correctPositions.has(i)) {
+          const up = document.createElement('button');
+          up.textContent = '↑';
+          up.style.cssText = 'padding:2px 8px;background:var(--paper3);border:1px solid var(--border);cursor:pointer;font-size:12px;';
+          up.onclick = () => { [currentOrder[i], currentOrder[i-1]] = [currentOrder[i-1], currentOrder[i]]; renderEvents(); };
+          btnWrap.appendChild(up);
+        }
+        if (i < currentOrder.length - 1 && !correctPositions.has(i)) {
+          const dn = document.createElement('button');
+          dn.textContent = '↓';
+          dn.style.cssText = 'padding:2px 8px;background:var(--paper3);border:1px solid var(--border);cursor:pointer;font-size:12px;';
+          dn.onclick = () => { [currentOrder[i], currentOrder[i+1]] = [currentOrder[i+1], currentOrder[i]]; renderEvents(); };
+          btnWrap.appendChild(dn);
+        }
+        row.appendChild(btnWrap);
+        evtList.appendChild(row);
+      });
+    }
+    renderEvents();
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'submit-btn';
+    submitBtn.style.marginBottom = '16px';
+    submitBtn.textContent = 'Submit Order';
+    submitBtn.onclick = () => {
+      attempts++;
+      attLbl.textContent = `Attempts: ${attempts}/${maxAttempts}`;
+      const correct = currentOrder.every((evt, i) => evt.year === toSort[i].year);
+      correctPositions = new Set();
+      currentOrder.forEach((evt, i) => { if (evt.year === toSort[i].year) correctPositions.add(i); });
+      renderEvents();
+
+      if (correct) {
+        const pts = Math.max(0, maxAttempts - attempts + 1);
+        prog.scores.push(pts);
+        prog.round = roundIdx + 1;
+        saveProgress('chronicle', prog);
+        fb.className = 'feedback-msg good';
+        fb.textContent = `✓ Correct! +${pts} point${pts !== 1 ? 's' : ''}`;
+        submitBtn.disabled = true;
+        setTimeout(() => startRound(roundIdx + 1), 1200);
+      } else if (attempts >= maxAttempts) {
+        prog.scores.push(0);
+        prog.round = roundIdx + 1;
+        saveProgress('chronicle', prog);
+        fb.className = 'feedback-msg bad';
+        fb.textContent = `Out of attempts. The correct order was by year.`;
+        submitBtn.disabled = true;
+        // Show years
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:11px;color:var(--muted);margin-top:8px;';
+        toSort.sort((a,b)=>a.year-b.year).forEach(e => {
+          hint.innerHTML += `<div style="padding:3px 0">${e.year}: ${e.text.substring(0,50)}…</div>`;
+        });
+        area.appendChild(hint);
+        setTimeout(() => startRound(roundIdx + 1), 2500);
+      } else {
+        fb.className = 'feedback-msg bad';
+        fb.textContent = `Not quite. ${correctPositions.size}/${toSort.length} in the right position.`;
+      }
+    };
+    area.insertBefore(submitBtn, evtList);
+    content.appendChild(area);
+  }
+
+  if (prog.finished) {
+    const total = prog.scores.reduce((a, b) => a + b, 0);
+    const area = document.createElement('div');
+    area.className = 'game-area';
+    area.appendChild(scoreBar(prog.scores));
+    area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Historian!' : 'Keep studying!',
+      `${total} out of ${puzzle.events.length * 3} points`, 'New events every Monday'));
+    document.getElementById('game-content').appendChild(area);
+  } else {
+    startRound(prog.round);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// GAME 4: WAVELENGTH
+// ═══════════════════════════════════════════════
+function renderWavelength() {
+  howToPlay(`
+    A word appears on screen. You must place it on the <strong>correct position</strong> on a spectrum between two opposites.<br><br>
+    For example: where does <strong>WARM</strong> fall between <em>Freezing</em> and <em>Boiling</em>?<br><br>
+    Drag the slider to your answer, then submit. The <strong>closer you are</strong> to the target, the more points you earn (up to 3 per round).<br><br>
+    5 rounds · New spectrums every <strong>Monday</strong>.
+  `, startWavelength);
+}
+
+function startWavelength() {
+  const puzzle = WAVELENGTH_POOL[getWeekIndex(WAVELENGTH_POOL.length)];
+  const prog = loadProgress('wavelength') || { round: 0, scores: [], finished: false };
+  const content = document.getElementById('game-content');
+
+  function startRound(roundIdx) {
+    if (roundIdx >= puzzle.rounds.length) {
+      prog.finished = true;
+      saveProgress('wavelength', prog);
+      const total = prog.scores.reduce((a, b) => a + b, 0);
+      content.innerHTML = '';
+      const area = document.createElement('div');
+      area.className = 'game-area';
+      area.appendChild(scoreBar(prog.scores));
+      area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday'));
+      content.appendChild(area);
+      return;
+    }
+
+    const round = puzzle.rounds[roundIdx];
+    content.innerHTML = '';
+    const area = document.createElement('div');
+    area.className = 'game-area';
+
+    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length));
+
+    const roundLbl = document.createElement('div');
+    roundLbl.className = 'prompt-label';
+    roundLbl.textContent = `Round ${roundIdx + 1} of ${puzzle.rounds.length}`;
+    area.appendChild(roundLbl);
+
+    const wordDiv = document.createElement('div');
+    wordDiv.className = 'big-prompt';
+    wordDiv.innerHTML = `Where does <strong>${round.word}</strong> fall on this spectrum?`;
+    area.appendChild(wordDiv);
+
+    const specWrap = document.createElement('div');
+    const specBar = document.createElement('div');
+    specBar.className = 'spectrum-bar';
+    specWrap.appendChild(specBar);
+
+    const labels = document.createElement('div');
+    labels.className = 'spectrum-labels';
+    labels.innerHTML = `<span>${round.left}</span><span>${round.right}</span>`;
+    specWrap.appendChild(labels);
+    area.appendChild(specWrap);
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 0; slider.max = 100; slider.value = 50;
+    slider.className = 'spectrum-slider';
+
+    const marker = document.createElement('div');
+    marker.className = 'spectrum-guess-marker';
+    marker.style.left = '50%';
+    specBar.appendChild(marker);
+
+    slider.oninput = () => {
+      marker.style.left = slider.value + '%';
+    };
+    area.appendChild(slider);
+
+    const fb = document.createElement('div');
+    fb.id = 'wl-fb';
+    area.appendChild(fb);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'submit-btn';
+    submitBtn.textContent = 'Lock It In';
+    submitBtn.onclick = () => {
+      const guess = parseInt(slider.value);
+      const diff = Math.abs(guess - round.target);
+      let pts = 0;
+      let msg = '';
+      if (diff <= round.tolerance * 0.33) { pts = 3; msg = '🎯 Right on!'; }
+      else if (diff <= round.tolerance * 0.66) { pts = 2; msg = '✓ Close!'; }
+      else if (diff <= round.tolerance) { pts = 1; msg = '≈ Nearby'; }
+      else { pts = 0; msg = `✗ Off — target was ${round.target <= 30 ? 'near the left' : round.target >= 70 ? 'near the right' : 'near the center'}`; }
+
+      // Show target
+      const targetMarker = document.createElement('div');
+      targetMarker.className = 'spectrum-target';
+      targetMarker.style.left = round.target + '%';
+      specBar.appendChild(targetMarker);
+
+      fb.className = 'feedback-msg ' + (pts > 0 ? 'good' : 'bad');
+      fb.textContent = `${msg} · +${pts} point${pts !== 1 ? 's' : ''}`;
+      slider.disabled = true;
+      submitBtn.disabled = true;
+
+      prog.scores.push(pts);
+      prog.round = roundIdx + 1;
+      saveProgress('wavelength', prog);
+      setTimeout(() => startRound(roundIdx + 1), 1400);
+    };
+    area.appendChild(submitBtn);
+    content.appendChild(area);
+  }
+
+  if (prog.finished) {
+    const total = prog.scores.reduce((a, b) => a + b, 0);
+    const area = document.createElement('div');
+    area.className = 'game-area';
+    area.appendChild(scoreBar(prog.scores));
+    area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday'));
+    document.getElementById('game-content').appendChild(area);
+  } else {
+    startRound(prog.round);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// GAME 5: MIMIC
+// ═══════════════════════════════════════════════
+function renderMimic() {
+  howToPlay(`
+    A hidden <strong>5-letter word</strong> must be found using clues. Each round has <strong>3 clues</strong> of increasing specificity.<br><br>
+    You may guess after any clue. The fewer clues you use, the more points you earn:<br>
+    → After clue 1: <strong>3 points</strong><br>
+    → After clue 2: <strong>2 points</strong><br>
+    → After clue 3: <strong>1 point</strong><br><br>
+    You get <strong>2 guesses per clue level</strong>. Squares turn <span style="color:var(--sage)">green</span> for correct, <span style="color:var(--gold)">gold</span> for wrong-position, grey for absent.<br><br>
+    5 rounds · New words every <strong>Monday</strong>.
+  `, startMimic);
+}
+
+function startMimic() {
+  const puzzle = MIMIC_POOL[getWeekIndex(MIMIC_POOL.length)];
+  const prog = loadProgress('mimic') || { round: 0, scores: [], finished: false };
+  const content = document.getElementById('game-content');
+
+  function startRound(roundIdx) {
+    if (roundIdx >= puzzle.rounds.length) {
+      prog.finished = true;
+      saveProgress('mimic', prog);
+      const total = prog.scores.reduce((a, b) => a + b, 0);
+      content.innerHTML = '';
+      const area = document.createElement('div');
+      area.className = 'game-area';
+      area.appendChild(scoreBar(prog.scores));
+      area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday'));
+      content.appendChild(area);
+      return;
+    }
+
+    const round = puzzle.rounds[roundIdx];
+    const word = round.word;
+    let clueLevel = 0;
+    let guessesThisLevel = 0;
+    const maxGuessesPerLevel = 2;
+    let allGuesses = [];
+    let pts = 3;
+
+    content.innerHTML = '';
+    const area = document.createElement('div');
+    area.className = 'game-area';
+
+    area.appendChild(roundProgress(prog.scores, puzzle.rounds.length));
+
+    const rl = document.createElement('div');
+    rl.className = 'prompt-label';
+    rl.textContent = `Round ${roundIdx + 1} · 5-letter word`;
+    area.appendChild(rl);
+
+    const diffDiv = document.createElement('div');
+    diffDiv.className = 'mimic-difficulty easy';
+    diffDiv.textContent = 'CLUE 1 (easy) · 3 pts if solved now';
+    area.appendChild(diffDiv);
+
+    const clueDiv = document.createElement('div');
+    clueDiv.className = 'big-prompt';
+    clueDiv.textContent = round.clues[0];
+    area.appendChild(clueDiv);
+
+    const guessesArea = document.createElement('div');
+    guessesArea.id = 'mimic-guesses';
+    area.appendChild(guessesArea);
+
+    const fb = document.createElement('div');
+    fb.id = 'mimic-fb';
+    area.appendChild(fb);
+
+    const inputRow = document.createElement('div');
+    inputRow.className = 'input-row';
+    const inp = document.createElement('input');
+    inp.className = 'game-input';
+    inp.maxLength = 5;
+    inp.placeholder = 'Enter 5-letter word…';
+    inp.style.textTransform = 'uppercase';
+    inp.oninput = () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, ''); };
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'submit-btn';
+    submitBtn.textContent = 'Guess';
+    inputRow.appendChild(inp);
+    inputRow.appendChild(submitBtn);
+    area.appendChild(inputRow);
+
+    const nextClueBtn = document.createElement('button');
+    nextClueBtn.className = 'back-btn';
+    nextClueBtn.style.marginTop = '8px';
+    nextClueBtn.textContent = 'Get Next Clue (costs 1 pt)';
+    nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
+    area.appendChild(nextClueBtn);
+
+    function renderGuessRow(guess) {
+      const row = document.createElement('div');
+      row.className = 'mimic-blanks';
+      row.style.marginBottom = '8px';
+      for (let i = 0; i < 5; i++) {
+        const box = document.createElement('div');
+        box.className = 'letter-box';
+        const g = guess[i] || '';
+        const w = word[i];
+        box.textContent = g;
+        if (g) {
+          if (g === w) box.classList.add('correct');
+          else if (word.includes(g)) box.classList.add('present');
+          else box.classList.add('absent');
+        }
+        row.appendChild(box);
+      }
+      guessesArea.appendChild(row);
+    }
+
+    function updateDiffLabel() {
+      const labels = ['CLUE 1 (easy) · 3 pts if solved now', 'CLUE 2 (medium) · 2 pts if solved now', 'CLUE 3 (hard) · 1 pt if solved now'];
+      const classes = ['easy', 'medium', 'hard'];
+      diffDiv.className = 'mimic-difficulty ' + classes[clueLevel];
+      diffDiv.textContent = labels[clueLevel];
+    }
+
+    function doGuess() {
+      const guess = inp.value.trim().toUpperCase();
+      if (guess.length !== 5) { fb.className = 'feedback-msg bad'; fb.textContent = 'Enter a 5-letter word.'; return; }
+      guessesThisLevel++;
+      allGuesses.push(guess);
+      renderGuessRow(guess);
+      inp.value = '';
+
+      if (guess === word) {
+        fb.className = 'feedback-msg good';
+        fb.textContent = `✓ ${word}! +${pts} point${pts !== 1 ? 's' : ''}`;
+        inputRow.style.display = 'none';
+        nextClueBtn.style.display = 'none';
+        prog.scores.push(pts);
+        prog.round = roundIdx + 1;
+        saveProgress('mimic', prog);
+        setTimeout(() => startRound(roundIdx + 1), 1400);
+        return;
+      }
+
+      if (guessesThisLevel >= maxGuessesPerLevel) {
+        if (clueLevel < 2) {
+          clueLevel++;
+          pts = Math.max(1, 3 - clueLevel);
+          guessesThisLevel = 0;
+          clueDiv.textContent = round.clues[clueLevel];
+          updateDiffLabel();
+          nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
+          fb.className = 'feedback-msg bad';
+          fb.textContent = `Next clue unlocked.`;
+        } else {
+          // Out of chances
+          fb.className = 'feedback-msg bad';
+          fb.textContent = `Word was: ${word}`;
+          inputRow.style.display = 'none';
+          nextClueBtn.style.display = 'none';
+          prog.scores.push(0);
+          prog.round = roundIdx + 1;
+          saveProgress('mimic', prog);
+          setTimeout(() => startRound(roundIdx + 1), 1800);
+        }
+      } else {
+        fb.className = 'feedback-msg bad';
+        fb.textContent = `Not quite. ${maxGuessesPerLevel - guessesThisLevel} guess${maxGuessesPerLevel - guessesThisLevel !== 1 ? 'es' : ''} left at this clue level.`;
+      }
+    }
+
+    submitBtn.onclick = doGuess;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') doGuess(); });
+
+    nextClueBtn.onclick = () => {
+      if (clueLevel >= 2) return;
+      clueLevel++;
+      pts = Math.max(1, 3 - clueLevel);
+      guessesThisLevel = 0;
+      clueDiv.textContent = round.clues[clueLevel];
+      updateDiffLabel();
+      nextClueBtn.style.display = clueLevel >= 2 ? 'none' : 'block';
+      fb.className = 'feedback-msg';
+      fb.textContent = '';
+    };
+
+    content.appendChild(area);
+  }
+
+  if (prog.finished) {
+    const total = prog.scores.reduce((a, b) => a + b, 0);
+    const area = document.createElement('div');
+    area.className = 'game-area';
+    area.appendChild(scoreBar(prog.scores));
+    area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday'));
+    document.getElementById('game-content').appendChild(area);
+  } else {
+    startRound(prog.round);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildHub();
+</script>
+<script src="../shared/recommendations.js"></script>
+</body>
+</html>
