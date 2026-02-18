@@ -80,95 +80,125 @@
         musicPlaying = true;
         musicNodes = [];
 
-        // Master volume for music
+        // Master volume
         const master = ctx.createGain();
         master.gain.value = 0;
-        master.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 2);
+        master.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 1.5);
         master.connect(ctx.destination);
         musicNodes.push(master);
 
-        // Warm pad - two detuned oscillators for thickness
-        function makePad(freq, detune) {
-            const osc = ctx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            osc.detune.value = detune || 0;
+        // Plucky note function (like a marimba/xylophone)
+        function pluck(freq, time, vol, dur) {
+            const o = ctx.createOscillator();
             const g = ctx.createGain();
-            g.gain.value = 0.5;
-            osc.connect(g);
+            const o2 = ctx.createOscillator();
+            const g2 = ctx.createGain();
+            // Main tone
+            o.type = 'triangle';
+            o.frequency.value = freq;
+            g.gain.setValueAtTime((vol || 0.3), time);
+            g.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.5));
+            o.connect(g);
             g.connect(master);
-            osc.start();
-            musicNodes.push(osc, g);
-            return osc;
+            o.start(time);
+            o.stop(time + (dur || 0.5));
+            // Octave harmonic for brightness
+            o2.type = 'sine';
+            o2.frequency.value = freq * 2;
+            g2.gain.setValueAtTime((vol || 0.3) * 0.15, time);
+            g2.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.5) * 0.6);
+            o2.connect(g2);
+            g2.connect(master);
+            o2.start(time);
+            o2.stop(time + (dur || 0.5));
         }
 
-        // Chord progression: Cmaj7 → Am7 → Fmaj7 → G7 (gentle jazz cycle)
-        const chords = [
-            [261.6, 329.6, 392.0, 493.9],  // Cmaj7
-            [220.0, 261.6, 329.6, 392.0],  // Am7
-            [174.6, 220.0, 261.6, 329.6],  // Fmaj7
-            [196.0, 246.9, 293.7, 349.2],  // G7
+        // Soft pad for warmth underneath
+        function startPad(freq) {
+            const o = ctx.createOscillator();
+            o.type = 'sine';
+            o.frequency.value = freq;
+            const g = ctx.createGain();
+            g.gain.value = 0.08;
+            o.connect(g);
+            g.connect(master);
+            o.start();
+            musicNodes.push(o, g);
+            return { osc: o, gain: g };
+        }
+        const pad1 = startPad(261.6);
+        const pad2 = startPad(329.6);
+
+        // Melody notes (C major pentatonic, fun and bouncy)
+        // Two 8-bar phrases that alternate
+        const melodyA = [
+            // phrase 1: playful ascending
+            {n: 523.3, d: 0.3}, {n: 587.3, d: 0.3}, {n: 659.3, d: 0.6},
+            {n: 0, d: 0.3},     {n: 784.0, d: 0.3}, {n: 659.3, d: 0.6},
+            {n: 523.3, d: 0.3}, {n: 587.3, d: 0.6}, {n: 0, d: 0.3},
+            {n: 784.0, d: 0.3}, {n: 880.0, d: 0.3}, {n: 784.0, d: 0.6},
+        ];
+        const melodyB = [
+            // phrase 2: bouncy descending
+            {n: 880.0, d: 0.3}, {n: 784.0, d: 0.3}, {n: 659.3, d: 0.6},
+            {n: 0, d: 0.3},     {n: 587.3, d: 0.3}, {n: 523.3, d: 0.6},
+            {n: 659.3, d: 0.3}, {n: 784.0, d: 0.3}, {n: 659.3, d: 0.3}, {n: 587.3, d: 0.3},
+            {n: 523.3, d: 0.9}, {n: 0, d: 0.3},
+        ];
+        const melodies = [melodyA, melodyB];
+
+        // Bass line (root notes, bouncy rhythm)
+        const bassLine = [
+            {n: 130.8, d: 0.4}, {n: 0, d: 0.2}, {n: 130.8, d: 0.2}, {n: 0, d: 0.4},
+            {n: 110.0, d: 0.4}, {n: 0, d: 0.2}, {n: 110.0, d: 0.2}, {n: 0, d: 0.4},
+            {n: 87.3, d: 0.4},  {n: 0, d: 0.2}, {n: 87.3, d: 0.2},  {n: 0, d: 0.4},
+            {n: 98.0, d: 0.4},  {n: 0, d: 0.2}, {n: 98.0, d: 0.2},  {n: 0, d: 0.4},
         ];
 
-        const pads = [makePad(261.6, -5), makePad(329.6, 5), makePad(392.0, -3), makePad(493.9, 3)];
-        let chordIdx = 0;
+        // Chord pads follow: C → Am → F → G
+        const chordProg = [
+            [261.6, 329.6],  // C
+            [220.0, 329.6],  // Am
+            [174.6, 261.6],  // F
+            [196.0, 293.7],  // G
+        ];
 
-        // Slowly morph between chords
-        function nextChord() {
+        let melodyIdx = 0;
+        let loopTimeout;
+
+        function playLoop() {
             if (!musicPlaying) return;
-            chordIdx = (chordIdx + 1) % chords.length;
-            const chord = chords[chordIdx];
-            const t = getAudio().currentTime;
-            pads.forEach((osc, i) => {
-                osc.frequency.linearRampToValueAtTime(chord[i], t + 3);
+            const t0 = ctx.currentTime + 0.05;
+            const melody = melodies[melodyIdx % melodies.length];
+            melodyIdx++;
+
+            // Schedule melody
+            let mt = t0;
+            melody.forEach(note => {
+                if (note.n > 0) pluck(note.n, mt, 0.25, note.d + 0.15);
+                mt += note.d;
             });
-        }
-        const chordInterval = setInterval(nextChord, 6000);
-        musicNodes.push({ stop() { clearInterval(chordInterval); } });
+            const loopLen = mt - t0;
 
-        // Gentle high sparkle notes (random pentatonic)
-        const sparkleNotes = [523, 587, 659, 784, 880, 1047, 1175];
-        function sparkle() {
-            if (!musicPlaying) return;
-            const ctx2 = getAudio();
-            const t = ctx2.currentTime;
-            const freq = sparkleNotes[Math.floor(Math.random() * sparkleNotes.length)];
-            const osc = ctx2.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            const g = ctx2.createGain();
-            g.gain.setValueAtTime(0.03, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 2);
-            osc.connect(g);
-            g.connect(master);
-            osc.start(t);
-            osc.stop(t + 2);
-            // Random interval 2-5s
-            setTimeout(sparkle, 2000 + Math.random() * 3000);
-        }
-        setTimeout(sparkle, 1000);
+            // Schedule bass under melody
+            let bt = t0;
+            bassLine.forEach(note => {
+                if (bt - t0 >= loopLen) return;
+                if (note.n > 0) pluck(note.n, bt, 0.2, note.d + 0.1);
+                bt += note.d;
+            });
 
-        // Very subtle low bass pulse
-        const bass = ctx.createOscillator();
-        bass.type = 'sine';
-        bass.frequency.value = 65.4; // Low C
-        const bassGain = ctx.createGain();
-        bassGain.gain.value = 0.3;
-        bass.connect(bassGain);
-        bassGain.connect(master);
-        bass.start();
-        musicNodes.push(bass, bassGain);
+            // Move pad chords (one chord per loop)
+            const chord = chordProg[melodyIdx % chordProg.length];
+            pad1.osc.frequency.linearRampToValueAtTime(chord[0], t0 + 1);
+            pad2.osc.frequency.linearRampToValueAtTime(chord[1], t0 + 1);
 
-        // Bass follows root of chord
-        const bassRoots = [65.4, 55.0, 43.7, 49.0];
-        let bassIdx = 0;
-        function nextBass() {
-            if (!musicPlaying) return;
-            bassIdx = (bassIdx + 1) % bassRoots.length;
-            bass.frequency.linearRampToValueAtTime(bassRoots[bassIdx], getAudio().currentTime + 2);
+            // Schedule next loop
+            loopTimeout = setTimeout(playLoop, loopLen * 1000);
         }
-        const bassInterval = setInterval(nextBass, 6000);
-        musicNodes.push({ stop() { clearInterval(bassInterval); } });
+        musicNodes.push({ stop() { clearTimeout(loopTimeout); } });
+
+        playLoop();
     }
 
     function stopMusic() {
