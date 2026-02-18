@@ -66,10 +66,10 @@ const QUESTIONS = [
   },
   {
     question: "What is the likelihood of being audited by the IRS?",
-    answer: "About 1 in 250",
-    options: ["1 in 10", "1 in 250", "1 in 5,000", "1 in 50,000"],
+    answer: "About 1 in 500",
+    options: ["1 in 10", "1 in 500", "1 in 5,000", "1 in 50,000"],
     correctIndex: 1,
-    fact: "The audit rate has been dropping for years. If you earn under $200K, your odds are even lower — about 1 in 500.",
+    fact: "The audit rate has been dropping for years — it's fallen from about 1% in 2010 to roughly 0.2% today. Higher earners face much higher odds.",
     category: "Everyday Life"
   },
   {
@@ -196,10 +196,10 @@ const QUESTIONS = [
   },
   {
     question: "What is the likelihood of a white Christmas in New York City?",
-    answer: "About 22%",
-    options: ["About 5%", "About 22%", "About 50%", "About 75%"],
+    answer: "About 12%",
+    options: ["About 5%", "About 12%", "About 50%", "About 75%"],
     correctIndex: 1,
-    fact: "A 'white Christmas' requires at least 1 inch of snow on the ground. NYC's odds have been declining due to warming trends.",
+    fact: "A 'white Christmas' requires at least 1 inch of snow on the ground. NYC's odds have been declining due to warming trends — NOAA puts it at around 12-13%.",
     category: "Nature & Animals"
   },
   {
@@ -392,10 +392,10 @@ const QUESTIONS = [
   },
   {
     question: "What is the likelihood of a US high school football player making the NFL?",
-    answer: "About 0.08%",
-    options: ["About 0.008%", "About 0.08%", "About 2%", "About 10%"],
+    answer: "About 0.03%",
+    options: ["About 0.003%", "About 0.03%", "About 2%", "About 10%"],
     correctIndex: 1,
-    fact: "Of the roughly 1 million high school players, only about 250 get drafted each year. The funnel is incredibly narrow.",
+    fact: "Of the roughly 1 million high school players, only about 250 get drafted each year — and even fewer make a final roster. The funnel is incredibly narrow.",
     category: "Sports"
   },
   {
@@ -664,7 +664,7 @@ const QUESTIONS = [
     answer: "About 10%",
     options: ["About 1%", "About 10%", "About 25%", "About 50%"],
     correctIndex: 1,
-    fact: "With 46 presidents born on 42 different dates, you have about a 10% chance of sharing a birthday with one. No president has ever been born in June!",
+    fact: "With 46 presidents born on 42 different dates, you have about a 10% chance of sharing a birthday with one. June was the last month to get a presidential birthday — George H.W. Bush, born June 12!",
     category: "History & Records"
   },
   {
@@ -737,7 +737,7 @@ const QUESTIONS = [
     answer: "Essentially 0% — it's a myth",
     options: ["About 8 per year", "About 2 per year", "About 1 per year", "Essentially 0% — it's a myth"],
     correctIndex: 3,
-    fact: "The 'swallowing 8 spiders a year' statistic was fabricated in 1993 to show how easily fake facts spread on the internet. Spiders avoid sleeping humans — the vibrations scare them!",
+    fact: "The 'swallowing 8 spiders a year' claim has no scientific basis whatsoever. Spiders avoid sleeping humans — the vibrations from breathing and heartbeat scare them away!",
     category: "Human Quirks"
   },
   {
@@ -811,7 +811,7 @@ const QUESTIONS = [
     answer: "About 1 in 6,000",
     options: ["Completely impossible", "1 in 6,000", "1 in 1 million", "1 in 100 million"],
     correctIndex: 1,
-    fact: "Physicist Daniel Murray calculated that an American penny can land on its edge about 1 in 6,000 times when spun on a flat surface. It's rare but very much possible!",
+    fact: "A computational model by Murray and Teare found that an American nickel can land on its edge about 1 in 6,000 times. Thinner coins like pennies have even lower odds!",
     category: "Money & Luck"
   },
   {
