@@ -4,16 +4,12 @@
  * Or it auto-injects if it detects known end-screen patterns.
  */
 (function() {
+  // Only include games that are on the landing page (published)
   const ALL_GAMES = [
     { name: 'Heavy Eye',    emoji: '⚖️', path: '/heavyeye/',    color: '#f59e0b', desc: 'Guess the weight' },
     { name: 'Circle',       emoji: '✏️', path: '/circle/',      color: '#e2e8f0', desc: 'Draw perfection' },
     { name: 'BreakPoint',   emoji: '🃏', path: '/breakpoint/',  color: '#ef4444', desc: 'Card duel vs AI' },
     { name: 'Likelihood',   emoji: '🎲', path: '/likelihood/',  color: '#a78bfa', desc: 'Probability trivia' },
-    { name: 'Fill or Spill',emoji: '🫗', path: '/fillOrSpill/', color: '#3b82f6', desc: '2-player fill game' },
-    { name: 'Zoom Out',     emoji: '🔍', path: '/zoomout/',     color: '#10b981', desc: 'Guess the zoomed image' },
-    { name: 'Magnitude',    emoji: '🏢', path: '/magnitude/',   color: '#f97316', desc: 'Survive the quake' },
-    { name: 'Shatterform',  emoji: '🔷', path: '/shatterform/', color: '#06b6d4', desc: 'Hex grow & shatter' },
-    { name: 'Catastrophe',  emoji: '🐱', path: '/catastrophe/', color: '#ec4899', desc: 'Cat chaos' },
   ];
 
   // Determine current game from path
