@@ -24,6 +24,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0e0e12;--surface:#1a1a24;--text:#f0f0f0;--muted:#888}
 body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.about-link{position:fixed;top:16px;right:16px;z-index:9999;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:20px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);transition:all 0.2s}
+.about-link:hover{color:#fff;border-color:rgba(139,92,246,0.5);background:rgba(139,92,246,0.15)}
 a{text-decoration:none;color:inherit}
 
 /* HERO */
@@ -186,6 +188,8 @@ footer p+p{margin-top:.3rem}
   <meta name="theme-color" content="#0e0e12">
 </head>
 <body>
+
+<a href="/about/" class="about-link">About</a>
 
 <!-- AD PLACEHOLDER: Top banner (~90px, leaderboard 728x90) -->
 <!-- <div class="ad-slot ad-slot-top" style="max-width:728px;margin:0 auto;height:90px;"></div> -->
