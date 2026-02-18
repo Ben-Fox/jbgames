@@ -29,6 +29,12 @@
       border: 'rgba(167,139,250,.25)',
       thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><text x="40" y="28" text-anchor="middle" font-size="22" fill="rgba(167,139,250,.3)" font-weight="700">%</text><rect x="12" y="35" width="8" height="14" rx="1.5" fill="rgba(167,139,250,.4)"/><rect x="24" y="28" width="8" height="21" rx="1.5" fill="rgba(167,139,250,.5)"/><rect x="36" y="22" width="8" height="27" rx="1.5" fill="rgba(167,139,250,.6)"/><rect x="48" y="32" width="8" height="17" rx="1.5" fill="rgba(167,139,250,.45)"/><rect x="60" y="38" width="8" height="11" rx="1.5" fill="rgba(167,139,250,.35)"/></svg>'
     },
+    {
+      name: 'Fivefold', path: '/fivefold/', textColor: '#1a1814',
+      gradient: 'linear-gradient(160deg,#f5f0e8 0%,#ede8db 40%,#e4ddd0 100%)',
+      border: 'rgba(184,134,11,.3)',
+      thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><text x="22" y="30" font-size="16" fill="#1a1814" font-weight="700" font-family="serif">Five</text><text x="52" y="30" font-size="16" fill="#b8860b" font-weight="700" font-family="serif">fold</text><rect x="8" y="38" width="12" height="16" rx="2" fill="#ede8db" stroke="rgba(26,24,20,.15)"/><rect x="8" y="38" width="12" height="2" fill="#b8860b"/><rect x="23" y="38" width="12" height="16" rx="2" fill="#ede8db" stroke="rgba(26,24,20,.15)"/><rect x="23" y="38" width="12" height="2" fill="#4a6741"/><rect x="38" y="38" width="12" height="16" rx="2" fill="#ede8db" stroke="rgba(26,24,20,.15)"/><rect x="38" y="38" width="12" height="2" fill="#3d4f5c"/><rect x="53" y="38" width="12" height="16" rx="2" fill="#ede8db" stroke="rgba(26,24,20,.15)"/><rect x="53" y="38" width="12" height="2" fill="#8b3a2a"/><rect x="68" y="38" width="12" height="16" rx="2" fill="#ede8db" stroke="rgba(26,24,20,.15)"/><rect x="68" y="38" width="12" height="2" fill="#6b3a7d"/></svg>'
+    },
   ];
 
   const currentPath = window.location.pathname.replace(/\/+$/, '/');
@@ -47,7 +53,7 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'bs-rec-cards';
     wrapper.innerHTML = '<div class="bs-rec-label">Try next</div><div class="bs-rec-row">' +
-      games.map(g => `<a href="${g.path}" class="bs-rec-card" style="background:${g.gradient};border-color:${g.border}">
+      games.map(g => `<a href="${g.path}" class="bs-rec-card" style="background:${g.gradient};border-color:${g.border}${g.textColor ? ';color:'+g.textColor : ''}">
         <div class="bs-rec-thumb">${g.thumb}</div>
         <span class="bs-rec-name">${g.name}</span>
       </a>`).join('') + '</div>';
