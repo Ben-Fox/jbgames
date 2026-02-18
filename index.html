@@ -210,9 +210,7 @@ footer p+p{margin-top:.3rem}
 <section class="games">
 
   <!-- Heavy Eye -->
-  <a href="/heavyeye/" class="card card--heavyeye">
-    <span class="card-badge">WEIGH</span>
-    <div class="thumb">
+  <a href="/heavyeye/" class="card card--heavyeye">    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Base (static, doesn't rock) -->
         <rect x="65" y="125" width="30" height="6" rx="3" fill="#d97706"/>
@@ -249,9 +247,7 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- Circle -->
-  <a href="/circle/" class="card card--circle">
-    <span class="card-badge">✏️</span>
-    <div class="thumb">
+  <a href="/circle/" class="card card--circle">    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Chalkboard grid dots -->
         <circle class="chalk-dot" cx="30" cy="30" r="1.5" fill="rgba(226,232,240,.3)"/>
@@ -277,10 +273,7 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- BreakPoint -->
-  <a href="/breakpoint/" class="card card--breakpoint">
-    <span class="card-badge">🃏</span>
-    <span class="card-hot">HOT</span>
-    <div class="thumb">
+  <a href="/breakpoint/" class="card card--breakpoint">    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <g transform="translate(80,70)">
           <!-- Card 1 - red -->
@@ -316,9 +309,7 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- Likelihood -->
-  <a href="/likelihood/" class="card card--likelihood">
-    <span class="card-badge">ODDS</span>
-    <div class="thumb">
+  <a href="/likelihood/" class="card card--likelihood">    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Big percentage -->
         <text x="80" y="50" text-anchor="middle" font-size="42" fill="#c4b5fd" font-family="'Space Grotesk',sans-serif" font-weight="700" class="pct-counter">73%</text>
@@ -399,6 +390,45 @@ footer p+p{margin-top:.3rem}
   <p>Made with brains by BrainSmacks</p>
   <p>© 2026 BrainSmacks. All games free to play.</p>
 </footer>
+
+<script>
+// Track game popularity & show HOT badge on most-played game
+(function(){
+  const KEY = 'brainsmacks_plays';
+  const cards = document.querySelectorAll('a.card[href]');
+  
+  // Load play counts
+  function getCounts(){ try{ return JSON.parse(localStorage.getItem(KEY))||{} }catch(e){ return {} } }
+  
+  // Track clicks
+  cards.forEach(function(card){
+    card.addEventListener('click', function(){
+      var counts = getCounts();
+      var game = card.getAttribute('href').replace(/\//g,'');
+      counts[game] = (counts[game]||0) + 1;
+      localStorage.setItem(KEY, JSON.stringify(counts));
+    });
+  });
+  
+  // Find most popular game and add HOT badge
+  var counts = getCounts();
+  var games = Object.keys(counts);
+  if(games.length > 0){
+    var top = games.reduce(function(a,b){ return counts[a]>counts[b]?a:b });
+    if(counts[top] >= 3){ // Only show after 3+ plays
+      cards.forEach(function(card){
+        var game = card.getAttribute('href').replace(/\//g,'');
+        if(game === top){
+          var badge = document.createElement('span');
+          badge.className = 'card-hot';
+          badge.textContent = 'HOT';
+          card.appendChild(badge);
+        }
+      });
+    }
+  }
+})();
+</script>
 
 </body>
 </html>
