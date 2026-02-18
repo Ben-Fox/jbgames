@@ -68,7 +68,7 @@
     position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
     font-family: 'Bangers', cursive; font-size: 36px; pointer-events: none;
     opacity: 0; z-index: 10; white-space: nowrap; text-align: center;
-    text-shadow: 0 0 20px rgba(0,0,0,0.8);
+    text-shadow: 0 0 20px rgba(0,0,0,0.8); transition: opacity 0.3s;
   }
   #comboDisplay {
     position: absolute; top: 90px; right: 20px; font-family: 'Bangers', cursive;
@@ -80,6 +80,17 @@
     font-family: 'Bangers', cursive; font-size: 20px; color: rgba(255,220,100,0.7);
     pointer-events: none; z-index: 5; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   }
+  #touchControls {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 140px;
+    z-index: 200; pointer-events: none;
+  }
+  .touch-btn {
+    position: absolute; width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(255,107,53,0.35); border: 2px solid rgba(255,107,53,0.6);
+    pointer-events: auto; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: rgba(255,255,255,0.8); user-select: none; -webkit-user-select: none;
+  }
+  .touch-btn:active { background: rgba(255,107,53,0.6); }
   @media (max-width: 600px) {
     #overlay h1 { font-size: 42px; letter-spacing: 3px; }
     #overlay p { font-size: 16px; }
@@ -92,12 +103,16 @@
     #warningBanner { font-size: 24px; }
     #comboDisplay { font-size: 28px; }
   }
+  @media (pointer: coarse) {
+    #touchControls { display: block; }
+  }
 </style>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#0e0e12">
 </head>
 <body>
-<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+<a href="../" style="position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.5);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🏠 Home</a>
+
 <div id="gameWrapper">
   <div id="topBar">
     <div id="scoreDisplay">SCORE: <span id="scoreVal">0</span></div>
@@ -113,7 +128,7 @@
     <h1>🐱 CATASTROPHE</h1>
     <div class="emoji-row">💥 🪴 🏺 🖼️ 🔥</div>
     <p>You are a cat. Destroy EVERYTHING.</p>
-    <p>Push, knock, scratch, pounce & cause chaos!</p>
+    <p>Push, knock, scratch, climb & cause chaos!</p>
     <p style="color:#ffdd00">120 seconds. Massive house. Maximum damage. GO!</p>
     <div class="control-hint">
       <span class="hint-badge">← → Move</span>
@@ -121,10 +136,18 @@
       <span class="hint-badge">E Push/Scratch</span>
       <span class="hint-badge">Wall Jump off walls!</span>
       <span class="hint-badge">Double-tap → = Pounce!</span>
+      <span class="hint-badge">🧗 Climb curtains!</span>
       <span class="hint-badge">🐕 Beware the sleeping dog!</span>
     </div>
     <button class="btn" onclick="startGame()">START MAYHEM 😈</button>
   </div>
+</div>
+
+<div id="touchControls">
+  <div class="touch-btn" style="left:20px;bottom:70px" id="tbLeft">◀</div>
+  <div class="touch-btn" style="left:90px;bottom:70px" id="tbRight">▶</div>
+  <div class="touch-btn" style="right:90px;bottom:70px" id="tbJump">▲</div>
+  <div class="touch-btn" style="right:20px;bottom:70px" id="tbAction">E</div>
 </div>
 
 <script>
@@ -132,10 +155,13 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const CW = 960, CH = 560;
 
-// ===== WORLD CONSTANTS =====
-const WORLD_W = 3400, WORLD_H = 1100;
-const GRAVITY = 0.52;
-const GROUND_Y = WORLD_H - 40;
+// ===== CAT-SCALE WORLD =====
+// Cat is ~24px tall. Tables ~72px, counters ~96px, doors ~160px.
+// Each room ~800-1000px wide, ~600-800px tall.
+const WORLD_W = 5200, WORLD_H = 1800;
+const GRAVITY = 0.48;
+const GROUND_Y = WORLD_H - 50;
+const TILE = 24; // cat-unit reference
 
 // ===== GAME STATE =====
 let gameState = 'menu';
@@ -143,17 +169,15 @@ let score = 0, timeLeft = 120, timerInterval, animFrame;
 let fireActive = false, fireSpread = 0;
 let particles = [], floatingTexts = [];
 let camera = { x: 0, y: 0 };
-let combo = { count: 0, timer: 0, multiplier: 1 };
+let combo = { count: 0, timer: 0, multiplier: 1, lastTime: 0 };
 let totalDestructibles = 0, totalDestroyed = 0;
 let puzzleState = {
-  garageDoorOpen: false,
-  atticHatchOpen: false,
+  garageDoorOpen: false, atticHatchOpen: false,
   safeOpen: false, safeCombo: [0,0,0], safeTarget: [3,7,1],
   bathroomFlooded: false,
   secretRoomOpen: false, booksRemoved: 0, totalBooks: 5,
   hasLighter: false, stoveOn: false, fireStarted: false,
-  cluesFound: [],
-  boxesStacked: 0
+  cluesFound: [], boxesStacked: 0
 };
 let warnings = [];
 let ownerWarningTriggered = false, dogWarningTriggered = false;
@@ -165,464 +189,522 @@ let glassShards = [];
 
 // ===== SLEEPING DOG =====
 let sleepingDog = {
-  x: 350, y: GROUND_Y - 50, w: 70, h: 40,
-  active: true, state: 'sleeping', // sleeping, alert, chasing, fled, caught
-  detectionRadius: 150,
-  detectionMeter: 0, // 0-100
-  snoreTimer: 0,
-  breathScale: 0,
-  zzzParticles: [],
-  alertTimer: 0,
-  chaseVx: 0,
-  barkTimer: 0,
-  legAnim: 0,
-  exclamationTimer: 0,
-  bonked: false,
-  bonkTimer: 0,
-  fleeX: 0, fleeDir: 0
+  x: 500, y: GROUND_Y - 60, w: 80, h: 50,
+  active: true, state: 'sleeping',
+  detectionRadius: 180, detectionMeter: 0,
+  snoreTimer: 0, breathScale: 0, zzzParticles: [],
+  alertTimer: 0, chaseVx: 0, barkTimer: 0, legAnim: 0,
+  exclamationTimer: 0, bonked: false, bonkTimer: 0, fleeX: 0, fleeDir: 0
 };
 
-// ===== AUDIO (Web Audio API) =====
+// ===== AUDIO =====
 let audioCtx;
-function initAudio() {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
+function initAudio() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
 function playSound(type) {
   if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain); gain.connect(audioCtx.destination);
   gain.gain.value = 0.15;
+  const t = audioCtx.currentTime;
   switch(type) {
     case 'smash':
-      osc.type = 'sawtooth'; osc.frequency.value = 200 + Math.random()*200;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.15); break;
+      osc.type='sawtooth'; osc.frequency.value=200+Math.random()*200;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(); osc.stop(t+0.15); break;
+    case 'glass':
+      osc.type='square'; osc.frequency.value=1200+Math.random()*800;
+      gain.gain.value=0.1; gain.gain.exponentialRampToValueAtTime(0.01,t+0.2); osc.start(); osc.stop(t+0.2); break;
+    case 'splash':
+      osc.type='sine'; osc.frequency.value=300+Math.random()*200;
+      gain.gain.value=0.08; gain.gain.exponentialRampToValueAtTime(0.01,t+0.3); osc.start(); osc.stop(t+0.3); break;
+    case 'shred':
+      osc.type='sawtooth'; osc.frequency.value=400+Math.random()*600;
+      gain.gain.value=0.06; gain.gain.exponentialRampToValueAtTime(0.01,t+0.25); osc.start(); osc.stop(t+0.25); break;
     case 'scratch':
-      osc.type = 'sawtooth'; osc.frequency.value = 800 + Math.random()*400;
-      gain.gain.value = 0.08;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.3); break;
+      osc.type='sawtooth'; osc.frequency.value=800+Math.random()*400;
+      gain.gain.value=0.08; gain.gain.exponentialRampToValueAtTime(0.01,t+0.3); osc.start(); osc.stop(t+0.3); break;
     case 'jump':
-      osc.type = 'sine'; osc.frequency.value = 300;
-      osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.12); break;
+      osc.type='sine'; osc.frequency.value=300;
+      osc.frequency.exponentialRampToValueAtTime(600,t+0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.12); osc.start(); osc.stop(t+0.12); break;
     case 'pounce':
-      osc.type = 'square'; osc.frequency.value = 150;
-      osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.1); break;
+      osc.type='square'; osc.frequency.value=150;
+      osc.frequency.exponentialRampToValueAtTime(400,t+0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.1); osc.start(); osc.stop(t+0.1); break;
     case 'combo':
-      osc.type = 'sine'; osc.frequency.value = 500 + combo.count * 100;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.2); break;
+      osc.type='sine'; osc.frequency.value=500+combo.count*100;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.2); osc.start(); osc.stop(t+0.2); break;
     case 'fire':
-      osc.type = 'sawtooth'; osc.frequency.value = 100;
-      gain.gain.value = 0.2;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.5); break;
+      osc.type='sawtooth'; osc.frequency.value=100; gain.gain.value=0.2;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.5); osc.start(); osc.stop(t+0.5); break;
     case 'unlock':
-      osc.type = 'sine'; osc.frequency.value = 400;
-      osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.3);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.35); break;
+      osc.type='sine'; osc.frequency.value=400;
+      osc.frequency.exponentialRampToValueAtTime(800,t+0.3);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.35); osc.start(); osc.stop(t+0.35); break;
     case 'water':
-      osc.type = 'sine'; osc.frequency.value = 200 + Math.random()*100;
-      gain.gain.value = 0.06;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.4); break;
+      osc.type='sine'; osc.frequency.value=200+Math.random()*100;
+      gain.gain.value=0.06; gain.gain.exponentialRampToValueAtTime(0.01,t+0.4); osc.start(); osc.stop(t+0.4); break;
     case 'warning':
-      osc.type = 'square'; osc.frequency.value = 600;
-      gain.gain.value = 0.12;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.5); break;
+      osc.type='square'; osc.frequency.value=600; gain.gain.value=0.12;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.5); osc.start(); osc.stop(t+0.5); break;
     case 'legendary':
-      osc.type = 'sine'; osc.frequency.value = 300;
-      osc.frequency.linearRampToValueAtTime(900, audioCtx.currentTime + 0.5);
-      gain.gain.value = 0.2;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.6); break;
+      osc.type='sine'; osc.frequency.value=300;
+      osc.frequency.linearRampToValueAtTime(900,t+0.5); gain.gain.value=0.2;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.6); osc.start(); osc.stop(t+0.6); break;
+    case 'climb':
+      osc.type='triangle'; osc.frequency.value=600;
+      osc.frequency.linearRampToValueAtTime(900,t+0.15); gain.gain.value=0.07;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.2); osc.start(); osc.stop(t+0.2); break;
+    case 'push':
+      osc.type='triangle'; osc.frequency.value=80; gain.gain.value=0.1;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(); osc.stop(t+0.15); break;
+    case 'unroll':
+      osc.type='sine'; osc.frequency.value=200;
+      osc.frequency.linearRampToValueAtTime(100,t+0.4); gain.gain.value=0.06;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.4); osc.start(); osc.stop(t+0.4); break;
   }
 }
-
 function playDogSound(type) {
   if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain); gain.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
   switch(type) {
     case 'snore':
-      osc.type = 'sine'; osc.frequency.value = 60 + Math.random()*20;
-      gain.gain.value = 0.06;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.8); break;
+      osc.type='sine'; osc.frequency.value=60+Math.random()*20; gain.gain.value=0.06;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.8); osc.start(); osc.stop(t+0.8); break;
     case 'growl':
-      osc.type = 'sawtooth'; osc.frequency.value = 80;
-      osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.4);
-      gain.gain.value = 0.12;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.5); break;
+      osc.type='sawtooth'; osc.frequency.value=80;
+      osc.frequency.linearRampToValueAtTime(120,t+0.4); gain.gain.value=0.12;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.5); osc.start(); osc.stop(t+0.5); break;
     case 'bark':
-      osc.type = 'square'; osc.frequency.value = 200;
-      osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
-      osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12);
-      gain.gain.value = 0.18;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.15); break;
+      osc.type='square'; osc.frequency.value=200;
+      osc.frequency.exponentialRampToValueAtTime(400,t+0.05);
+      osc.frequency.exponentialRampToValueAtTime(150,t+0.12); gain.gain.value=0.18;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(); osc.stop(t+0.15); break;
     case 'yelp':
-      osc.type = 'sine'; osc.frequency.value = 400;
-      osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-      osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.25);
-      gain.gain.value = 0.15;
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.3); break;
+      osc.type='sine'; osc.frequency.value=400;
+      osc.frequency.exponentialRampToValueAtTime(800,t+0.1);
+      osc.frequency.exponentialRampToValueAtTime(300,t+0.25); gain.gain.value=0.15;
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.3); osc.start(); osc.stop(t+0.3); break;
   }
 }
 
 // ===== INPUT =====
 const keys = {};
 let lastDirTap = { dir: 0, time: 0 };
+let touchState = { left:false, right:false, jump:false, action:false };
+
 document.addEventListener('keydown', e => {
-  if (['ArrowLeft','ArrowRight','ArrowUp','Space','KeyZ','KeyW','KeyA','KeyD','KeyE'].includes(e.code)) e.preventDefault();
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','KeyZ','KeyW','KeyA','KeyD','KeyE','KeyS'].includes(e.code)) e.preventDefault();
   if (!keys[e.code]) {
-    // Double-tap detection for pounce
     const now = Date.now();
-    if ((e.code === 'ArrowRight' || e.code === 'KeyD') && lastDirTap.dir === 1 && now - lastDirTap.time < 250) {
-      cat.pounce = 1;
-    } else if ((e.code === 'ArrowLeft' || e.code === 'KeyA') && lastDirTap.dir === -1 && now - lastDirTap.time < 250) {
-      cat.pounce = -1;
-    }
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') lastDirTap = { dir: 1, time: now };
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') lastDirTap = { dir: -1, time: now };
+    if ((e.code==='ArrowRight'||e.code==='KeyD') && lastDirTap.dir===1 && now-lastDirTap.time<250) cat.pounce=1;
+    else if ((e.code==='ArrowLeft'||e.code==='KeyA') && lastDirTap.dir===-1 && now-lastDirTap.time<250) cat.pounce=-1;
+    if (e.code==='ArrowRight'||e.code==='KeyD') lastDirTap={dir:1,time:now};
+    if (e.code==='ArrowLeft'||e.code==='KeyA') lastDirTap={dir:-1,time:now};
   }
   keys[e.code] = true;
 });
 document.addEventListener('keyup', e => {
   keys[e.code] = false;
-  if (e.code === 'ArrowUp' || e.code === 'KeyZ' || e.code === 'KeyW' || e.code === 'Space') {
-    cat.jumpReleased = true;
-  }
+  if (e.code==='ArrowUp'||e.code==='KeyZ'||e.code==='KeyW'||e.code==='Space') cat.jumpReleased=true;
 });
 
+// Touch controls
+function setupTouch() {
+  const bind = (id, key) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => { e.preventDefault(); keys[key]=true; touchState[id.replace('tb','').toLowerCase()]=true; }, {passive:false});
+    el.addEventListener('touchend', e => { e.preventDefault(); keys[key]=false; touchState[id.replace('tb','').toLowerCase()]=false;
+      if(key==='ArrowUp') cat.jumpReleased=true; }, {passive:false});
+  };
+  bind('tbLeft','ArrowLeft'); bind('tbRight','ArrowRight'); bind('tbJump','ArrowUp'); bind('tbAction','KeyE');
+}
+
 // ===== ROOMS =====
-// Room definitions: name, bounds, floor color, wall color
+// Cat-scale: rooms are ~900-1100px wide, ~700px tall. Cat is 24px tall.
 const rooms = [
-  { name: 'Living Room', x: 0, y: 400, w: 700, h: 700, floor: '#8B6F47', wall: '#f5e6c8', wallAccent: 'rgba(200,180,130,0.3)' },
-  { name: 'Kitchen', x: 700, y: 400, w: 600, h: 700, floor: '#d4c4a8', wall: '#fff8e7', wallAccent: 'rgba(180,160,120,0.2)' },
-  { name: 'Bathroom', x: 0, y: 0, w: 500, h: 400, floor: '#b8d4e3', wall: '#e8f4f8', wallAccent: 'rgba(150,200,220,0.2)' },
-  { name: 'Bedroom', x: 700, y: 0, w: 600, h: 400, floor: '#c9a87c', wall: '#f0e0d0', wallAccent: 'rgba(200,170,140,0.2)' },
-  { name: 'Hallway', x: 500, y: 0, w: 200, h: 400, floor: '#a08060', wall: '#e8d8c0', wallAccent: 'rgba(180,150,120,0.2)' },
-  { name: 'Garage', x: 1900, y: 400, w: 700, h: 700, floor: '#808080', wall: '#c0c0c0', wallAccent: 'rgba(100,100,100,0.15)' },
-  { name: 'Attic', x: 200, y: -350, w: 800, h: 350, floor: '#a08060', wall: '#d4c0a0', wallAccent: 'rgba(160,130,90,0.2)' },
-  { name: 'Secret Room', x: 1300, y: 400, w: 600, h: 700, floor: '#4a0080', wall: '#2a0050', wallAccent: 'rgba(100,0,180,0.15)' },
+  { name:'Living Room',  x:0,    y:1100, w:1000, h:700, floor:'#8B6F47', wall:'#f5e6c8', wallAccent:'rgba(200,180,130,0.3)' },
+  { name:'Kitchen',      x:1000, y:1100, w:900,  h:700, floor:'#d4c4a8', wall:'#fff8e7', wallAccent:'rgba(180,160,120,0.2)' },
+  { name:'Bathroom',     x:0,    y:400,  w:700,  h:700, floor:'#b8d4e3', wall:'#e8f4f8', wallAccent:'rgba(150,200,220,0.2)' },
+  { name:'Hallway',      x:700,  y:400,  w:300,  h:700, floor:'#a08060', wall:'#e8d8c0', wallAccent:'rgba(180,150,120,0.2)' },
+  { name:'Bedroom',      x:1000, y:400,  w:900,  h:700, floor:'#c9a87c', wall:'#f0e0d0', wallAccent:'rgba(200,170,140,0.2)' },
+  { name:'Garage',       x:2800, y:1100, w:900,  h:700, floor:'#808080', wall:'#c0c0c0', wallAccent:'rgba(100,100,100,0.15)' },
+  { name:'Laundry',      x:1900, y:1100, w:900,  h:700, floor:'#c8d8c8', wall:'#e8f0e8', wallAccent:'rgba(150,180,150,0.2)' },
+  { name:'Attic',        x:300,  y:0,    w:1000, h:400, floor:'#a08060', wall:'#d4c0a0', wallAccent:'rgba(160,130,90,0.2)' },
+  { name:'Secret Room',  x:1900, y:400,  w:800,  h:700, floor:'#4a0080', wall:'#2a0050', wallAccent:'rgba(100,0,180,0.15)' },
 ];
 
 function getRoomAt(x, y) {
-  // Secret room only visible when open
   for (const r of rooms) {
-    if (r.name === 'Secret Room' && !puzzleState.secretRoomOpen) continue;
-    if (r.name === 'Attic' && !puzzleState.atticHatchOpen) continue;
-    if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return r;
+    if (r.name==='Secret Room' && !puzzleState.secretRoomOpen) continue;
+    if (r.name==='Attic' && !puzzleState.atticHatchOpen) continue;
+    if (x>=r.x && x<r.x+r.w && y>=r.y && y<r.y+r.h) return r;
   }
   return rooms[0];
 }
 
 // ===== WALLS & PLATFORMS =====
-let walls = [];
-let platforms = [];
+let walls = [], platforms = [];
+
+// Moveable furniture
+let furniture = [];
 
 function initLevel() {
-  // World boundary
   walls = [
-    // Ground floor
-    { x: 0, y: GROUND_Y, w: WORLD_W, h: 40, solid: true, color: '#5a4a30' },
-    // Left exterior wall
-    { x: -20, y: -400, w: 20, h: WORLD_H + 400, solid: true, color: '#8B7355' },
-    // Right exterior wall
-    { x: 2600, y: 300, w: 20, h: 800, solid: true, color: '#8B7355' },
+    // Ground
+    { x:0, y:GROUND_Y, w:WORLD_W, h:50, solid:true, color:'#5a4a30' },
+    // Left wall
+    { x:-20, y:-50, w:20, h:WORLD_H+100, solid:true, color:'#8B7355' },
+    // Right wall
+    { x:3700, y:400, w:20, h:1500, solid:true, color:'#8B7355' },
 
-    // === GROUND FLOOR WALLS ===
-    // Living room / Kitchen divider (with doorway)
-    { x: 690, y: 400, w: 20, h: 260, solid: true, color: '#c8a87a' }, // upper part
-    { x: 690, y: 760, w: 20, h: 300, solid: true, color: '#c8a87a' }, // lower part (doorway 660-760)
-
-    // Kitchen / Secret Room divider (bookshelf wall - becomes passable)
-    // This is handled via the puzzle system
-
+    // === Ground floor walls ===
+    // Living/Kitchen divider
+    { x:990, y:1100, w:20, h:300, solid:true, color:'#c8a87a' },
+    { x:990, y:1560, w:20, h:240, solid:true, color:'#c8a87a' },
+    // Kitchen/Laundry divider
+    { x:1890, y:1100, w:20, h:280, solid:true, color:'#c8a87a' },
+    { x:1890, y:1540, w:20, h:260, solid:true, color:'#c8a87a' },
+    // Laundry/Garage divider (garage door)
     // Secret Room / Garage divider
-    { x: 1890, y: 400, w: 20, h: 300, solid: true, color: '#8B7355' },
-    { x: 1890, y: 800, w: 20, h: 260, solid: true, color: '#8B7355' },
-
+    { x:2790, y:1100, w:20, h:300, solid:true, color:'#8B7355' },
+    { x:2790, y:1560, w:20, h:240, solid:true, color:'#8B7355' },
     // Garage right wall
-    { x: 2590, y: 400, w: 20, h: 660, solid: true, color: '#8B7355' },
+    { x:3690, y:1100, w:20, h:700, solid:true, color:'#8B7355' },
 
-    // === UPPER FLOOR ===
-    // Upper floor (ceiling of ground floor / floor of upper rooms)
-    { x: 0, y: 390, w: 1310, h: 20, solid: true, color: '#8B6F47' },
-
-    // Bathroom left wall (exterior)
-    { x: -20, y: -400, w: 20, h: 800, solid: true, color: '#8B7355' },
-
-    // Bathroom / Hallway divider
-    { x: 490, y: 0, w: 20, h: 280, solid: true, color: '#c8a87a' },
-    // doorway from 280-390
-
-    // Hallway / Bedroom divider
-    { x: 690, y: 0, w: 20, h: 260, solid: true, color: '#c8a87a' },
-    // doorway from 260-390
-
+    // === Upper floor ===
+    // Floor between upper and lower
+    { x:0, y:1090, w:2700, h:20, solid:true, color:'#8B6F47' },
+    // Bathroom left wall
+    { x:-20, y:400, w:20, h:700, solid:true, color:'#8B7355' },
+    // Bathroom/Hallway divider
+    { x:690, y:400, w:20, h:460, solid:true, color:'#c8a87a' },
+    // Hallway/Bedroom divider
+    { x:990, y:400, w:20, h:420, solid:true, color:'#c8a87a' },
     // Upper ceiling
-    { x: 0, y: -10, w: 1310, h: 20, solid: true, color: '#8B7355' },
-
+    { x:0, y:390, w:1910, h:20, solid:true, color:'#8B7355' },
     // Bedroom right wall
-    { x: 1290, y: -10, w: 20, h: 420, solid: true, color: '#8B7355' },
+    { x:1890, y:400, w:20, h:700, solid:true, color:'#8B7355' },
 
-    // === ATTIC ===
-    // Attic walls (only collidable when attic is open)
+    // === Attic ===
+    // (accessible when hatch open)
 
-    // === GARAGE DOOR (closed by default) ===
+    // Baseboards
   ];
 
   platforms = [
-    // === LIVING ROOM ===
-    // Sofa
-    { x: 40, y: 940, w: 200, h: 30, color: '#A0522D', room: 'Living Room', type: 'sofa' },
-    // Coffee table
-    { x: 300, y: 970, w: 140, h: 20, color: '#8B6914', room: 'Living Room', type: 'table' },
-    // Wall shelf left
-    { x: 50, y: 740, w: 160, h: 14, color: '#6B4423', room: 'Living Room', type: 'shelf' },
-    // Wall shelf right
-    { x: 480, y: 700, w: 160, h: 14, color: '#6B4423', room: 'Living Room', type: 'shelf' },
-    // High shelf
-    { x: 200, y: 580, w: 180, h: 14, color: '#6B4423', room: 'Living Room', type: 'shelf' },
-    // Bookshelf (special - blocks secret room)
-    { x: 1290, y: 410, w: 30, h: 650, color: '#5a3a1a', room: 'Living Room', type: 'bookshelf', blocksSecret: true },
+    // === LIVING ROOM === (cat-scale: cat is 24px, sofa ~80px tall from ground)
+    // Sofa (big, cat has to jump up)
+    { x:60, y:GROUND_Y-80, w:280, h:35, color:'#A0522D', room:'Living Room', type:'sofa' },
+    // Coffee table (shorter)
+    { x:420, y:GROUND_Y-50, w:180, h:18, color:'#8B6914', room:'Living Room', type:'table' },
+    // Wall shelves (towering high)
+    { x:80, y:1320, w:200, h:16, color:'#6B4423', room:'Living Room', type:'shelf' },
+    { x:700, y:1280, w:180, h:16, color:'#6B4423', room:'Living Room', type:'shelf' },
+    { x:400, y:1200, w:200, h:16, color:'#6B4423', room:'Living Room', type:'shelf' },
+    // TV stand
+    { x:500, y:GROUND_Y-100, w:120, h:20, color:'#3a2a14', room:'Living Room', type:'tvstand' },
+    // Bookshelf (blocks secret room passage)
+    { x:1890, y:410, w:30, h:690, color:'#5a3a1a', room:'Secret Room', type:'bookshelf', blocksSecret:true },
 
     // === KITCHEN ===
-    // Counter left
-    { x: 720, y: 900, w: 200, h: 25, color: '#C0A882', room: 'Kitchen', type: 'counter' },
+    // Counter left (tall for cat - ~96px)
+    { x:1020, y:GROUND_Y-96, w:250, h:20, color:'#C0A882', room:'Kitchen', type:'counter' },
     // Counter right
-    { x: 1000, y: 900, w: 200, h: 25, color: '#C0A882', room: 'Kitchen', type: 'counter' },
-    // Upper cabinet shelf
-    { x: 750, y: 650, w: 140, h: 14, color: '#8B6F47', room: 'Kitchen', type: 'shelf' },
-    // Stove
-    { x: 1100, y: 930, w: 100, h: 50, color: '#7f8c8d', room: 'Kitchen', type: 'stove' },
-    // Fridge top
-    { x: 720, y: 680, w: 70, h: 14, color: '#bdc3c7', room: 'Kitchen', type: 'shelf' },
+    { x:1400, y:GROUND_Y-96, w:250, h:20, color:'#C0A882', room:'Kitchen', type:'counter' },
     // Kitchen table
-    { x: 850, y: 800, w: 120, h: 16, color: '#8B6914', room: 'Kitchen', type: 'table' },
+    { x:1200, y:GROUND_Y-72, w:160, h:16, color:'#8B6914', room:'Kitchen', type:'table' },
+    // Upper cabinet shelf
+    { x:1050, y:1250, w:180, h:14, color:'#8B6F47', room:'Kitchen', type:'shelf' },
+    // Stove
+    { x:1650, y:GROUND_Y-96, w:120, h:40, color:'#7f8c8d', room:'Kitchen', type:'stove' },
+    // Fridge top (very high)
+    { x:1020, y:1200, w:80, h:14, color:'#bdc3c7', room:'Kitchen', type:'shelf' },
+    // Stepping stool
+    { x:1350, y:GROUND_Y-36, w:50, h:14, color:'#a08060', room:'Kitchen', type:'stool' },
 
     // === BATHROOM ===
     // Sink counter
-    { x: 30, y: 270, w: 140, h: 18, color: '#d4e6f1', room: 'Bathroom', type: 'counter' },
+    { x:50, y:880, w:180, h:20, color:'#d4e6f1', room:'Bathroom', type:'counter' },
     // Bathtub rim
-    { x: 250, y: 310, w: 180, h: 14, color: '#ecf0f1', room: 'Bathroom', type: 'tub' },
+    { x:380, y:940, w:250, h:16, color:'#ecf0f1', room:'Bathroom', type:'tub' },
     // Shelf above toilet
-    { x: 50, y: 130, w: 120, h: 12, color: '#bdc3c7', room: 'Bathroom', type: 'shelf' },
+    { x:80, y:660, w:160, h:14, color:'#bdc3c7', room:'Bathroom', type:'shelf' },
     // Towel rack
-    { x: 350, y: 180, w: 80, h: 10, color: '#7f8c8d', room: 'Bathroom', type: 'shelf' },
+    { x:500, y:720, w:120, h:12, color:'#7f8c8d', room:'Bathroom', type:'shelf' },
+    // Toilet (cat can jump on)
+    { x:260, y:980, w:70, h:30, color:'#ecf0f1', room:'Bathroom', type:'toilet' },
 
     // === HALLWAY ===
-    // Hallway shelf
-    { x: 520, y: 220, w: 100, h: 12, color: '#6B4423', room: 'Hallway', type: 'shelf' },
-    // Stairs (series of steps) from hallway down to kitchen area
-    { x: 560, y: 300, w: 80, h: 14, color: '#8B6F47', room: 'Hallway', type: 'stair' },
-    { x: 600, y: 340, w: 80, h: 14, color: '#8B6F47', room: 'Hallway', type: 'stair' },
+    { x:720, y:780, w:130, h:14, color:'#6B4423', room:'Hallway', type:'shelf' },
+    // Stairs down to ground floor
+    { x:750, y:900, w:100, h:16, color:'#8B6F47', room:'Hallway', type:'stair' },
+    { x:800, y:960, w:100, h:16, color:'#8B6F47', room:'Hallway', type:'stair' },
+    { x:850, y:1020, w:100, h:16, color:'#8B6F47', room:'Hallway', type:'stair' },
 
     // === BEDROOM ===
-    // Bed
-    { x: 900, y: 300, w: 200, h: 30, color: '#6a5acd', room: 'Bedroom', type: 'bed' },
+    // Bed (big)
+    { x:1200, y:980, w:300, h:40, color:'#6a5acd', room:'Bedroom', type:'bed' },
     // Desk
-    { x: 750, y: 260, w: 120, h: 16, color: '#8B6914', room: 'Bedroom', type: 'desk' },
+    { x:1050, y:860, w:160, h:18, color:'#8B6914', room:'Bedroom', type:'desk' },
     // High shelf
-    { x: 1100, y: 140, w: 140, h: 14, color: '#6B4423', room: 'Bedroom', type: 'shelf' },
+    { x:1600, y:620, w:180, h:16, color:'#6B4423', room:'Bedroom', type:'shelf' },
     // Nightstand
-    { x: 1120, y: 330, w: 60, h: 20, color: '#5a3a1a', room: 'Bedroom', type: 'table' },
-    // Dresser
-    { x: 730, y: 340, w: 80, h: 50, color: '#8B6F47', room: 'Bedroom', type: 'dresser' },
+    { x:1520, y:1000, w:70, h:24, color:'#5a3a1a', room:'Bedroom', type:'table' },
+    // Dresser (tall)
+    { x:1030, y:950, w:100, h:70, color:'#8B6F47', room:'Bedroom', type:'dresser' },
+    // Window sill (high, curtain access)
+    { x:1300, y:560, w:200, h:14, color:'#c8a87a', room:'Bedroom', type:'windowsill' },
+
+    // === LAUNDRY ===
+    // Washer top
+    { x:1940, y:GROUND_Y-90, w:120, h:16, color:'#bdc3c7', room:'Laundry', type:'appliance' },
+    // Dryer top
+    { x:2080, y:GROUND_Y-90, w:120, h:16, color:'#bdc3c7', room:'Laundry', type:'appliance' },
+    // Folding table
+    { x:2300, y:GROUND_Y-70, w:180, h:16, color:'#8B6914', room:'Laundry', type:'table' },
+    // Laundry shelf
+    { x:2000, y:1280, w:200, h:14, color:'#6B4423', room:'Laundry', type:'shelf' },
+    // Ironing board
+    { x:2500, y:GROUND_Y-55, w:160, h:10, color:'#aaa', room:'Laundry', type:'shelf' },
 
     // === GARAGE ===
     // Workbench
-    { x: 2000, y: 880, w: 200, h: 24, color: '#8B6F47', room: 'Garage', type: 'bench' },
-    // High shelf garage
-    { x: 2200, y: 650, w: 200, h: 16, color: '#7f8c8d', room: 'Garage', type: 'shelf' },
-    // Car hood (platform)
-    { x: 2050, y: 780, w: 250, h: 20, color: '#c0392b', room: 'Garage', type: 'car' },
+    { x:2900, y:GROUND_Y-80, w:250, h:22, color:'#8B6F47', room:'Garage', type:'bench' },
+    // High shelf
+    { x:3200, y:1300, w:250, h:18, color:'#7f8c8d', room:'Garage', type:'shelf' },
+    // Car hood
+    { x:3000, y:GROUND_Y-140, w:350, h:22, color:'#c0392b', room:'Garage', type:'car' },
+    // Step ladder
+    { x:3500, y:GROUND_Y-50, w:60, h:16, color:'#a08060', room:'Garage', type:'stool' },
+    { x:3510, y:GROUND_Y-100, w:50, h:16, color:'#a08060', room:'Garage', type:'stool' },
 
     // === ATTIC ===
-    // Attic floor beams
-    { x: 220, y: -10, w: 760, h: 16, color: '#8B6F47', room: 'Attic', type: 'beam' },
-    // Attic shelf left
-    { x: 250, y: -180, w: 160, h: 14, color: '#6B4423', room: 'Attic', type: 'shelf' },
-    // Attic shelf right
-    { x: 700, y: -200, w: 180, h: 14, color: '#6B4423', room: 'Attic', type: 'shelf' },
-    // Attic crossbeam
-    { x: 450, y: -120, w: 200, h: 12, color: '#8B6F47', room: 'Attic', type: 'beam' },
+    { x:320, y:380, w:960, h:18, color:'#8B6F47', room:'Attic', type:'beam' },
+    { x:350, y:200, w:200, h:16, color:'#6B4423', room:'Attic', type:'shelf' },
+    { x:850, y:180, w:220, h:16, color:'#6B4423', room:'Attic', type:'shelf' },
+    { x:550, y:280, w:250, h:14, color:'#8B6F47', room:'Attic', type:'beam' },
 
     // === SECRET ROOM ===
-    // Pedestal
-    { x: 1550, y: 900, w: 80, h: 30, color: '#4a0080', room: 'Secret Room', type: 'pedestal' },
-    // Display shelf
-    { x: 1400, y: 700, w: 150, h: 14, color: '#6a0090', room: 'Secret Room', type: 'shelf' },
-    // High display
-    { x: 1600, y: 600, w: 120, h: 14, color: '#6a0090', room: 'Secret Room', type: 'shelf' },
+    { x:2100, y:880, w:100, h:30, color:'#4a0080', room:'Secret Room', type:'pedestal' },
+    { x:2000, y:700, w:180, h:16, color:'#6a0090', room:'Secret Room', type:'shelf' },
+    { x:2400, y:620, w:160, h:16, color:'#6a0090', room:'Secret Room', type:'shelf' },
+  ];
+
+  // === MOVEABLE FURNITURE ===
+  furniture = [
+    // Living Room
+    { x:350, y:GROUND_Y-40, w:50, h:40, color:'#C19A6B', label:'Ottoman', heavy:false, pushable:true, vx:0, vy:0, onGround:false, hidesItem:null },
+    { x:750, y:GROUND_Y-55, w:40, h:55, color:'#8B6914', label:'Chair', heavy:false, pushable:true, vx:0, vy:0, onGround:false, hidesItem:null },
+    { x:900, y:GROUND_Y-30, w:30, h:20, color:'#654321', label:'Shoes', heavy:false, pushable:true, vx:0, vy:0, onGround:false, hidesItem:'clue1' },
+    // Kitchen
+    { x:1300, y:GROUND_Y-55, w:40, h:55, color:'#8B6914', label:'Kitchen Chair', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    { x:1550, y:GROUND_Y-30, w:36, h:30, color:'#a0522d', label:'Box', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    // Hallway
+    { x:770, y:1060, w:40, h:30, color:'#654321', label:'Shoes', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    // Bedroom
+    { x:1700, y:980, w:50, h:40, color:'#C19A6B', label:'Ottoman', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    { x:1800, y:1060, w:30, h:20, color:'#8B4513', label:'Slippers', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    // Laundry
+    { x:2250, y:GROUND_Y-36, w:40, h:36, color:'#ddd', label:'Laundry Basket', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    { x:2600, y:GROUND_Y-30, w:36, h:30, color:'#a0522d', label:'Box', heavy:false, pushable:true, vx:0, vy:0, onGround:false, hidesItem:'passage_garage' },
+    // Garage
+    { x:3550, y:GROUND_Y-30, w:36, h:30, color:'#a0522d', label:'Crate', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+    { x:3400, y:GROUND_Y-36, w:36, h:36, color:'#8B4513', label:'Toolbox', heavy:false, pushable:true, vx:0, vy:0, onGround:false },
+  ];
+}
+
+// ===== CURTAINS (Climbable, one-time use) =====
+let curtains = [];
+function initCurtains() {
+  curtains = [
+    // Living Room windows
+    { x:120, y:1180, w:35, h:300, room:'Living Room', shredded:false, climbed:false, color:'#c0392b',
+      topY:1180, windowX:130, windowY:1190, windowW:140, windowH:120 },
+    { x:800, y:1180, w:35, h:300, room:'Living Room', shredded:false, climbed:false, color:'#c0392b',
+      topY:1180, windowX:810, windowY:1190, windowW:140, windowH:120 },
+    // Bedroom windows
+    { x:1300, y:500, w:35, h:300, room:'Bedroom', shredded:false, climbed:false, color:'#2c3e50',
+      topY:500, windowX:1310, windowY:510, windowW:180, windowH:140 },
+    { x:1700, y:500, w:35, h:300, room:'Bedroom', shredded:false, climbed:false, color:'#2c3e50',
+      topY:500, windowX:1710, windowY:510, windowW:140, windowH:120 },
+    // Bathroom
+    { x:200, y:520, w:30, h:250, room:'Bathroom', shredded:false, climbed:false, color:'#3498db',
+      topY:520, windowX:210, windowY:530, windowW:120, windowH:100 },
+    // Laundry
+    { x:2400, y:1180, w:35, h:300, room:'Laundry', shredded:false, climbed:false, color:'#27ae60',
+      topY:1180, windowX:2410, windowY:1190, windowW:140, windowH:120 },
   ];
 }
 
 // ===== CAT =====
 let cat = {
-  x: 100, y: 900, w: 30, h: 26,
-  vx: 0, vy: 0, onGround: false, facing: 1,
-  state: 'idle', frame: 0, frameTimer: 0,
-  eHeld: 0, pushCooldown: 0, tail: 0,
-  jumpHeld: false, jumpReleased: false, jumpTime: 0,
-  wallSlide: 0, // -1 left wall, 1 right wall, 0 none
-  pounce: 0, pounceTimer: 0,
-  squish: 0, stretch: 0,
-  puffTail: 0,
-  scratchTarget: null, scratchProgress: 0
+  x:150, y:GROUND_Y-30, w:24, h:22,
+  vx:0, vy:0, onGround:false, facing:1,
+  state:'idle', frame:0, frameTimer:0,
+  eHeld:0, pushCooldown:0, tail:0,
+  jumpHeld:false, jumpReleased:false, jumpTime:0,
+  wallSlide:0, pounce:0, pounceTimer:0,
+  squish:0, stretch:0, puffTail:0,
+  scratchTarget:null, scratchProgress:0,
+  climbing:null, climbY:0, climbTimer:0
 };
 
 // ===== OBJECTS =====
 let objects = [];
-let pushBoxes = [];
 
 function initObjects() {
   totalDestroyed = 0;
   objects = [
-    // === LIVING ROOM - Easy items ===
-    { id:'glass1', room:'Living Room', type:'glass', x:320, y:955, w:14, h:18, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'glass2', room:'Living Room', type:'glass', x:380, y:955, w:14, h:18, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'mug1', room:'Living Room', type:'glass', x:420, y:955, w:16, h:20, destroyed:false, pts:1, color:'#e07a5f', label:'Mug', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'pillow1', room:'Living Room', type:'pillow', x:60, y:925, w:24, h:18, destroyed:false, pts:1, color:'#e056da', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'pillow2', room:'Living Room', type:'pillow', x:180, y:925, w:24, h:18, destroyed:false, pts:1, color:'#fdcb6e', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false },
+    // ===== LIVING ROOM =====
+    // On coffee table
+    { id:'glass1', room:'Living Room', type:'glass', x:440, y:GROUND_Y-68, w:10, h:16, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'glass2', room:'Living Room', type:'glass', x:480, y:GROUND_Y-68, w:10, h:16, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'mug1', room:'Living Room', type:'glass', x:520, y:GROUND_Y-70, w:12, h:18, destroyed:false, pts:1, color:'#e07a5f', label:'Mug', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'remote', room:'Living Room', type:'book', x:560, y:GROUND_Y-56, w:18, h:6, destroyed:false, pts:2, color:'#333', label:'TV Remote', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'magazine1', room:'Living Room', type:'book', x:460, y:GROUND_Y-56, w:16, h:10, destroyed:false, pts:1, color:'#e74c3c', label:'Magazine', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'coaster1', room:'Living Room', type:'glass', x:500, y:GROUND_Y-54, w:10, h:4, destroyed:false, pts:1, color:'#8B6914', label:'Coaster', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'coaster2', room:'Living Room', type:'glass', x:540, y:GROUND_Y-54, w:10, h:4, destroyed:false, pts:1, color:'#8B6914', label:'Coaster', pushable:true, vx:0, vy:0, smashable:false },
+    // On sofa
+    { id:'pillow1', room:'Living Room', type:'pillow', x:100, y:GROUND_Y-100, w:28, h:20, destroyed:false, pts:2, color:'#e056da', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false, shreddable:true },
+    { id:'pillow2', room:'Living Room', type:'pillow', x:260, y:GROUND_Y-100, w:28, h:20, destroyed:false, pts:2, color:'#fdcb6e', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false, shreddable:true },
+    // Shelves
+    { id:'vase1', room:'Living Room', type:'vase', x:120, y:1300, w:16, h:24, destroyed:false, pts:3, color:'#6a9ebc', label:'Vase', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'plant1', room:'Living Room', type:'plant', x:730, y:1256, w:20, h:28, destroyed:false, pts:3, color:'#4a7c59', label:'Plant Pot', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'frame1', room:'Living Room', type:'painting', x:300, y:1220, w:60, h:45, destroyed:false, pts:5, color:'#e8daef', label:'Picture Frame', fixed:true, scratchable:true, scratchTime:20 },
+    { id:'candle1', room:'Living Room', type:'glass', x:200, y:1304, w:8, h:18, destroyed:false, pts:2, color:'#f5f5dc', label:'Candle', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'candle2', room:'Living Room', type:'glass', x:850, y:1264, w:8, h:18, destroyed:false, pts:2, color:'#f5f5dc', label:'Candle', pushable:true, vx:0, vy:0, smashable:true },
+    // High shelf
+    { id:'book_lr1', room:'Living Room', type:'book', x:420, y:1186, w:18, h:12, destroyed:false, pts:2, color:'#e74c3c', label:'Book', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'book_lr2', room:'Living Room', type:'book', x:450, y:1186, w:18, h:12, destroyed:false, pts:2, color:'#3498db', label:'Book', pushable:true, vx:0, vy:0, smashable:false },
+    // TV
+    { id:'tv', room:'Living Room', type:'tv', x:510, y:GROUND_Y-140, w:100, h:50, destroyed:false, pts:10, color:'#2c3e50', label:'HDTV', pushable:true, vx:0, vy:0, smashable:true, heavy:true },
+    // Painting (scratchable)
+    { id:'painting', room:'Living Room', type:'painting', x:500, y:1180, w:90, h:70, destroyed:false, pts:12, color:'#8e44ad', label:'Priceless Painting', fixed:true, scratchable:true, scratchTime:40 },
+    // Plant pot on floor
+    { id:'plant2', room:'Living Room', type:'plant', x:950, y:GROUND_Y-30, w:22, h:30, destroyed:false, pts:3, color:'#2d6a4f', label:'Floor Plant', pushable:true, vx:0, vy:0, smashable:true },
 
-    // Living Room - Medium items
-    { id:'vase1', room:'Living Room', type:'vase', x:90, y:722, w:18, h:22, destroyed:false, pts:3, color:'#6a9ebc', label:'Vase', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'plant1', room:'Living Room', type:'plant', x:500, y:682, w:22, h:24, destroyed:false, pts:3, color:'#4a7c59', label:'Plant', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'lamp1', room:'Living Room', type:'lamp', x:270, y:940, w:14, h:28, destroyed:false, pts:3, color:'#f9ca24', label:'Lamp', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'book_lr1', room:'Living Room', type:'book', x:250, y:568, w:22, h:14, destroyed:false, pts:2, color:'#e74c3c', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook: false },
-    { id:'book_lr2', room:'Living Room', type:'book', x:280, y:568, w:22, h:14, destroyed:false, pts:2, color:'#3498db', label:'Book', pushable:true, vx:0, vy:0, smashable:false },
+    // Bookshelf books (5 to reveal secret room)
+    { id:'bk1', room:'Living Room', type:'book', x:1895, y:430, w:20, h:14, destroyed:false, pts:2, color:'#8e44ad', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
+    { id:'bk2', room:'Living Room', type:'book', x:1895, y:470, w:20, h:14, destroyed:false, pts:2, color:'#e74c3c', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
+    { id:'bk3', room:'Living Room', type:'book', x:1895, y:510, w:20, h:14, destroyed:false, pts:2, color:'#2ecc71', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
+    { id:'bk4', room:'Living Room', type:'book', x:1895, y:550, w:20, h:14, destroyed:false, pts:2, color:'#f39c12', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
+    { id:'bk5', room:'Living Room', type:'book', x:1895, y:590, w:20, h:14, destroyed:false, pts:2, color:'#3498db', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
 
-    // Living Room - Hard items
-    { id:'tv', room:'Living Room', type:'tv', x:350, y:920, w:80, h:36, destroyed:false, pts:10, color:'#2c3e50', label:'HDTV', pushable:true, vx:0, vy:0, smashable:true, heavy:true },
-    { id:'painting', room:'Living Room', type:'painting', x:200, y:480, w:80, h:60, destroyed:false, pts:12, color:'#8e44ad', label:'Priceless Painting', fixed:true, scratchable:true, scratchTime:40 },
+    // Clue note 1
+    { id:'clue1', room:'Living Room', type:'clue', x:200, y:1306, w:14, h:10, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "First digit: 3"', collectable:true, clueIndex:0, clueValue:3 },
 
-    // Curtains
-    { id:'curtain1', room:'Living Room', type:'curtain', x:10, y:500, w:28, h:250, destroyed:false, pts:4, color:'#c0392b', label:'Curtains', scratchable:true, scratchTime:30 },
-    { id:'curtain2', room:'Living Room', type:'curtain', x:640, y:500, w:28, h:250, destroyed:false, pts:4, color:'#c0392b', label:'Curtains', scratchable:true, scratchTime:30 },
+    // ===== KITCHEN =====
+    // Counter items
+    { id:'plate1', room:'Kitchen', type:'glass', x:1040, y:GROUND_Y-114, w:18, h:8, destroyed:false, pts:2, color:'#ecf0f1', label:'Plate', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'plate2', room:'Kitchen', type:'glass', x:1080, y:GROUND_Y-114, w:18, h:8, destroyed:false, pts:2, color:'#ecf0f1', label:'Plate', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'bowl1', room:'Kitchen', type:'glass', x:1120, y:GROUND_Y-116, w:16, h:12, destroyed:false, pts:2, color:'#d4e6f1', label:'Bowl', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'cup1', room:'Kitchen', type:'glass', x:1160, y:GROUND_Y-116, w:10, h:14, destroyed:false, pts:1, color:'#87ceeb', label:'Cup', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'cup2', room:'Kitchen', type:'glass', x:1200, y:GROUND_Y-116, w:10, h:14, destroyed:false, pts:1, color:'#87ceeb', label:'Cup', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'vase_k', room:'Kitchen', type:'vase', x:1420, y:GROUND_Y-120, w:14, h:24, destroyed:false, pts:3, color:'#e8daef', label:'Vase', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'spicerack', room:'Kitchen', type:'glass', x:1480, y:GROUND_Y-116, w:30, h:20, destroyed:false, pts:4, color:'#d4a574', label:'Spice Rack', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'blender', room:'Kitchen', type:'glass', x:1540, y:GROUND_Y-120, w:16, h:26, destroyed:false, pts:3, color:'#95a5a6', label:'Blender', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'fruitbowl', room:'Kitchen', type:'glass', x:1600, y:GROUND_Y-114, w:24, h:16, destroyed:false, pts:3, color:'#f39c12', label:'Fruit Bowl', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'papertowel', room:'Kitchen', type:'tp', x:1250, y:GROUND_Y-118, w:14, h:22, destroyed:false, pts:2, color:'#ecf0f1', label:'Paper Towel', pushable:true, vx:0, vy:0, smashable:false, unrollable:true },
+    // On table
+    { id:'glass_k1', room:'Kitchen', type:'glass', x:1220, y:GROUND_Y-90, w:10, h:16, destroyed:false, pts:1, color:'#a8d8ea', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'plant_k', room:'Kitchen', type:'plant', x:1280, y:GROUND_Y-96, w:18, h:24, destroyed:false, pts:3, color:'#2d6a4f', label:'Herb Plant', pushable:true, vx:0, vy:0, smashable:true },
+    // Stove
+    { id:'stoveknob', room:'Kitchen', type:'stoveknob', x:1690, y:GROUND_Y-86, w:14, h:14, destroyed:false, pts:5, color:'#e74c3c', label:'Stove Knob', fixed:true, interactive:true },
+    // Upper shelf
+    { id:'bowl_k2', room:'Kitchen', type:'glass', x:1070, y:1236, w:16, h:12, destroyed:false, pts:2, color:'#d4e6f1', label:'Bowl', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'mug_k', room:'Kitchen', type:'glass', x:1140, y:1236, w:12, h:16, destroyed:false, pts:1, color:'#e07a5f', label:'Mug', pushable:true, vx:0, vy:0, smashable:true },
 
-    // Bookshelf books (5 books to remove to reveal secret room)
-    { id:'bk1', room:'Living Room', type:'book', x:1295, y:430, w:20, h:14, destroyed:false, pts:2, color:'#8e44ad', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
-    { id:'bk2', room:'Living Room', type:'book', x:1295, y:460, w:20, h:14, destroyed:false, pts:2, color:'#e74c3c', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
-    { id:'bk3', room:'Living Room', type:'book', x:1295, y:490, w:20, h:14, destroyed:false, pts:2, color:'#2ecc71', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
-    { id:'bk4', room:'Living Room', type:'book', x:1295, y:520, w:20, h:14, destroyed:false, pts:2, color:'#f39c12', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
-    { id:'bk5', room:'Living Room', type:'book', x:1295, y:550, w:20, h:14, destroyed:false, pts:2, color:'#3498db', label:'Book', pushable:true, vx:0, vy:0, smashable:false, isBookshelfBook:true },
+    // Clue 2
+    { id:'clue2', room:'Kitchen', type:'clue', x:1100, y:1238, w:14, h:10, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "Second digit: 7"', collectable:true, clueIndex:1, clueValue:7 },
+    // Garage opener
+    { id:'garagebtn', room:'Kitchen', type:'button', x:1850, y:GROUND_Y-50, w:20, h:20, destroyed:false, pts:0, color:'#2ecc71', label:'Garage Opener', fixed:true, interactive:true },
 
-    // Clue note 1 (in living room)
-    { id:'clue1', room:'Living Room', type:'clue', x:155, y:727, w:16, h:12, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "First digit: 3"', fixed:false, pushable:false, collectable:true, clueIndex:0, clueValue:3 },
+    // ===== BATHROOM =====
+    // Toilet paper
+    { id:'tp1', room:'Bathroom', type:'tp', x:280, y:960, w:16, h:16, destroyed:false, pts:2, color:'#ecf0f1', label:'Toilet Paper', pushable:true, vx:0, vy:0, smashable:false, unrollable:true },
+    // Sink items
+    { id:'soap', room:'Bathroom', type:'glass', x:80, y:862, w:10, h:12, destroyed:false, pts:1, color:'#ff9ff3', label:'Soap Dispenser', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'tp2', room:'Bathroom', type:'tp', x:120, y:864, w:14, h:14, destroyed:false, pts:1, color:'#ecf0f1', label:'Toilet Paper', pushable:true, vx:0, vy:0, smashable:false },
+    // Towels
+    { id:'towel1', room:'Bathroom', type:'pillow', x:510, y:712, w:30, h:14, destroyed:false, pts:2, color:'#3498db', label:'Towel', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'towel2', room:'Bathroom', type:'pillow', x:550, y:712, w:30, h:14, destroyed:false, pts:2, color:'#e74c3c', label:'Towel', pushable:true, vx:0, vy:0, smashable:false },
+    // Shelf items
+    { id:'shampoo', room:'Bathroom', type:'glass', x:100, y:646, w:10, h:18, destroyed:false, pts:2, color:'#2ecc71', label:'Shampoo', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'perfume', room:'Bathroom', type:'glass', x:150, y:646, w:8, h:16, destroyed:false, pts:3, color:'#9b59b6', label:'Perfume', pushable:true, vx:0, vy:0, smashable:true },
+    // Mirror
+    { id:'mirror', room:'Bathroom', type:'painting', x:120, y:680, w:70, h:55, destroyed:false, pts:5, color:'#d5f5e3', label:'Mirror', fixed:true, scratchable:true, scratchTime:25 },
+    // Faucet
+    { id:'faucet', room:'Bathroom', type:'faucet', x:450, y:930, w:20, h:16, destroyed:false, pts:5, color:'#bdc3c7', label:'Faucet (knock it!)', pushable:true, vx:0, vy:0, smashable:false, isFaucet:true },
+    // Shower curtain (scratchable)
+    { id:'showercurtain', room:'Bathroom', type:'curtain', x:620, y:600, w:30, h:400, destroyed:false, pts:4, color:'#ecf0f1', label:'Shower Curtain', scratchable:true, scratchTime:20 },
 
-    // === KITCHEN ===
-    // Easy
-    { id:'mug2', room:'Kitchen', type:'glass', x:740, y:882, w:16, h:20, destroyed:false, pts:1, color:'#e07a5f', label:'Mug', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'glass3', room:'Kitchen', type:'glass', x:1020, y:882, w:14, h:18, destroyed:false, pts:1, color:'#87ceeb', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'glass4', room:'Kitchen', type:'glass', x:1060, y:882, w:14, h:18, destroyed:false, pts:1, color:'#87ceeb', label:'Glass', pushable:true, vx:0, vy:0, smashable:true },
+    // ===== HALLWAY =====
+    { id:'vase_h', room:'Hallway', type:'vase', x:740, y:766, w:16, h:20, destroyed:false, pts:3, color:'#e8daef', label:'Hallway Vase', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'clue3', room:'Hallway', type:'clue', x:780, y:770, w:14, h:10, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "Third digit: 1"', collectable:true, clueIndex:2, clueValue:1 },
 
-    // Medium
-    { id:'plate1', room:'Kitchen', type:'glass', x:780, y:884, w:20, h:16, destroyed:false, pts:2, color:'#ecf0f1', label:'Plate', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'plant_k', room:'Kitchen', type:'plant', x:870, y:780, w:22, h:24, destroyed:false, pts:3, color:'#2d6a4f', label:'Herb Plant', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'toaster', room:'Kitchen', type:'toaster', x:1040, y:878, w:36, h:26, destroyed:false, pts:3, color:'#95a5a6', label:'Toaster', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'bowl', room:'Kitchen', type:'glass', x:760, y:636, w:20, h:16, destroyed:false, pts:2, color:'#d4e6f1', label:'Bowl', pushable:true, vx:0, vy:0, smashable:true },
+    // ===== BEDROOM =====
+    // On bed
+    { id:'pillow_b1', room:'Bedroom', type:'pillow', x:1220, y:960, w:26, h:18, destroyed:false, pts:2, color:'#a29bfe', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false, shreddable:true },
+    { id:'pillow_b2', room:'Bedroom', type:'pillow', x:1440, y:960, w:26, h:18, destroyed:false, pts:2, color:'#fd79a8', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false, shreddable:true },
+    // Desk items
+    { id:'keyboard', room:'Bedroom', type:'keyboard', x:1070, y:844, w:50, h:12, destroyed:false, pts:3, color:'#bdc3c7', label:'Keyboard', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'phone_charger', room:'Bedroom', type:'glass', x:1140, y:844, w:8, h:14, destroyed:false, pts:2, color:'#333', label:'Phone Charger', pushable:true, vx:0, vy:0, smashable:false },
+    // Nightstand items
+    { id:'lamp_b', room:'Bedroom', type:'lamp', x:1540, y:976, w:14, h:28, destroyed:false, pts:3, color:'#f9ca24', label:'Lamp', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'alarm', room:'Bedroom', type:'glass', x:1560, y:982, w:16, h:14, destroyed:false, pts:2, color:'#2c3e50', label:'Alarm Clock', pushable:true, vx:0, vy:0, smashable:true },
+    // Dresser items
+    { id:'jewelry', room:'Bedroom', type:'glass', x:1050, y:936, w:14, h:12, destroyed:false, pts:5, color:'#f1c40f', label:'Jewelry Box', pushable:true, vx:0, vy:0, smashable:true },
+    // High shelf
+    { id:'trophy', room:'Bedroom', type:'trophy', x:1640, y:600, w:16, h:24, destroyed:false, pts:8, color:'#f1c40f', label:'Trophy', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'fishbowl', room:'Bedroom', type:'fishbowl', x:1700, y:596, w:26, h:24, destroyed:false, pts:8, color:'#85c1e9', label:'Fishbowl 🐠', pushable:true, vx:0, vy:0, smashable:true },
+    // Books on shelf
+    { id:'book_b1', room:'Bedroom', type:'book', x:1620, y:606, w:16, h:12, destroyed:false, pts:2, color:'#e74c3c', label:'Book', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'book_b2', room:'Bedroom', type:'book', x:1660, y:606, w:16, h:12, destroyed:false, pts:2, color:'#3498db', label:'Book', pushable:true, vx:0, vy:0, smashable:false },
+    // Wedding photo
+    { id:'photo_b', room:'Bedroom', type:'painting', x:1150, y:520, w:70, h:50, destroyed:false, pts:5, color:'#e8daef', label:'Wedding Photo', fixed:true, scratchable:true, scratchTime:20 },
+    // Safe
+    { id:'safe', room:'Bedroom', type:'safe', x:1800, y:1040, w:55, h:45, destroyed:false, pts:0, color:'#2c3e50', label:'Safe [E]', fixed:true, interactive:true },
+    // Attic key
+    { id:'attic_key', room:'Bedroom', type:'key', x:1060, y:950, w:14, h:10, destroyed:false, pts:0, color:'#f1c40f', label:'Attic Key 🔑', collectable:true },
 
-    // Stove interaction
-    { id:'stoveknob', room:'Kitchen', type:'stoveknob', x:1130, y:920, w:14, h:14, destroyed:false, pts:5, color:'#e74c3c', label:'Stove Knob', fixed:true, interactive:true },
+    // ===== LAUNDRY =====
+    { id:'detergent', room:'Laundry', type:'glass', x:1960, y:GROUND_Y-108, w:14, h:20, destroyed:false, pts:2, color:'#3498db', label:'Detergent', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'softener', room:'Laundry', type:'glass', x:2000, y:GROUND_Y-108, w:12, h:18, destroyed:false, pts:2, color:'#9b59b6', label:'Fabric Softener', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'iron', room:'Laundry', type:'glass', x:2520, y:GROUND_Y-68, w:18, h:14, destroyed:false, pts:3, color:'#95a5a6', label:'Iron', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'spray', room:'Laundry', type:'glass', x:2560, y:GROUND_Y-68, w:10, h:18, destroyed:false, pts:2, color:'#2ecc71', label:'Spray Bottle', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'sock1', room:'Laundry', type:'pillow', x:2320, y:GROUND_Y-86, w:14, h:10, destroyed:false, pts:1, color:'#fff', label:'Sock', pushable:true, vx:0, vy:0, smashable:false },
+    { id:'sock2', room:'Laundry', type:'pillow', x:2360, y:GROUND_Y-86, w:14, h:10, destroyed:false, pts:1, color:'#e74c3c', label:'Sock', pushable:true, vx:0, vy:0, smashable:false },
+    // Shelf items
+    { id:'bleach', room:'Laundry', type:'glass', x:2020, y:1266, w:12, h:20, destroyed:false, pts:2, color:'#ecf0f1', label:'Bleach', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'basket_stuff', room:'Laundry', type:'glass', x:2100, y:1266, w:24, h:16, destroyed:false, pts:2, color:'#f39c12', label:'Clothespins', pushable:true, vx:0, vy:0, smashable:false },
 
-    // Clue note 2 (in kitchen, on high shelf)
-    { id:'clue2', room:'Kitchen', type:'clue', x:730, y:668, w:16, h:12, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "Second digit: 7"', fixed:false, pushable:false, collectable:true, clueIndex:1, clueValue:7 },
+    // ===== GARAGE =====
+    { id:'toolbox_g', room:'Garage', type:'glass', x:2920, y:GROUND_Y-104, w:28, h:20, destroyed:false, pts:3, color:'#e74c3c', label:'Toolbox', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'paint', room:'Garage', type:'glass', x:3000, y:GROUND_Y-104, w:20, h:24, destroyed:false, pts:3, color:'#3498db', label:'Paint Can', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'oilcan', room:'Garage', type:'glass', x:3250, y:1284, w:14, h:20, destroyed:false, pts:2, color:'#2c3e50', label:'Oil Can', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'spraypaint', room:'Garage', type:'glass', x:3350, y:1284, w:10, h:18, destroyed:false, pts:2, color:'#e74c3c', label:'Spray Paint', pushable:true, vx:0, vy:0, smashable:true },
+    // Car (scratchable)
+    { id:'car', room:'Garage', type:'car_body', x:3000, y:GROUND_Y-180, w:350, h:80, destroyed:false, pts:50, color:'#c0392b', label:'CAR 🚗', fixed:true, scratchable:true, scratchTime:60 },
 
-    // === BATHROOM ===
-    // Easy
-    { id:'tp1', room:'Bathroom', type:'tp', x:60, y:258, w:18, h:18, destroyed:false, pts:1, color:'#ecf0f1', label:'Toilet Paper', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'tp2', room:'Bathroom', type:'tp', x:90, y:258, w:18, h:18, destroyed:false, pts:1, color:'#ecf0f1', label:'Toilet Paper', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'soap', room:'Bathroom', type:'glass', x:130, y:258, w:12, h:14, destroyed:false, pts:1, color:'#ff9ff3', label:'Soap', pushable:true, vx:0, vy:0, smashable:true },
+    // ===== ATTIC =====
+    { id:'lighter', room:'Attic', type:'lighter', x:400, y:184, w:12, h:16, destroyed:false, pts:0, color:'#e67e22', label:'🔥 Lighter!', collectable:true },
+    { id:'artifact', room:'Attic', type:'artifact', x:900, y:164, w:28, h:26, destroyed:false, pts:30, color:'#f1c40f', label:'Ancient Artifact', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'antique', room:'Attic', type:'trophy', x:600, y:266, w:20, h:24, destroyed:false, pts:15, color:'#e67e22', label:'Antique Urn', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'old_painting', room:'Attic', type:'painting', x:450, y:80, w:80, h:60, destroyed:false, pts:15, color:'#c27ba0', label:'Old Masterpiece', fixed:true, scratchable:true, scratchTime:30 },
 
-    // Medium
-    { id:'towel', room:'Bathroom', type:'pillow', x:360, y:172, w:30, h:14, destroyed:false, pts:2, color:'#3498db', label:'Towel', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'shampoo', room:'Bathroom', type:'glass', x:70, y:118, w:14, h:18, destroyed:false, pts:2, color:'#2ecc71', label:'Shampoo', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'mirror', room:'Bathroom', type:'painting', x:100, y:120, w:60, h:50, destroyed:false, pts:5, color:'#d5f5e3', label:'Mirror', fixed:true, scratchable:true, scratchTime:25 },
-
-    // Special: Bathtub faucet (knock to flood)
-    { id:'faucet', room:'Bathroom', type:'faucet', x:300, y:300, w:20, h:16, destroyed:false, pts:5, color:'#bdc3c7', label:'Faucet (knock it!)', pushable:true, vx:0, vy:0, smashable:false, isFaucet:true },
-
-    // === HALLWAY ===
-    { id:'vase_h', room:'Hallway', type:'vase', x:540, y:205, w:18, h:22, destroyed:false, pts:3, color:'#e8daef', label:'Hallway Vase', pushable:true, vx:0, vy:0, smashable:true },
-    // Clue note 3 (hallway)
-    { id:'clue3', room:'Hallway', type:'clue', x:570, y:210, w:16, h:12, destroyed:false, pts:0, color:'#ffffcc', label:'Note: "Third digit: 1"', fixed:false, pushable:false, collectable:true, clueIndex:2, clueValue:1 },
-
-    // === BEDROOM ===
-    // Easy
-    { id:'pillow_b1', room:'Bedroom', type:'pillow', x:920, y:282, w:24, h:18, destroyed:false, pts:1, color:'#a29bfe', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'pillow_b2', room:'Bedroom', type:'pillow', x:1060, y:282, w:24, h:18, destroyed:false, pts:1, color:'#fd79a8', label:'Pillow', pushable:true, vx:0, vy:0, smashable:false },
-
-    // Medium
-    { id:'keyboard', room:'Bedroom', type:'keyboard', x:770, y:248, w:55, h:14, destroyed:false, pts:3, color:'#bdc3c7', label:'Keyboard', pushable:true, vx:0, vy:0, smashable:false },
-    { id:'lamp_b', room:'Bedroom', type:'lamp', x:1140, y:310, w:14, h:26, destroyed:false, pts:3, color:'#f9ca24', label:'Lamp', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'alarm', room:'Bedroom', type:'glass', x:1160, y:316, w:18, h:16, destroyed:false, pts:2, color:'#2c3e50', label:'Alarm Clock', pushable:true, vx:0, vy:0, smashable:true },
-
-    // Hard
-    { id:'trophy', room:'Bedroom', type:'trophy', x:1140, y:120, w:18, h:26, destroyed:false, pts:8, color:'#f1c40f', label:'Trophy', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'photo_b', room:'Bedroom', type:'painting', x:850, y:60, w:60, h:45, destroyed:false, pts:5, color:'#e8daef', label:'Wedding Photo', fixed:true, scratchable:true, scratchTime:20 },
-    { id:'fishbowl', room:'Bedroom', type:'fishbowl', x:1200, y:124, w:28, h:26, destroyed:false, pts:8, color:'#85c1e9', label:'Fishbowl 🐠', pushable:true, vx:0, vy:0, smashable:true },
-
-    // Safe (legendary - needs combo 3-7-1)
-    { id:'safe', room:'Bedroom', type:'safe', x:1200, y:330, w:50, h:40, destroyed:false, pts:0, color:'#2c3e50', label:'Safe [E]', fixed:true, interactive:true },
-    // Jewelry inside (spawns when safe opened)
-
-    // === GARAGE ===
-    // Medium
-    { id:'toolbox', room:'Garage', type:'glass', x:2020, y:860, w:30, h:22, destroyed:false, pts:3, color:'#e74c3c', label:'Toolbox', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'paint', room:'Garage', type:'glass', x:2100, y:860, w:22, h:26, destroyed:false, pts:3, color:'#3498db', label:'Paint Can', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'oilcan', room:'Garage', type:'glass', x:2220, y:636, w:18, h:22, destroyed:false, pts:2, color:'#2c3e50', label:'Oil Can', pushable:true, vx:0, vy:0, smashable:true },
-
-    // Legendary: Car (scratch to damage)
-    { id:'car', room:'Garage', type:'car_body', x:2050, y:730, w:250, h:60, destroyed:false, pts:50, color:'#c0392b', label:'CAR 🚗', fixed:true, scratchable:true, scratchTime:60 },
-
-    // Garage button (opens door)
-    { id:'garagebtn', room:'Kitchen', type:'button', x:1250, y:950, w:20, h:20, destroyed:false, pts:0, color:'#2ecc71', label:'Garage Opener', fixed:true, interactive:true },
-
-    // === ATTIC ===
-    // Lighter (in attic)
-    { id:'lighter', room:'Attic', type:'lighter', x:300, y:-195, w:14, h:18, destroyed:false, pts:0, color:'#e67e22', label:'🔥 Lighter!', collectable:true },
-
-    // Legendary
-    { id:'artifact', room:'Attic', type:'artifact', x:750, y:-215, w:30, h:28, destroyed:false, pts:30, color:'#f1c40f', label:'Ancient Artifact', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'antique', room:'Attic', type:'trophy', x:500, y:-134, w:22, h:26, destroyed:false, pts:15, color:'#e67e22', label:'Antique Urn', pushable:true, vx:0, vy:0, smashable:true },
-    // Old painting
-    { id:'old_painting', room:'Attic', type:'painting', x:350, y:-300, w:70, h:50, destroyed:false, pts:15, color:'#c27ba0', label:'Old Masterpiece', fixed:true, scratchable:true, scratchTime:30 },
-
-    // Attic hatch key (somewhere in bedroom)
-    { id:'attic_key', room:'Bedroom', type:'key', x:760, y:330, w:14, h:10, destroyed:false, pts:0, color:'#f1c40f', label:'Attic Key 🔑', collectable:true },
-
-    // === SECRET ROOM ===
-    { id:'crystal', room:'Secret Room', type:'artifact', x:1570, y:878, w:24, h:24, destroyed:false, pts:25, color:'#9b59b6', label:'Crystal Ball', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'gold_vase', room:'Secret Room', type:'vase', x:1430, y:682, w:22, h:26, destroyed:false, pts:20, color:'#f1c40f', label:'Golden Vase', pushable:true, vx:0, vy:0, smashable:true },
-    { id:'diamond', room:'Secret Room', type:'artifact', x:1640, y:582, w:18, h:18, destroyed:false, pts:35, color:'#85c1e9', label:'Diamond Display', pushable:true, vx:0, vy:0, smashable:true },
+    // ===== SECRET ROOM =====
+    { id:'crystal', room:'Secret Room', type:'artifact', x:2120, y:856, w:22, h:22, destroyed:false, pts:25, color:'#9b59b6', label:'Crystal Ball', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'gold_vase', room:'Secret Room', type:'vase', x:2030, y:682, w:20, h:24, destroyed:false, pts:20, color:'#f1c40f', label:'Golden Vase', pushable:true, vx:0, vy:0, smashable:true },
+    { id:'diamond', room:'Secret Room', type:'artifact', x:2440, y:602, w:16, h:16, destroyed:false, pts:35, color:'#85c1e9', label:'Diamond Display', pushable:true, vx:0, vy:0, smashable:true },
   ];
 
   totalDestructibles = objects.filter(o => o.pts > 0).length;
 
-  pushBoxes = [
-    { x: 450, y: GROUND_Y - 36, w: 36, h: 36, vx: 0, vy: 0, onGround: false, color: '#8B4513', label: 'Box' },
-    { x: 200, y: GROUND_Y - 32, w: 32, h: 32, vx: 0, vy: 0, onGround: false, color: '#DEB887', label: 'Crate' },
-    { x: 600, y: GROUND_Y - 36, w: 36, h: 36, vx: 0, vy: 0, onGround: false, color: '#8B4513', label: 'Box' },
-    // Kitchen box
-    { x: 900, y: GROUND_Y - 32, w: 32, h: 32, vx: 0, vy: 0, onGround: false, color: '#A0522D', label: 'Crate' },
-    // Bathroom boxes for stacking
-    { x: 350, y: 370, w: 30, h: 30, vx: 0, vy: 0, onGround: false, color: '#8B4513', label: 'Box' },
-  ];
-
-  // Room destruction tracking
   roomDestructionMap = {};
   visitedRooms = {};
   for (const r of rooms) {
@@ -634,79 +716,116 @@ function initObjects() {
 // ===== COMBO SYSTEM =====
 function addCombo() {
   combo.count++;
-  combo.timer = 90; // frames
-  if (combo.count >= 8) combo.multiplier = 4;
+  combo.timer = 100;
+  combo.lastTime = Date.now();
+  if (combo.count >= 10) combo.multiplier = 5;
+  else if (combo.count >= 8) combo.multiplier = 4;
   else if (combo.count >= 5) combo.multiplier = 3;
   else if (combo.count >= 3) combo.multiplier = 2;
   else combo.multiplier = 1;
-
   if (combo.multiplier > 1) {
     playSound('combo');
     const el = document.getElementById('comboDisplay');
     el.textContent = `${combo.multiplier}x COMBO! (${combo.count})`;
     el.style.opacity = '1';
-    el.style.color = combo.multiplier >= 4 ? '#ff4500' : combo.multiplier >= 3 ? '#ff6b35' : '#ffdd00';
+    el.style.color = combo.multiplier>=5?'#ff0000':combo.multiplier>=4?'#ff4500':combo.multiplier>=3?'#ff6b35':'#ffdd00';
   }
 }
-
 function updateCombo() {
   if (combo.timer > 0) {
     combo.timer--;
-    if (combo.timer <= 0) {
-      combo.count = 0; combo.multiplier = 1;
-      document.getElementById('comboDisplay').style.opacity = '0';
-    }
+    if (combo.timer <= 0) { combo.count=0; combo.multiplier=1; document.getElementById('comboDisplay').style.opacity='0'; }
   }
 }
 
-// ===== SCORE & LOGGING =====
+// ===== SCORE =====
 function addScore(pts, label, x, y) {
   const finalPts = pts * combo.multiplier;
   score += finalPts;
   document.getElementById('scoreVal').textContent = score;
   updateChaosLevel();
   const comboText = combo.multiplier > 1 ? ` (${combo.multiplier}x!)` : '';
-  floatingTexts.push({ x, y: y - 10, text: `+${finalPts} ${label}${comboText}`, life: 120, vy: -1.5 });
+  floatingTexts.push({ x, y: y-10, text: `+${finalPts} ${label}${comboText}`, life: 120, vy: -1.5 });
   if (pts >= 20) playSound('legendary');
   else playSound('smash');
   addCombo();
   totalDestroyed++;
   updateDestructionDisplay();
 }
-
 function updateDestructionDisplay() {
   const pct = totalDestructibles > 0 ? Math.round((totalDestroyed / totalDestructibles) * 100) : 0;
   document.getElementById('destructionVal').textContent = pct + '%';
 }
-
-function addLog(msg) {
-  // Simple floating log near bottom of screen
-  floatingTexts.push({ x: camera.x + CW/2, y: camera.y + CH - 40, text: '😈 ' + msg, life: 150, vy: -0.5 });
-}
-
+function addLog(msg) { floatingTexts.push({ x: camera.x+CW/2, y: camera.y+CH-40, text: '😈 '+msg, life: 150, vy: -0.5 }); }
 function updateChaosLevel() {
   const el = document.getElementById('chaosVal');
-  if (score < 10) el.textContent = '😴 Napping';
-  else if (score < 30) el.textContent = '😏 Mischievous';
-  else if (score < 60) el.textContent = '😼 Chaotic';
-  else if (score < 100) el.textContent = '🔥 Destructive';
-  else if (score < 180) el.textContent = '💥 CATASTROPHIC';
-  else el.textContent = '☢️ LEGENDARY';
+  if (score < 10) el.textContent='😴 Napping';
+  else if (score < 30) el.textContent='😏 Mischievous';
+  else if (score < 60) el.textContent='😼 Chaotic';
+  else if (score < 100) el.textContent='🔥 Destructive';
+  else if (score < 180) el.textContent='💥 CATASTROPHIC';
+  else el.textContent='☢️ LEGENDARY';
 }
 
 // ===== PARTICLES =====
 function spawnParticles(x, y, color, count, type='smash') {
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 6 + 2;
+    const angle = Math.random()*Math.PI*2;
+    const speed = Math.random()*6+2;
     particles.push({
       x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 3,
-      color, life: 40 + Math.random()*30, maxLife: 70,
-      size: type === 'smoke' ? 8+Math.random()*8 : 3+Math.random()*5, type
+      color, life: 40+Math.random()*30, maxLife: 70,
+      size: type==='smoke'?8+Math.random()*8:type==='feather'?4+Math.random()*4:type==='confetti'?3+Math.random()*3:type==='shard'?2+Math.random()*4:3+Math.random()*5,
+      type, rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.2
     });
   }
 }
-
+function spawnGlassShards(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random()*Math.PI*2;
+    const speed = Math.random()*5+1;
+    particles.push({
+      x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed-2,
+      color, life: 50+Math.random()*30, maxLife: 80,
+      size: 2+Math.random()*4, type:'shard', rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.3
+    });
+  }
+  playSound('glass');
+}
+function spawnFeathers(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: x+(Math.random()-0.5)*20, y: y+(Math.random()-0.5)*10,
+      vx: (Math.random()-0.5)*3, vy: -Math.random()*2-1,
+      color, life: 80+Math.random()*40, maxLife: 120,
+      size: 3+Math.random()*3, type:'feather', rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.1
+    });
+  }
+  playSound('shred');
+}
+function spawnWaterSplash(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = -Math.PI/2+(Math.random()-0.5)*Math.PI;
+    const speed = Math.random()*4+2;
+    particles.push({
+      x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+      color: `rgba(52,152,219,${0.5+Math.random()*0.5})`, life: 30+Math.random()*20, maxLife: 50,
+      size: 2+Math.random()*3, type:'water', rot:0, rotV:0
+    });
+  }
+  playSound('splash');
+}
+function spawnConfetti(x, y, count) {
+  const colors = ['#ff6b35','#ffdd00','#ff4500','#e056da','#3498db','#2ecc71'];
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y, vx: (Math.random()-0.5)*6, vy: -Math.random()*4-2,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      life: 60+Math.random()*40, maxLife: 100,
+      size: 2+Math.random()*3, type:'confetti', rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.3
+    });
+  }
+}
 function spawnFireParticles(x, y) {
   const colors = ['#ff4500','#ff6b35','#ffdd00','#ff8c00'];
   for (let i = 0; i < 2; i++) {
@@ -714,21 +833,23 @@ function spawnFireParticles(x, y) {
       x: x+(Math.random()-0.5)*20, y,
       vx: (Math.random()-0.5)*2, vy: -2-Math.random()*3,
       color: colors[Math.floor(Math.random()*colors.length)],
-      life: 30+Math.random()*20, maxLife: 50, size: 6+Math.random()*8, type:'fire'
+      life: 30+Math.random()*20, maxLife: 50, size: 6+Math.random()*8, type:'fire', rot:0, rotV:0
     });
   }
 }
-
 function updateParticles() {
   particles = particles.filter(p => p.life > 0);
   for (const p of particles) {
     p.x += p.vx; p.y += p.vy;
-    if (p.type !== 'fire' && p.type !== 'smoke') p.vy += 0.2;
+    if (p.type==='feather') { p.vy += 0.02; p.vx *= 0.99; p.vx += Math.sin(Date.now()*0.005+p.x)*0.05; }
+    else if (p.type==='water') { p.vy += 0.25; }
+    else if (p.type==='confetti') { p.vy += 0.08; p.vx *= 0.98; }
+    else if (p.type!=='fire' && p.type!=='smoke') { p.vy += 0.2; }
     p.life--;
-    if (p.type === 'fire' || p.type === 'smoke') p.size *= 0.97;
+    p.rot += p.rotV || 0;
+    if (p.type==='fire'||p.type==='smoke') p.size *= 0.97;
   }
-  // Cap particles
-  if (particles.length > 500) particles = particles.slice(-400);
+  if (particles.length > 600) particles = particles.slice(-500);
 }
 
 // ===== COLLISION =====
@@ -738,20 +859,15 @@ function rectOverlap(a, b) {
 
 function getAllSolids() {
   let solids = [...walls];
-  // Bookshelf blocks passage if secret room not open
   if (!puzzleState.secretRoomOpen) {
     const bs = platforms.find(p => p.blocksSecret);
-    if (bs) solids.push({ x: bs.x, y: bs.y, w: bs.w, h: bs.h, solid: true });
+    if (bs) solids.push({ x:bs.x, y:bs.y, w:bs.w, h:bs.h, solid:true });
   }
-  // Garage door
   if (!puzzleState.garageDoorOpen) {
-    solids.push({ x: 1890, y: 600, w: 20, h: 460, solid: true, color: '#8B7355', isGarageDoor: true });
+    solids.push({ x:2790, y:1400, w:20, h:400, solid:true, color:'#8B7355', isGarageDoor:true });
   }
-  // Attic ceiling (blocks access unless hatch open)
-  // The floor between hallway and attic has a hatch
   if (!puzzleState.atticHatchOpen) {
-    // Block the hatch area
-    solids.push({ x: 500, y: -20, w: 200, h: 30, solid: true });
+    solids.push({ x:700, y:380, w:300, h:30, solid:true });
   }
   return solids;
 }
@@ -759,452 +875,365 @@ function getAllSolids() {
 function resolveCollisions(entity, ew, eh) {
   const solids = getAllSolids();
   const allPlatforms = [...platforms];
-  // Push boxes as platforms
-  for (const b of pushBoxes) {
-    allPlatforms.push({ x: b.x, y: b.y, w: b.w, h: b.h });
-  }
+  for (const f of furniture) allPlatforms.push({ x:f.x, y:f.y, w:f.w, h:f.h });
 
   entity.onGround = false;
-  entity.wallSlide = 0;
+  if (entity === cat) entity.wallSlide = 0;
 
-  // Platform landing (one-way - only from top)
   for (const p of allPlatforms) {
     if (p.blocksSecret && puzzleState.secretRoomOpen) continue;
-    if (entity.x + ew > p.x + 2 && entity.x < p.x + p.w - 2 &&
-        entity.y + eh <= p.y + 6 && entity.y + eh + entity.vy >= p.y - 2) {
+    if (entity.x+ew > p.x+2 && entity.x < p.x+p.w-2 &&
+        entity.y+eh <= p.y+6 && entity.y+eh+entity.vy >= p.y-2) {
       if (entity.vy >= 0) {
         entity.y = p.y - eh;
-        if (entity.vy > 8 && entity === cat) {
-          cat.squish = 8;
-          spawnParticles(entity.x + ew/2, entity.y + eh, '#8B6F47', 4, 'dust');
-        }
+        if (entity.vy > 8 && entity === cat) { cat.squish=8; spawnParticles(entity.x+ew/2, entity.y+eh, '#8B6F47', 4, 'dust'); }
         entity.vy = 0;
         entity.onGround = true;
       }
     }
   }
 
-  // Solid wall collisions
   for (const w of solids) {
-    if (!rectOverlap({ x: entity.x, y: entity.y, w: ew, h: eh }, w)) continue;
-
-    // Resolve by finding smallest overlap
-    const overlapLeft = (entity.x + ew) - w.x;
-    const overlapRight = (w.x + w.w) - entity.x;
-    const overlapTop = (entity.y + eh) - w.y;
-    const overlapBottom = (w.y + w.h) - entity.y;
-
-    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-    if (minOverlap === overlapTop && entity.vy >= 0) {
-      entity.y = w.y - eh;
-      if (entity.vy > 8 && entity === cat) cat.squish = 8;
-      entity.vy = 0;
-      entity.onGround = true;
-    } else if (minOverlap === overlapBottom && entity.vy <= 0) {
-      entity.y = w.y + w.h;
-      entity.vy = 1;
-    } else if (minOverlap === overlapLeft && entity.vx >= 0) {
-      entity.x = w.x - ew;
-      if (entity === cat) entity.wallSlide = 1;
-      entity.vx = 0;
-    } else if (minOverlap === overlapRight && entity.vx <= 0) {
-      entity.x = w.x + w.w;
-      if (entity === cat) entity.wallSlide = -1;
-      entity.vx = 0;
-    }
+    if (!rectOverlap({ x:entity.x, y:entity.y, w:ew, h:eh }, w)) continue;
+    const oL=(entity.x+ew)-w.x, oR=(w.x+w.w)-entity.x, oT=(entity.y+eh)-w.y, oB=(w.y+w.h)-entity.y;
+    const m = Math.min(oL,oR,oT,oB);
+    if (m===oT && entity.vy>=0) { entity.y=w.y-eh; if(entity.vy>8&&entity===cat) cat.squish=8; entity.vy=0; entity.onGround=true; }
+    else if (m===oB && entity.vy<=0) { entity.y=w.y+w.h; entity.vy=1; }
+    else if (m===oL && entity.vx>=0) { entity.x=w.x-ew; if(entity===cat) entity.wallSlide=1; entity.vx=0; }
+    else if (m===oR && entity.vx<=0) { entity.x=w.x+w.w; if(entity===cat) entity.wallSlide=-1; entity.vx=0; }
   }
 
-  // World bounds
-  if (entity.y + eh > GROUND_Y) { entity.y = GROUND_Y - eh; entity.vy = 0; entity.onGround = true; }
-  if (entity.x < 0) { entity.x = 0; entity.vx = 0; if (entity === cat) entity.wallSlide = -1; }
-  if (entity.x + ew > WORLD_W) { entity.x = WORLD_W - ew; entity.vx = 0; }
+  if (entity.y+eh > GROUND_Y) { entity.y=GROUND_Y-eh; entity.vy=0; entity.onGround=true; }
+  if (entity.x < 0) { entity.x=0; entity.vx=0; if(entity===cat) entity.wallSlide=-1; }
+  if (entity.x+ew > WORLD_W) { entity.x=WORLD_W-ew; entity.vx=0; }
 }
 
 // ===== CAT UPDATE =====
 function updateCat() {
   if (gameState !== 'playing') return;
 
-  const speed = 4.2;
-  const maxJumpPower = -12;
-  const minJumpPower = -6;
+  // Climbing curtain?
+  if (cat.climbing) {
+    cat.climbTimer++;
+    cat.y -= 2.5;
+    cat.vx = 0; cat.vy = 0;
+    cat.state = 'climb';
+    if (cat.climbTimer % 6 === 0) playSound('climb');
+    // Reached top?
+    if (cat.y <= cat.climbing.topY - 10) {
+      cat.climbing.climbed = true;
+      cat.climbing.shredded = true;
+      cat.climbing = null;
+      cat.vy = -3;
+      cat.onGround = false;
+      addScore(4, 'Shredded curtains!', cat.x, cat.y);
+      spawnParticles(cat.x, cat.y+cat.h, '#c0392b', 15, 'confetti');
+      addLog('🧗 Climbed & shredded curtains!');
+    }
+    return;
+  }
 
-  // Check slippery
+  const speed = 4.0;
+  const maxJumpPower = -11;
+  const minJumpPower = -5.5;
+
   let onSlippery = false;
   for (const sz of slipperyZones) {
-    if (rectOverlap({ x: cat.x, y: cat.y, w: cat.w, h: cat.h }, sz)) {
-      onSlippery = true; break;
-    }
+    if (rectOverlap({ x:cat.x, y:cat.y, w:cat.w, h:cat.h }, sz)) { onSlippery=true; break; }
   }
   const friction = onSlippery ? 0.98 : 0.7;
 
-  // Movement
-  if (keys['ArrowLeft'] || keys['KeyA']) {
-    cat.vx = onSlippery ? cat.vx - 0.3 : -speed;
-    cat.facing = -1; cat.state = 'walk';
-  } else if (keys['ArrowRight'] || keys['KeyD']) {
-    cat.vx = onSlippery ? cat.vx + 0.3 : speed;
-    cat.facing = 1; cat.state = 'walk';
-  } else {
-    cat.vx *= friction;
-    if (cat.onGround) cat.state = 'idle';
-  }
+  if (keys['ArrowLeft']||keys['KeyA']) { cat.vx = onSlippery ? cat.vx-0.3 : -speed; cat.facing=-1; cat.state='walk'; }
+  else if (keys['ArrowRight']||keys['KeyD']) { cat.vx = onSlippery ? cat.vx+0.3 : speed; cat.facing=1; cat.state='walk'; }
+  else { cat.vx *= friction; if (cat.onGround) cat.state='idle'; }
   if (onSlippery) cat.vx = Math.max(-8, Math.min(8, cat.vx));
 
-  // Pounce (dash)
-  if (cat.pounce !== 0 && cat.pounceTimer <= 0) {
-    cat.vx = cat.pounce * 12;
-    cat.pounceTimer = 30;
-    cat.pounce = 0;
-    cat.facing = cat.vx > 0 ? 1 : -1;
-    cat.stretch = 8;
+  // Pounce
+  if (cat.pounce!==0 && cat.pounceTimer<=0) {
+    cat.vx = cat.pounce*11; cat.pounceTimer=30; cat.pounce=0;
+    cat.facing = cat.vx>0?1:-1; cat.stretch=8;
     playSound('pounce');
-    spawnParticles(cat.x + cat.w/2, cat.y + cat.h/2, '#FFA500', 8, 'dust');
+    spawnParticles(cat.x+cat.w/2, cat.y+cat.h/2, '#FFA500', 8, 'dust');
   }
-  if (cat.pounceTimer > 0) cat.pounceTimer--;
+  if (cat.pounceTimer>0) cat.pounceTimer--;
   cat.pounce = 0;
 
-  // Jump (variable height)
-  const jumpKeys = keys['ArrowUp'] || keys['KeyZ'] || keys['KeyW'] || keys['Space'];
+  // Jump
+  const jumpKeys = keys['ArrowUp']||keys['KeyZ']||keys['KeyW']||keys['Space'];
   if (jumpKeys && cat.onGround) {
-    cat.vy = maxJumpPower;
-    cat.onGround = false;
-    cat.jumpHeld = true;
-    cat.jumpReleased = false;
-    cat.jumpTime = 0;
-    cat.stretch = 6;
+    cat.vy=maxJumpPower; cat.onGround=false; cat.jumpHeld=true; cat.jumpReleased=false; cat.jumpTime=0; cat.stretch=6;
     playSound('jump');
-    spawnParticles(cat.x + cat.w/2, cat.y + cat.h, '#8B6F47', 5, 'dust');
-  }
-  // Wall jump
-  else if (jumpKeys && cat.wallSlide !== 0 && !cat.onGround && cat.jumpReleased) {
-    cat.vy = -10;
-    cat.vx = -cat.wallSlide * 6;
-    cat.facing = -cat.wallSlide;
-    cat.jumpReleased = false;
-    cat.stretch = 5;
+    spawnParticles(cat.x+cat.w/2, cat.y+cat.h, '#8B6F47', 5, 'dust');
+  } else if (jumpKeys && cat.wallSlide!==0 && !cat.onGround && cat.jumpReleased) {
+    cat.vy=-9; cat.vx=-cat.wallSlide*5.5; cat.facing=-cat.wallSlide; cat.jumpReleased=false; cat.stretch=5;
     playSound('jump');
-    spawnParticles(cat.x + (cat.wallSlide > 0 ? cat.w : 0), cat.y + cat.h/2, '#c8a87a', 6, 'dust');
+    spawnParticles(cat.x+(cat.wallSlide>0?cat.w:0), cat.y+cat.h/2, '#c8a87a', 6, 'dust');
   }
-
-  // Variable jump: cut short if released early
-  if (cat.jumpHeld && !jumpKeys) {
-    cat.jumpHeld = false;
-    if (cat.vy < minJumpPower) cat.vy = minJumpPower;
-  }
+  if (cat.jumpHeld && !jumpKeys) { cat.jumpHeld=false; if(cat.vy<minJumpPower) cat.vy=minJumpPower; }
   if (cat.jumpHeld) cat.jumpTime++;
 
-  // Wall slide (slow fall on walls)
-  if (cat.wallSlide !== 0 && !cat.onGround && cat.vy > 0) {
-    cat.vy = Math.min(cat.vy, 2);
-    cat.state = 'wallslide';
-    if (Math.random() < 0.3) spawnParticles(cat.x + (cat.wallSlide > 0 ? cat.w : 0), cat.y + cat.h/2, '#c8a87a', 1, 'dust');
+  if (cat.wallSlide!==0 && !cat.onGround && cat.vy>0) {
+    cat.vy = Math.min(cat.vy, 2); cat.state='wallslide';
+    if (Math.random()<0.3) spawnParticles(cat.x+(cat.wallSlide>0?cat.w:0), cat.y+cat.h/2, '#c8a87a', 1, 'dust');
   }
 
-  // Gravity
   cat.vy += GRAVITY;
   cat.x += cat.vx;
   cat.y += cat.vy;
-
-  if (cat.vy > 0 && !cat.onGround) cat.state = 'jump';
+  if (cat.vy>0 && !cat.onGround) cat.state='jump';
 
   resolveCollisions(cat, cat.w, cat.h);
+  if (cat.onGround && Math.abs(cat.vx)<0.3 && cat.state!=='push') cat.state='idle';
 
-  if (cat.onGround && Math.abs(cat.vx) < 0.3 && cat.state !== 'push') cat.state = 'idle';
-
-  // Interact / scratch
+  // Interact
   if (keys['KeyE']) {
     cat.eHeld++;
-    if (cat.onGround || cat.wallSlide !== 0) cat.state = 'push';
+    if (cat.onGround || cat.wallSlide!==0) cat.state='push';
   } else {
-    cat.eHeld = 0;
-    cat.scratchTarget = null;
-    cat.scratchProgress = 0;
+    cat.eHeld=0; cat.scratchTarget=null; cat.scratchProgress=0;
   }
 
-  cat.tail = Math.sin(Date.now() * 0.005) * 15;
-  if (cat.squish > 0) cat.squish -= 0.5;
-  if (cat.stretch > 0) cat.stretch -= 0.4;
-  if (cat.puffTail > 0) cat.puffTail -= 0.3;
+  cat.tail = Math.sin(Date.now()*0.005)*15;
+  if (cat.squish>0) cat.squish-=0.5;
+  if (cat.stretch>0) cat.stretch-=0.4;
+  if (cat.puffTail>0) cat.puffTail-=0.3;
+  if (dogWarningTriggered && !dogChaseActive) cat.puffTail=5;
+  if (cat.pushCooldown>0) cat.pushCooldown--;
 
-  // Dog warning puff
-  if (dogWarningTriggered && !dogChaseActive) cat.puffTail = 5;
+  if (keys['KeyE'] && cat.pushCooldown===0) interactWithObjects();
 
-  if (cat.pushCooldown > 0) cat.pushCooldown--;
-
-  if ((keys['KeyE']) && cat.pushCooldown === 0) {
-    interactWithObjects();
+  // Check curtain climbing
+  if (jumpKeys && !cat.onGround && !cat.climbing) {
+    for (const c of curtains) {
+      if (c.climbed || c.shredded) continue;
+      if (rectOverlap({ x:cat.x, y:cat.y, w:cat.w, h:cat.h }, { x:c.x, y:c.topY, w:c.w, h:c.h })) {
+        cat.climbing = c; cat.climbTimer=0; cat.vx=0; cat.vy=0;
+        addLog('🧗 Climbing curtains!');
+        break;
+      }
+    }
   }
 
   cat.frameTimer++;
-  if (cat.frameTimer > 8) { cat.frame = (cat.frame + 1) % 4; cat.frameTimer = 0; }
+  if (cat.frameTimer>8) { cat.frame=(cat.frame+1)%4; cat.frameTimer=0; }
 
-  // Track visited rooms
-  const room = getRoomAt(cat.x + cat.w/2, cat.y + cat.h/2);
+  const room = getRoomAt(cat.x+cat.w/2, cat.y+cat.h/2);
   if (room) visitedRooms[room.name] = true;
 }
 
 function interactWithObjects() {
-  const reach = { x: cat.x + (cat.facing > 0 ? cat.w : -28), y: cat.y - 5, w: 32, h: cat.h + 10 };
+  const reach = { x:cat.x+(cat.facing>0?cat.w:-28), y:cat.y-5, w:32, h:cat.h+10 };
 
-  // Push boxes
-  for (const box of pushBoxes) {
-    if (rectOverlap(reach, box)) {
-      box.vx = cat.facing * 3;
+  // Push furniture
+  for (const f of furniture) {
+    if (f.pushable && rectOverlap(reach, f)) {
+      f.vx = cat.facing*2.5;
       cat.pushCooldown = 8;
+      playSound('push');
+      // Check if reveals hidden item
+      if (f.hidesItem && !f._revealed) {
+        f._revealed = true;
+        addLog('Found something hidden!');
+        showWarning('🔍 Hidden item revealed!', '#f1c40f');
+      }
     }
   }
 
   for (const obj of objects) {
     if (obj.destroyed) continue;
-    const objReach = { x: obj.x - 10, y: obj.y - 10, w: (obj.w||20) + 20, h: (obj.h||20) + 20 };
-    if (!rectOverlap({ x: cat.x, y: cat.y, w: cat.w, h: cat.h }, objReach)) continue;
+    const objReach = { x:obj.x-10, y:obj.y-10, w:(obj.w||20)+20, h:(obj.h||20)+20 };
+    if (!rectOverlap({ x:cat.x, y:cat.y, w:cat.w, h:cat.h }, objReach)) continue;
 
     // Collectables
     if (obj.collectable && !obj.destroyed) {
       obj.destroyed = true;
-      if (obj.type === 'lighter') {
-        puzzleState.hasLighter = true;
-        addLog('🔥 Grabbed the lighter!');
-      } else if (obj.type === 'key') {
-        puzzleState.atticHatchOpen = true;
-        addLog('🔑 Attic hatch unlocked!');
-        playSound('unlock');
-        showWarning('🔑 ATTIC UNLOCKED!', '#f1c40f');
-      } else if (obj.type === 'clue') {
-        puzzleState.cluesFound[obj.clueIndex] = obj.clueValue;
-        addLog(`📝 Found clue: ${obj.label}`);
-        playSound('unlock');
-        showWarning(obj.label, '#ffffcc');
-      }
-      spawnParticles(obj.x + (obj.w||10)/2, obj.y + (obj.h||10)/2, obj.color, 12);
+      if (obj.type==='lighter') { puzzleState.hasLighter=true; addLog('🔥 Grabbed the lighter!'); }
+      else if (obj.type==='key') { puzzleState.atticHatchOpen=true; addLog('🔑 Attic hatch unlocked!'); playSound('unlock'); showWarning('🔑 ATTIC UNLOCKED!', '#f1c40f'); }
+      else if (obj.type==='clue') { puzzleState.cluesFound[obj.clueIndex]=obj.clueValue; addLog(`📝 Found clue: ${obj.label}`); playSound('unlock'); showWarning(obj.label, '#ffffcc'); }
+      spawnParticles(obj.x+(obj.w||10)/2, obj.y+(obj.h||10)/2, obj.color, 12);
       cat.pushCooldown = 20;
       continue;
     }
 
     // Stove knob
-    if (obj.type === 'stoveknob' && !puzzleState.stoveOn) {
-      puzzleState.stoveOn = true;
-      obj.color = '#2ecc71';
-      addScore(5, 'Stove On!', obj.x, obj.y);
-      addLog('💨 Gas is ON...');
-      cat.pushCooldown = 40;
-      continue;
+    if (obj.type==='stoveknob' && !puzzleState.stoveOn) {
+      puzzleState.stoveOn=true; obj.color='#2ecc71';
+      addScore(5, 'Stove On!', obj.x, obj.y); addLog('💨 Gas is ON...');
+      cat.pushCooldown=40; continue;
     }
-
     // Garage button
-    if (obj.type === 'button' && obj.id === 'garagebtn' && !puzzleState.garageDoorOpen) {
-      puzzleState.garageDoorOpen = true;
-      addLog('🚗 Garage door opened!');
-      playSound('unlock');
-      showWarning('🚗 GARAGE OPEN!', '#2ecc71');
-      cat.pushCooldown = 40;
-      continue;
+    if (obj.type==='button' && obj.id==='garagebtn' && !puzzleState.garageDoorOpen) {
+      puzzleState.garageDoorOpen=true; addLog('🚗 Garage door opened!');
+      playSound('unlock'); showWarning('🚗 GARAGE OPEN!', '#2ecc71'); cat.pushCooldown=40; continue;
     }
-
-    // Safe interaction
-    if (obj.type === 'safe' && !puzzleState.safeOpen) {
-      if (puzzleState.cluesFound.length >= 3 &&
-          puzzleState.cluesFound[0] === 3 &&
-          puzzleState.cluesFound[1] === 7 &&
-          puzzleState.cluesFound[2] === 1) {
-        puzzleState.safeOpen = true;
-        addLog('💎 SAFE CRACKED OPEN!');
-        playSound('legendary');
+    // Safe
+    if (obj.type==='safe' && !puzzleState.safeOpen) {
+      if (puzzleState.cluesFound.length>=3 && puzzleState.cluesFound[0]===3 && puzzleState.cluesFound[1]===7 && puzzleState.cluesFound[2]===1) {
+        puzzleState.safeOpen=true; addLog('💎 SAFE CRACKED OPEN!'); playSound('legendary');
         showWarning('💎 SAFE OPENED! JEWELRY!!!', '#f1c40f');
-        // Spawn jewelry
-        objects.push({
-          id:'jewelry', room:'Bedroom', type:'artifact', x:1210, y:340, w:20, h:16,
-          destroyed:false, pts:40, color:'#f1c40f', label:'💎 JEWELRY', pushable:true, vx:0, vy:0, smashable:true
-        });
-        totalDestructibles++;
-        cat.pushCooldown = 40;
-      } else {
-        showWarning('🔒 Need combo! Find 3 clue notes!', '#ff4500');
-        cat.pushCooldown = 30;
-      }
+        objects.push({ id:'safe_jewelry', room:'Bedroom', type:'artifact', x:1810, y:1050, w:18, h:14, destroyed:false, pts:40, color:'#f1c40f', label:'💎 JEWELRY', pushable:true, vx:0, vy:0, smashable:true });
+        totalDestructibles++; cat.pushCooldown=40;
+      } else { showWarning('🔒 Need combo! Find 3 clue notes!', '#ff4500'); cat.pushCooldown=30; }
       continue;
     }
-
-    // Faucet (floods bathroom)
+    // Faucet
     if (obj.isFaucet && !puzzleState.bathroomFlooded && obj.pushable) {
-      obj.vx = cat.facing * 4;
-      // After faucet falls, flood
+      obj.vx = cat.facing*4;
       if (!obj._knockedOnce) {
         obj._knockedOnce = true;
         setTimeout(() => {
-          if (gameState !== 'playing') return;
-          puzzleState.bathroomFlooded = true;
-          addScore(5, 'Flooded bathroom!', 300, 350);
-          addLog('🌊 BATHROOM FLOODED!');
-          playSound('water');
+          if (gameState!=='playing') return;
+          puzzleState.bathroomFlooded=true;
+          addScore(5, 'Flooded bathroom!', 400, 950);
+          addLog('🌊 BATHROOM FLOODED!'); playSound('water');
           showWarning('🌊 BATHROOM FLOODED!', '#3498db');
-          slipperyZones.push({ x: 0, y: 350, w: 500, h: 50 });
+          slipperyZones.push({ x:0, y:950, w:700, h:50 });
+          spawnWaterSplash(400, 950, 30);
         }, 1000);
       }
+      cat.pushCooldown=15; continue;
+    }
+    // Light fire
+    if (obj.type==='stoveknob' && puzzleState.stoveOn && puzzleState.hasLighter && !puzzleState.fireStarted) {
+      puzzleState.fireStarted=true; triggerFire(); cat.pushCooldown=40; continue;
+    }
+
+    // Unrollable (toilet paper, paper towels)
+    if (obj.unrollable && !obj.destroyed && cat.eHeld > 3) {
+      obj.destroyed = true;
+      addScore(obj.pts, `Unrolled ${obj.label}!`, obj.x, obj.y);
+      spawnConfetti(obj.x+obj.w/2, obj.y, 20);
+      playSound('unroll');
+      if (obj.room) roomDestructionMap[obj.room].destroyed++;
       cat.pushCooldown = 15;
       continue;
     }
 
-    // Light stove on fire
-    if (obj.type === 'stoveknob' && puzzleState.stoveOn && puzzleState.hasLighter && !puzzleState.fireStarted) {
-      puzzleState.fireStarted = true;
-      triggerFire();
-      cat.pushCooldown = 40;
+    // Shreddable (pillows)
+    if (obj.shreddable && !obj.destroyed && cat.eHeld > 10) {
+      obj.destroyed = true;
+      addScore(obj.pts, `Shredded ${obj.label}!`, obj.x, obj.y);
+      spawnFeathers(obj.x+obj.w/2, obj.y+obj.h/2, obj.color, 20);
+      if (obj.room) roomDestructionMap[obj.room].destroyed++;
+      cat.pushCooldown = 15;
       continue;
     }
 
-    // Scratchable objects
-    if (obj.scratchable && cat.eHeld > 5 && !obj.destroyed) {
+    // Scratchable
+    if (obj.scratchable && cat.eHeld>5 && !obj.destroyed) {
       cat.scratchTarget = obj;
       cat.scratchProgress++;
-      if (cat.scratchProgress % 10 === 0) playSound('scratch');
-      if (cat.scratchProgress >= (obj.scratchTime || 30)) {
+      if (cat.scratchProgress%10===0) playSound('scratch');
+      if (cat.scratchProgress >= (obj.scratchTime||30)) {
         obj.destroyed = true;
         addScore(obj.pts, `Destroyed ${obj.label}!`, obj.x, obj.y);
-        spawnParticles(obj.x + (obj.w||20)/2, obj.y + (obj.h||20)/2, obj.color, 25);
-        if (obj.room) {
-          roomDestructionMap[obj.room].destroyed++;
-        }
-        cat.pushCooldown = 20;
-        cat.scratchTarget = null;
-        cat.scratchProgress = 0;
+        spawnParticles(obj.x+(obj.w||20)/2, obj.y+(obj.h||20)/2, obj.color, 25);
+        if (obj.room) roomDestructionMap[obj.room].destroyed++;
+        cat.pushCooldown=20; cat.scratchTarget=null; cat.scratchProgress=0;
       }
       continue;
     }
 
-    // Pushable objects
+    // Pushable
     if (obj.pushable && !obj.destroyed) {
       obj.vx = cat.facing * (obj.heavy ? 1.5 : 3.5);
       cat.pushCooldown = 10;
-      // Check if it's a bookshelf book
       if (obj.isBookshelfBook) {
-        obj.isBookshelfBook = false; // Only count once
+        obj.isBookshelfBook = false;
         puzzleState.booksRemoved++;
         if (puzzleState.booksRemoved >= puzzleState.totalBooks) {
-          puzzleState.secretRoomOpen = true;
-          addLog('📚 Secret room revealed!');
-          playSound('legendary');
-          showWarning('🔮 SECRET ROOM DISCOVERED!', '#9b59b6');
+          puzzleState.secretRoomOpen=true; addLog('📚 Secret room revealed!');
+          playSound('legendary'); showWarning('🔮 SECRET ROOM DISCOVERED!', '#9b59b6');
         }
       }
     }
   }
 }
 
-// ===== OBJECT PHYSICS =====
+// ===== OBJECT & FURNITURE PHYSICS =====
 function updateObjects() {
   for (const obj of objects) {
     if (obj.destroyed || obj.fixed || !obj.pushable) continue;
-    obj.vx = (obj.vx || 0) * 0.85;
-    obj.vy = (obj.vy || 0) + GRAVITY;
-    obj.x += obj.vx;
-    obj.y += obj.vy;
-
-    const prevOnGround = obj.onGround;
+    obj.vx = (obj.vx||0) * 0.85;
+    obj.vy = (obj.vy||0) + GRAVITY;
+    obj.x += obj.vx; obj.y += obj.vy;
+    const prevGround = obj.onGround;
     resolveCollisions(obj, obj.w, obj.h);
 
-    // Smash on hard landing
-    if (obj.onGround && !prevOnGround && Math.abs(obj.vy) > 3 && obj.smashable) {
+    if (obj.onGround && !prevGround && Math.abs(obj.vy) > 3 && obj.smashable) {
       obj.destroyed = true;
-      addScore(obj.pts, `Smashed ${obj.label}!`, obj.x + obj.w/2, obj.y);
-      spawnParticles(obj.x + obj.w/2, obj.y, obj.color, 20);
-      if (obj.room) roomDestructionMap[obj.room].destroyed++;
-      // Glass shards
-      if (obj.type === 'glass' || obj.type === 'vase' || obj.type === 'fishbowl') {
-        glassShards.push({ x: obj.x, y: obj.y + obj.h, w: obj.w + 10, h: 4, color: obj.color, life: 600 });
+      addScore(obj.pts, `Smashed ${obj.label}!`, obj.x+obj.w/2, obj.y);
+      if (obj.type==='glass'||obj.type==='vase'||obj.type==='fishbowl') {
+        spawnGlassShards(obj.x+obj.w/2, obj.y, obj.color, 15);
+        glassShards.push({ x:obj.x-5, y:obj.y+obj.h, w:obj.w+10, h:4, color:obj.color, life:600 });
+      } else {
+        spawnParticles(obj.x+obj.w/2, obj.y, obj.color, 20);
       }
+      if (obj.type==='fishbowl') spawnWaterSplash(obj.x+obj.w/2, obj.y, 20);
+      if (obj.room) roomDestructionMap[obj.room].destroyed++;
     }
-
-    // Bounds
-    if (obj.x < 0) { obj.x = 0; obj.vx = Math.abs(obj.vx); }
-    if (obj.x + obj.w > WORLD_W) { obj.x = WORLD_W - obj.w; obj.vx = -Math.abs(obj.vx); }
+    if (obj.x<0) { obj.x=0; obj.vx=Math.abs(obj.vx); }
+    if (obj.x+obj.w>WORLD_W) { obj.x=WORLD_W-obj.w; obj.vx=-Math.abs(obj.vx); }
   }
-
-  // Books that fall off shelves count as knocked
+  // Books/soft items that hit ground count
   for (const obj of objects) {
     if (obj.destroyed || obj.fixed) continue;
-    if (obj.type === 'book' && !obj.smashable && obj.onGround && obj.y > 950 && !obj._counted) {
-      obj._counted = true;
-      obj.destroyed = true;
+    if ((obj.type==='book'||obj.type==='keyboard') && !obj.smashable && obj.onGround && obj.y>GROUND_Y-30 && !obj._counted) {
+      obj._counted = true; obj.destroyed = true;
       addScore(obj.pts, `Knocked ${obj.label}!`, obj.x, obj.y);
       if (obj.room) roomDestructionMap[obj.room].destroyed++;
-    }
-    // Pillows, TP, keyboard that hit ground
-    if (!obj.smashable && obj.type !== 'book' && obj.pushable && obj.onGround && !obj._counted) {
-      // Check if significantly displaced from original position
-      if (Math.abs(obj.vx) > 0.5 || obj.vy !== 0) {
-        // Will be counted when they settle
-      }
     }
   }
 }
 
-function updateBoxes() {
-  for (const box of pushBoxes) {
-    box.vx *= 0.85;
-    box.vy = (box.vy || 0) + GRAVITY;
-    box.x += box.vx;
-    box.y += box.vy;
-    resolveCollisions(box, box.w, box.h);
+function updateFurniture() {
+  for (const f of furniture) {
+    f.vx = (f.vx||0) * 0.85;
+    f.vy = (f.vy||0) + GRAVITY;
+    f.x += f.vx; f.y += f.vy;
+    resolveCollisions(f, f.w, f.h);
   }
 }
 
 // ===== FIRE =====
 function triggerFire() {
   if (fireActive) return;
-  fireActive = true;
-  addScore(50, '🔥 HOUSE ON FIRE!!!', 1100, 850);
+  fireActive=true;
+  addScore(50, '🔥 HOUSE ON FIRE!!!', 1650, GROUND_Y-150);
   addLog('🔥🔥🔥 MAXIMUM CHAOS!!! 🔥🔥🔥');
-  playSound('fire');
-  showWarning('🔥 THE HOUSE IS ON FIRE! 🔥', '#ff2200');
+  playSound('fire'); showWarning('🔥 THE HOUSE IS ON FIRE! 🔥', '#ff2200');
   let bonus = setInterval(() => {
-    if (!fireActive || gameState !== 'playing') { clearInterval(bonus); return; }
+    if (!fireActive || gameState!=='playing') { clearInterval(bonus); return; }
     fireSpread++;
-    if (fireSpread % 5 === 0) addScore(3, '🔥 Fire!', 1100 + Math.random()*200, 800);
-    if (fireSpread > 40) clearInterval(bonus);
+    if (fireSpread%5===0) addScore(3, '🔥 Fire!', 1650+Math.random()*200, GROUND_Y-100);
+    if (fireSpread>40) clearInterval(bonus);
   }, 1000);
 }
 
 // ===== WARNINGS =====
 function showWarning(text, color) {
   const el = document.getElementById('warningBanner');
-  el.textContent = text;
-  el.style.color = color || '#ff2200';
-  el.style.opacity = '1';
-  setTimeout(() => { el.style.opacity = '0'; }, 3000);
+  el.textContent = text; el.style.color = color||'#ff2200'; el.style.opacity='1';
+  setTimeout(() => { el.style.opacity='0'; }, 3000);
 }
 
 function updateWarnings() {
-  // Owner warning at 60s left
-  if (timeLeft <= 60 && !ownerWarningTriggered) {
-    ownerWarningTriggered = true;
-    showWarning('⚠️ OWNER COMING HOME IN 60 SECONDS!', '#ff6b35');
-    playSound('warning');
+  if (timeLeft<=60 && !ownerWarningTriggered) {
+    ownerWarningTriggered=true; showWarning('⚠️ OWNER COMING HOME IN 60 SECONDS!', '#ff6b35'); playSound('warning');
   }
-  // Dog warning at 30s left
-  if (timeLeft <= 30 && !dogWarningTriggered) {
-    dogWarningTriggered = true;
-    showWarning('🐕 DOG LET OUT OF CRATE IN 30s!', '#ff2200');
-    playSound('warning');
-    cat.puffTail = 10;
+  if (timeLeft<=30 && !dogWarningTriggered) {
+    dogWarningTriggered=true; showWarning('🐕 DOG LET OUT OF CRATE IN 30s!', '#ff2200'); playSound('warning'); cat.puffTail=10;
   }
-  // Dog chase at 15s
-  if (timeLeft <= 15 && !dogChaseActive) {
-    dogChaseActive = true;
-    dogX = 0; dogY = GROUND_Y - 40;
-    showWarning('🐕 WOOF WOOF! DOG IS CHASING YOU!', '#ff0000');
-    playSound('warning');
+  if (timeLeft<=15 && !dogChaseActive) {
+    dogChaseActive=true; dogX=0; dogY=GROUND_Y-40;
+    showWarning('🐕 WOOF WOOF! DOG IS CHASING YOU!', '#ff0000'); playSound('warning');
   }
-  // Update dog
   if (dogChaseActive) {
-    const dx = cat.x - dogX;
-    dogX += dx * 0.02;
-    dogY = cat.y; // Simplistic - same level
-    // If dog catches cat, lose time
-    if (Math.abs(dogX - cat.x) < 40 && Math.abs(dogY - cat.y) < 40) {
-      timeLeft = Math.max(0, timeLeft - 2);
-      dogX = cat.x - cat.facing * 200;
+    const dx = cat.x-dogX;
+    dogX += dx*0.02; dogY = cat.y;
+    if (Math.abs(dogX-cat.x)<40 && Math.abs(dogY-cat.y)<40) {
+      timeLeft = Math.max(0, timeLeft-2);
+      dogX = cat.x-cat.facing*200;
       showWarning('🐕 CAUGHT! Lost 2 seconds!', '#ff0000');
       spawnParticles(cat.x, cat.y, '#8B4513', 15);
     }
@@ -1213,1285 +1242,171 @@ function updateWarnings() {
 
 // ===== CAMERA =====
 function updateCamera() {
-  const targetX = cat.x + cat.w/2 - CW/2;
-  const targetY = cat.y + cat.h/2 - CH/2;
-  camera.x += (targetX - camera.x) * 0.08;
-  camera.y += (targetY - camera.y) * 0.08;
-  // Clamp
-  camera.x = Math.max(-100, Math.min(WORLD_W - CW + 100, camera.x));
-  camera.y = Math.max(-400, Math.min(WORLD_H - CH, camera.y));
+  const targetX = cat.x+cat.w/2-CW/2;
+  const targetY = cat.y+cat.h/2-CH/2;
+  camera.x += (targetX-camera.x)*0.08;
+  camera.y += (targetY-camera.y)*0.08;
+  camera.x = Math.max(-100, Math.min(WORLD_W-CW+100, camera.x));
+  camera.y = Math.max(-100, Math.min(WORLD_H-CH, camera.y));
 }
 
 // ===== DRAWING =====
 function drawBackground() {
-  // Sky
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, CH);
-  skyGrad.addColorStop(0, '#1a0a2e');
-  skyGrad.addColorStop(1, '#2c1654');
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, CW, CH);
+  const skyGrad = ctx.createLinearGradient(0,0,0,CH);
+  skyGrad.addColorStop(0,'#1a0a2e'); skyGrad.addColorStop(1,'#2c1654');
+  ctx.fillStyle = skyGrad; ctx.fillRect(0,0,CW,CH);
 
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
-  // Draw each room's background
   for (const r of rooms) {
-    if (r.name === 'Secret Room' && !puzzleState.secretRoomOpen) continue;
-    if (r.name === 'Attic' && !puzzleState.atticHatchOpen) continue;
+    if (r.name==='Secret Room' && !puzzleState.secretRoomOpen) continue;
+    if (r.name==='Attic' && !puzzleState.atticHatchOpen) continue;
 
-    // Wall fill
-    ctx.fillStyle = r.wall;
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-
-    // Wall stripes
-    ctx.strokeStyle = r.wallAccent;
-    ctx.lineWidth = 1;
-    for (let x = r.x; x < r.x + r.w; x += 40) {
-      ctx.beginPath(); ctx.moveTo(x, r.y); ctx.lineTo(x, r.y + r.h); ctx.stroke();
-    }
-
-    // Floor
-    ctx.fillStyle = r.floor;
-    ctx.fillRect(r.x, r.y + r.h - 30, r.w, 30);
-    // Floor planks
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 1;
-    for (let x = r.x; x < r.x + r.w; x += 60) {
-      ctx.beginPath(); ctx.moveTo(x, r.y + r.h - 30); ctx.lineTo(x, r.y + r.h); ctx.stroke();
-    }
-
-    // Room label (subtle)
-    ctx.fillStyle = 'rgba(0,0,0,0.07)';
-    ctx.font = 'bold 40px Bangers';
-    ctx.textAlign = 'center';
-    ctx.fillText(r.name.toUpperCase(), r.x + r.w/2, r.y + r.h/2);
+    ctx.fillStyle = r.wall; ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = r.wallAccent; ctx.lineWidth=1;
+    for (let x=r.x; x<r.x+r.w; x+=50) { ctx.beginPath(); ctx.moveTo(x,r.y); ctx.lineTo(x,r.y+r.h); ctx.stroke(); }
+    ctx.fillStyle = r.floor; ctx.fillRect(r.x, r.y+r.h-40, r.w, 40);
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth=1;
+    for (let x=r.x; x<r.x+r.w; x+=70) { ctx.beginPath(); ctx.moveTo(x,r.y+r.h-40); ctx.lineTo(x,r.y+r.h); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(0,0,0,0.05)'; ctx.font='bold 50px Bangers'; ctx.textAlign='center';
+    ctx.fillText(r.name.toUpperCase(), r.x+r.w/2, r.y+r.h/2);
   }
 
   // Windows
-  drawWindow(100, 440, 120, 100);
-  drawWindow(550, 440, 120, 100);
-  drawWindow(800, 440, 100, 90);
-  drawWindow(100, 50, 100, 80);
-  drawWindow(800, 50, 100, 80);
+  const drawWin = (x,y,w,h) => {
+    const sky=ctx.createLinearGradient(x,y,x,y+h);
+    sky.addColorStop(0,'#87ceeb'); sky.addColorStop(1,'#b0e0ff');
+    ctx.fillStyle=sky; ctx.fillRect(x,y,w,h);
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.ellipse(x+w*0.3,y+h*0.3,15,8,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#8B6F47'; ctx.lineWidth=4; ctx.strokeRect(x,y,w,h);
+    ctx.beginPath(); ctx.moveTo(x+w/2,y); ctx.lineTo(x+w/2,y+h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y+h/2); ctx.lineTo(x+w,y+h/2); ctx.stroke();
+  };
+  // Living room windows
+  drawWin(130,1190,140,120); drawWin(810,1190,140,120);
+  // Kitchen window
+  drawWin(1300,1190,140,120);
+  // Bathroom window
+  drawWin(210,530,120,100);
+  // Bedroom windows
+  drawWin(1310,510,180,140); drawWin(1710,510,140,120);
+  // Laundry window
+  drawWin(2410,1190,140,120);
 
   // Bathroom tiles
-  if (true) {
-    ctx.fillStyle = 'rgba(150,200,220,0.15)';
-    for (let tx = 0; tx < 500; tx += 30) {
-      for (let ty = 0; ty < 400; ty += 30) {
-        if ((tx + ty) % 60 === 0) ctx.fillRect(tx, ty, 28, 28);
-      }
-    }
-  }
+  ctx.fillStyle='rgba(150,200,220,0.15)';
+  for (let tx=0; tx<700; tx+=35) for (let ty=400; ty<1100; ty+=35) { if((tx+ty)%70===0) ctx.fillRect(tx,ty,33,33); }
 
-  // Bathroom flood water
+  // Bathroom flood
   if (puzzleState.bathroomFlooded) {
-    ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
-    ctx.fillRect(0, 340, 500, 60);
-    // Water ripples
-    ctx.strokeStyle = 'rgba(52, 152, 219, 0.4)';
-    ctx.lineWidth = 2;
-    for (let wx = 0; wx < 500; wx += 30) {
-      const wy = 350 + Math.sin(Date.now() * 0.003 + wx * 0.1) * 4;
-      ctx.beginPath();
-      ctx.moveTo(wx, wy);
-      ctx.quadraticCurveTo(wx + 15, wy - 3, wx + 30, wy);
-      ctx.stroke();
+    ctx.fillStyle='rgba(52,152,219,0.3)'; ctx.fillRect(0,960,700,70);
+    ctx.strokeStyle='rgba(52,152,219,0.4)'; ctx.lineWidth=2;
+    for (let wx=0; wx<700; wx+=30) {
+      const wy=970+Math.sin(Date.now()*0.003+wx*0.1)*4;
+      ctx.beginPath(); ctx.moveTo(wx,wy); ctx.quadraticCurveTo(wx+15,wy-3,wx+30,wy); ctx.stroke();
     }
   }
 
-  // Garage floor markings
-  ctx.fillStyle = 'rgba(255,255,0,0.2)';
-  ctx.fillRect(2050, GROUND_Y - 5, 250, 5);
-  ctx.fillRect(2050, GROUND_Y - 200, 5, 200);
-  ctx.fillRect(2295, GROUND_Y - 200, 5, 200);
+  // Garage floor
+  ctx.fillStyle='rgba(255,255,0,0.2)'; ctx.fillRect(3000,GROUND_Y-5,350,5);
 
-  // Draw walls
-  for (const w of getAllSolids()) {
-    if (w.color) {
-      ctx.fillStyle = w.color;
-      ctx.fillRect(w.x, w.y, w.w, w.h);
-    }
-  }
+  // Walls
+  for (const w of getAllSolids()) { if(w.color) { ctx.fillStyle=w.color; ctx.fillRect(w.x,w.y,w.w,w.h); } }
 
   // Baseboards
-  ctx.fillStyle = '#c8a87a';
-  ctx.fillRect(0, GROUND_Y - 8, 1900, 8);
+  ctx.fillStyle='#c8a87a'; ctx.fillRect(0,GROUND_Y-8,3700,8);
 
-  // Doorways (decorative arches)
-  drawDoorway(690, 660, 20, 100); // Living/Kitchen
-  drawDoorway(490, 280, 20, 110); // Bathroom/Hallway
-  drawDoorway(690, 260, 20, 130); // Hallway/Bedroom
+  // Doorway frames
+  const drawDoor = (x,y,w,h) => { ctx.fillStyle='#5a3a1a'; ctx.fillRect(x,y,w,6); ctx.fillRect(x,y,4,h); ctx.fillRect(x+w-4,y,4,h); };
+  drawDoor(990,1400,20,140); drawDoor(1890,1380,20,160); drawDoor(690,860,20,140);
+  drawDoor(990,820,20,140);
 
   ctx.restore();
-}
-
-function drawDoorway(x, y, w, h) {
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(x, y, w, 6); // top
-  ctx.fillRect(x, y, 4, h); // left frame
-  ctx.fillRect(x + w - 4, y, 4, h); // right frame
-}
-
-function drawWindow(x, y, w, h) {
-  const sky = ctx.createLinearGradient(x, y, x, y+h);
-  sky.addColorStop(0, '#87ceeb'); sky.addColorStop(1, '#b0e0ff');
-  ctx.fillStyle = sky; ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.beginPath(); ctx.ellipse(x+w*0.3, y+h*0.3, 18, 10, 0, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#8B6F47'; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
-  ctx.beginPath(); ctx.moveTo(x+w/2, y); ctx.lineTo(x+w/2, y+h); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x, y+h/2); ctx.lineTo(x+w, y+h/2); ctx.stroke();
 }
 
 function drawPlatforms() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-
+  ctx.save(); ctx.translate(-camera.x,-camera.y);
   for (const p of platforms) {
     if (p.blocksSecret && puzzleState.secretRoomOpen) continue;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+    ctx.fillStyle = p.color; ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(p.x,p.y+p.h-3,p.w,3);
 
-    // Shelf brackets
-    if (p.type === 'shelf') {
-      ctx.fillStyle = '#4a3020';
-      ctx.fillRect(p.x + 8, p.y + p.h, 6, 10);
-      ctx.fillRect(p.x + p.w - 14, p.y + p.h, 6, 10);
+    if (p.type==='shelf') {
+      ctx.fillStyle='#4a3020';
+      ctx.fillRect(p.x+10,p.y+p.h,6,12); ctx.fillRect(p.x+p.w-16,p.y+p.h,6,12);
     }
-
-    // Sofa details
-    if (p.type === 'sofa') {
-      ctx.fillStyle = '#8B4513';
-      ctx.fillRect(p.x, p.y - 10, 14, p.h + 10);
-      ctx.fillRect(p.x + p.w - 14, p.y - 10, 14, p.h + 10);
-      ctx.fillStyle = '#C0A882';
-      ctx.fillRect(p.x + 18, p.y + 4, 70, 18);
-      ctx.fillRect(p.x + p.w - 88, p.y + 4, 70, 18);
+    if (p.type==='sofa') {
+      ctx.fillStyle='#8B4513';
+      ctx.fillRect(p.x,p.y-15,16,p.h+15); ctx.fillRect(p.x+p.w-16,p.y-15,16,p.h+15);
+      ctx.fillStyle='#C0A882';
+      ctx.fillRect(p.x+20,p.y+6,100,20); ctx.fillRect(p.x+p.w-120,p.y+6,100,20);
     }
-
-    // Bed details
-    if (p.type === 'bed') {
-      ctx.fillStyle = '#5a4aad';
-      ctx.fillRect(p.x, p.y - 20, 20, p.h + 20);
-      ctx.fillStyle = '#7a6aed';
-      ctx.fillRect(p.x + 5, p.y - 15, 10, 10);
-      ctx.fillRect(p.x + 25, p.y + 5, p.w - 30, p.h - 10);
+    if (p.type==='bed') {
+      ctx.fillStyle='#5a4aad'; ctx.fillRect(p.x,p.y-30,24,p.h+30);
+      ctx.fillStyle='#7a6aed'; ctx.fillRect(p.x+8,p.y-22,12,12);
+      ctx.fillStyle='rgba(106,90,205,0.5)'; ctx.fillRect(p.x+30,p.y+5,p.w-40,p.h-10);
     }
-
-    // Stove details
-    if (p.type === 'stove') {
-      ctx.fillStyle = puzzleState.stoveOn ? '#ff4500' : '#555';
-      ctx.beginPath(); ctx.arc(p.x + 25, p.y + 15, 10, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x + 60, p.y + 15, 10, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x + 25, p.y + 38, 10, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x + 60, p.y + 38, 10, 0, Math.PI*2); ctx.fill();
-      if (puzzleState.stoveOn) {
-        ctx.fillStyle = 'rgba(255,100,0,0.5)';
-        const fh = 6 + Math.sin(Date.now()*0.01)*3;
-        [p.x+25, p.x+60].forEach(bx => {
-          [p.y+15, p.y+38].forEach(by => {
-            ctx.beginPath(); ctx.ellipse(bx, by-fh/2, 5, fh/2, 0, 0, Math.PI*2); ctx.fill();
-          });
-        });
-      }
+    if (p.type==='stove') {
+      ctx.fillStyle = puzzleState.stoveOn?'#ff4500':'#555';
+      const cx=p.x, cy=p.y;
+      [cx+25,cx+60,cx+25,cx+60].forEach((bx,i) => {
+        const by = i<2?cy+12:cy+30;
+        ctx.beginPath(); ctx.arc(bx,by,8,0,Math.PI*2); ctx.fill();
+      });
     }
-
-    // Car
-    if (p.type === 'car') {
-      ctx.fillStyle = '#a02020';
-      ctx.fillRect(p.x + 20, p.y - 30, p.w - 40, 30);
-      ctx.fillStyle = '#87ceeb';
-      ctx.fillRect(p.x + 40, p.y - 25, 60, 20);
-      ctx.fillRect(p.x + 140, p.y - 25, 60, 20);
-      // Wheels
-      ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(p.x + 50, p.y + p.h, 16, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x + p.w - 50, p.y + p.h, 16, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#888';
-      ctx.beginPath(); ctx.arc(p.x + 50, p.y + p.h, 8, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x + p.w - 50, p.y + p.h, 8, 0, Math.PI*2); ctx.fill();
+    if (p.type==='car') {
+      ctx.fillStyle='#a02020'; ctx.fillRect(p.x+30,p.y-40,p.w-60,40);
+      ctx.fillStyle='#87ceeb'; ctx.fillRect(p.x+50,p.y-35,80,28); ctx.fillRect(p.x+180,p.y-35,80,28);
+      ctx.fillStyle='#333';
+      ctx.beginPath(); ctx.arc(p.x+60,p.y+p.h,18,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x+p.w-60,p.y+p.h,18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#888';
+      ctx.beginPath(); ctx.arc(p.x+60,p.y+p.h,9,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x+p.w-60,p.y+p.h,9,0,Math.PI*2); ctx.fill();
     }
-
-    // Counter details
-    if (p.type === 'counter') {
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.fillRect(p.x, p.y - 2, p.w, 2);
+    if (p.type==='counter') { ctx.fillStyle='rgba(0,0,0,0.08)'; ctx.fillRect(p.x,p.y-2,p.w,2);
+      // Cabinet underneath
+      ctx.fillStyle='rgba(139,111,71,0.4)'; ctx.fillRect(p.x+5,p.y+p.h,p.w-10,70);
+      ctx.strokeStyle='rgba(0,0,0,0.1)'; ctx.lineWidth=1; ctx.strokeRect(p.x+5,p.y+p.h,p.w-10,70);
     }
-
-    // Bookshelf
+    if (p.type==='toilet') {
+      ctx.fillStyle='#ecf0f1';
+      ctx.fillRect(p.x+10,p.y+p.h,p.w-20,60);
+      ctx.beginPath(); ctx.ellipse(p.x+p.w/2,p.y+p.h/2,p.w/2+2,p.h/2+2,0,0,Math.PI*2);
+      ctx.strokeStyle='#bdc3c7'; ctx.lineWidth=2; ctx.stroke();
+    }
+    if (p.type==='tub') {
+      ctx.fillStyle='#ecf0f1'; ctx.fillRect(p.x-6,p.y,6,100); ctx.fillRect(p.x+p.w,p.y,6,100);
+      ctx.fillRect(p.x-6,p.y+96,p.w+12,8);
+      ctx.fillStyle='rgba(52,152,219,0.3)'; ctx.fillRect(p.x,p.y+12,p.w,84);
+    }
     if (p.blocksSecret && !puzzleState.secretRoomOpen) {
-      ctx.fillStyle = '#3a2010';
-      for (let sy = p.y; sy < p.y + p.h; sy += 80) {
-        ctx.fillRect(p.x, sy, p.w, 4);
-      }
+      ctx.fillStyle='#3a2010';
+      for (let sy=p.y; sy<p.y+p.h; sy+=80) ctx.fillRect(p.x,sy,p.w,4);
     }
-
-    // Pedestal
-    if (p.type === 'pedestal') {
-      ctx.fillStyle = '#6a0090';
-      ctx.fillRect(p.x + 5, p.y - 5, p.w - 10, 5);
+    if (p.type==='pedestal') { ctx.fillStyle='#6a0090'; ctx.fillRect(p.x+5,p.y-5,p.w-10,5); }
+    if (p.type==='appliance') {
+      ctx.fillStyle='#ddd'; ctx.fillRect(p.x,p.y+p.h,p.w,74);
+      ctx.fillStyle='#aaa'; ctx.beginPath(); ctx.arc(p.x+p.w/2,p.y+p.h+37,20,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#999'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x+p.w/2,p.y+p.h+37,20,0,Math.PI*2); ctx.stroke();
     }
-
-    // Bathtub
-    if (p.type === 'tub') {
-      ctx.fillStyle = '#ecf0f1';
-      ctx.fillRect(p.x - 5, p.y, 5, 80);
-      ctx.fillRect(p.x + p.w, p.y, 5, 80);
-      ctx.fillRect(p.x - 5, p.y + 76, p.w + 10, 8);
-      ctx.fillStyle = 'rgba(52,152,219,0.3)';
-      ctx.fillRect(p.x, p.y + 10, p.w, 66);
-    }
-  }
-
-  ctx.restore();
-}
-
-function drawObjects() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  for (const obj of objects) {
-    if (obj.destroyed) continue;
-    drawObject(obj);
-  }
-  // Glass shards
-  for (let i = glassShards.length - 1; i >= 0; i--) {
-    const s = glassShards[i];
-    ctx.fillStyle = s.color;
-    ctx.globalAlpha = 0.6;
-    for (let sx = 0; sx < s.w; sx += 4) {
-      ctx.fillRect(s.x + sx, s.y + Math.sin(sx)*2, 3, 2);
-    }
-    ctx.globalAlpha = 1;
-    s.life--;
-    if (s.life <= 0) glassShards.splice(i, 1);
   }
   ctx.restore();
 }
 
-function drawObject(obj) {
-  const { x, y, w, h, color, type } = obj;
-
-  // Scratch progress indicator
-  if (cat.scratchTarget === obj && cat.scratchProgress > 0) {
-    ctx.fillStyle = 'rgba(255,0,0,0.8)';
-    const pct = cat.scratchProgress / (obj.scratchTime || 30);
-    ctx.fillRect(x, y - 10, w * pct, 4);
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y - 10, w, 4);
-  }
-
-  switch(type) {
-    case 'glass': case 'plate':
-      ctx.fillStyle = color; ctx.globalAlpha = 0.7;
-      ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
-      ctx.strokeRect(x+2, y+2, w-4, h*0.4);
-      break;
-
-    case 'vase':
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(x+w*0.3, y+h); ctx.quadraticCurveTo(x, y+h*0.7, x+w*0.2, y+h*0.3);
-      ctx.quadraticCurveTo(x+w/2, y, x+w*0.8, y+h*0.3);
-      ctx.quadraticCurveTo(x+w, y+h*0.7, x+w*0.7, y+h);
-      ctx.closePath(); ctx.fill();
-      break;
-
-    case 'plant':
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(x+4, y+h*0.55, w-8, h*0.45);
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h*0.3, w*0.45, h*0.35, -0.3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(x+w/2+4, y+h*0.2, w*0.3, h*0.25, 0.3, 0, Math.PI*2); ctx.fill();
-      break;
-
-    case 'curtain':
-      const curtGrad = ctx.createLinearGradient(x, y, x+w, y);
-      curtGrad.addColorStop(0, '#922b21'); curtGrad.addColorStop(0.5, '#c0392b'); curtGrad.addColorStop(1, '#922b21');
-      ctx.fillStyle = curtGrad;
-      ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x-3, y-4, w+6, 6);
-      break;
-
-    case 'book':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x, y, 3, h);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillRect(x+5, y+3, w-8, 1); ctx.fillRect(x+5, y+6, w-8, 1);
-      break;
-
-    case 'fishbowl':
-      ctx.fillStyle = 'rgba(133,193,233,0.5)'; ctx.globalAlpha = 0.8;
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = '#5dade2'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.stroke();
-      const fishX = x+w/2+Math.sin(Date.now()*0.003)*5;
-      ctx.fillStyle = '#e74c3c';
-      ctx.beginPath(); ctx.ellipse(fishX, y+h/2+2, 4, 3, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(fishX+4, y+h/2+2); ctx.lineTo(fishX+7, y+h/2-1); ctx.lineTo(fishX+7, y+h/2+5); ctx.fill();
-      break;
-
-    case 'painting':
-      ctx.fillStyle = '#f0d060'; ctx.fillRect(x-4, y-4, w+8, h+8);
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.ellipse(x+w*0.3, y+h*0.4, 15, 12, 0.5, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#3498db'; ctx.fillRect(x+w*0.5, y+h*0.2, 18, 14);
-      ctx.fillStyle = '#f1c40f';
-      ctx.beginPath(); ctx.moveTo(x+w*0.2, y+h*0.7); ctx.lineTo(x+w*0.5, y+h*0.2); ctx.lineTo(x+w*0.8, y+h*0.7); ctx.fill();
-      break;
-
-    case 'lamp':
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x+3, y+h-5, w-6, 5);
-      ctx.fillStyle = '#95a5a6'; ctx.fillRect(x+w/2-2, y+6, 4, h-10);
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.moveTo(x, y+10); ctx.lineTo(x+w, y+10); ctx.lineTo(x+w-3, y); ctx.lineTo(x+3, y); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(249,202,36,0.2)';
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+15, w*0.7, 16, 0, 0, Math.PI*2); ctx.fill();
-      break;
-
-    case 'trophy':
-      ctx.fillStyle = color;
-      ctx.fillRect(x+4, y+h-7, w-8, 7);
-      ctx.fillRect(x+w/2-2, y+h-12, 4, 7);
-      ctx.beginPath();
-      ctx.moveTo(x, y+8);
-      ctx.quadraticCurveTo(x-6, y+h*0.5, x+w*0.2, y+h-12);
-      ctx.lineTo(x+w*0.8, y+h-12);
-      ctx.quadraticCurveTo(x+w+6, y+h*0.5, x+w, y+8);
-      ctx.lineTo(x, y+8);
-      ctx.fill();
-      ctx.fillStyle = '#f39c12'; ctx.font = '9px serif'; ctx.textAlign = 'center';
-      ctx.fillText('★', x+w/2, y+14);
-      break;
-
-    case 'keyboard':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      for (let i = 0; i < 10; i++) { ctx.fillRect(x+3+i*5, y+2, 4, 4); ctx.fillRect(x+3+i*5, y+7, 4, 4); }
-      break;
-
-    case 'tp':
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/4, h/4, 0, 0, Math.PI*2); ctx.stroke();
-      break;
-
-    case 'pillow':
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y, w, h, 5);
-      else ctx.rect(x, y, w, h);
-      ctx.fill();
-      break;
-
-    case 'tv':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#1a1a2e'; ctx.fillRect(x+4, y+4, w-8, h-14);
-      ctx.fillStyle = '#4a4a8a'; ctx.font = '8px Fredoka One'; ctx.textAlign = 'center';
-      ctx.fillText('📺 CAT TV', x+w/2, y+h/2-6);
-      ctx.fillStyle = '#555';
-      ctx.fillRect(x+w/2-10, y+h-10, 20, 4);
-      ctx.fillRect(x+w/2-16, y+h-6, 32, 5);
-      break;
-
-    case 'toaster':
-      ctx.fillStyle = color; ctx.fillRect(x, y+5, w, h-5);
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x+6, y, 8, 8); ctx.fillRect(x+18, y, 8, 8);
-      break;
-
-    case 'stoveknob':
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, w/2, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x+w/2-1, y+1, 2, h/2);
-      break;
-
-    case 'lighter':
-      ctx.fillStyle = color; ctx.fillRect(x, y+4, w, h-4);
-      ctx.fillStyle = '#f39c12'; ctx.fillRect(x+2, y, w-4, 6);
-      ctx.fillStyle = '#ff4500'; ctx.font = '12px serif'; ctx.textAlign = 'center';
-      ctx.fillText('🔥', x+w/2, y-2);
-      break;
-
-    case 'key':
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(x+w/2, y+4, 5, 0, Math.PI*2); ctx.fill();
-      ctx.fillRect(x+w/2-2, y+6, 4, h-6);
-      ctx.fillRect(x+w/2, y+h-4, 5, 3);
-      ctx.fillRect(x+w/2, y+h-7, 4, 2);
-      break;
-
-    case 'clue':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#333'; ctx.font = '7px serif'; ctx.textAlign = 'center';
-      ctx.fillText('📝', x+w/2, y+h-2);
-      break;
-
-    case 'safe':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.strokeRect(x+2, y+2, w-4, h-4);
-      ctx.fillStyle = puzzleState.safeOpen ? '#2ecc71' : '#e74c3c';
-      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, 6, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#95a5a6';
-      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, 12, 0, Math.PI*2); ctx.stroke();
-      if (!puzzleState.safeOpen) {
-        ctx.fillStyle = 'rgba(255,220,0,0.9)'; ctx.font = '9px Fredoka One'; ctx.textAlign = 'center';
-        ctx.fillText('🔒 SAFE', x+w/2, y-4);
-      }
-      break;
-
-    case 'button':
-      ctx.fillStyle = puzzleState.garageDoorOpen ? '#888' : color;
-      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, w/2, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,220,0,0.9)'; ctx.font = '8px Fredoka One'; ctx.textAlign = 'center';
-      ctx.fillText(puzzleState.garageDoorOpen ? 'OPEN' : 'GARAGE', x+w/2, y-4);
-      break;
-
-    case 'faucet':
-      ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#95a5a6'; ctx.fillRect(x+w/2-3, y-8, 6, 8);
-      ctx.fillRect(x+w/2-8, y-10, 16, 4);
-      break;
-
-    case 'artifact':
-      // Glowing artifact
-      ctx.fillStyle = 'rgba(241,196,15,0.2)';
-      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, w, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      const sides = 6;
-      for (let i = 0; i < sides; i++) {
-        const angle = (i / sides) * Math.PI * 2 - Math.PI/2;
-        const px = x + w/2 + Math.cos(angle) * w/2;
-        const py = y + h/2 + Math.sin(angle) * h/2;
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-      }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
-      break;
-
-    case 'car_body':
-      // Already drawn as platform, just show scratch marks if partially scratched
-      if (cat.scratchTarget === obj) {
-        ctx.strokeStyle = '#ffdd00'; ctx.lineWidth = 2;
-        for (let i = 0; i < cat.scratchProgress / 5; i++) {
-          const sx = x + 20 + Math.random() * (w - 40);
-          const sy = y + 5 + Math.random() * (h - 10);
-          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 15, sy + 5); ctx.stroke();
-        }
-      }
-      break;
-  }
-
-  // Interactive label
-  if ((obj.interactive || obj.collectable || obj.type === 'safe' || obj.type === 'button') && !obj.destroyed) {
-    const dist = Math.abs((cat.x + cat.w/2) - (x + (w||10)/2)) + Math.abs((cat.y + cat.h/2) - (y + (h||10)/2));
-    if (dist < 100) {
-      ctx.fillStyle = 'rgba(255,220,0,0.9)'; ctx.font = 'bold 9px Fredoka One'; ctx.textAlign = 'center';
-      ctx.fillText('[E] ' + obj.label, x + (w||10)/2, y - 8);
+function drawFurniture() {
+  ctx.save(); ctx.translate(-camera.x,-camera.y);
+  for (const f of furniture) {
+    ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(f.x+3,f.y+f.h,f.w-3,4);
+    ctx.fillStyle = f.color; ctx.fillRect(f.x,f.y,f.w,f.h);
+    ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1; ctx.strokeRect(f.x,f.y,f.w,f.h);
+    // Label when close
+    const d = Math.hypot(cat.x-f.x, cat.y-f.y);
+    if (d < 80) {
+      ctx.fillStyle='rgba(255,220,0,0.7)'; ctx.font='bold 8px Fredoka One'; ctx.textAlign='center';
+      ctx.fillText(f.label, f.x+f.w/2, f.y-6);
     }
-  }
-}
-
-function drawBoxes() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  for (const box of pushBoxes) {
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(box.x+3, box.y+box.h, box.w-3, 4);
-    ctx.fillStyle = box.color;
-    ctx.fillRect(box.x, box.y, box.w, box.h);
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
-    ctx.strokeRect(box.x, box.y, box.w, box.h);
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(box.x, box.y); ctx.lineTo(box.x+box.w, box.y+box.h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(box.x+box.w, box.y); ctx.lineTo(box.x, box.y+box.h); ctx.stroke();
   }
   ctx.restore();
-}
-
-function drawCat() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  ctx.translate(cat.x + cat.w/2, cat.y + cat.h/2);
-  ctx.scale(cat.facing, 1);
-
-  const t = Date.now() * 0.005;
-  const bodyBob = cat.onGround ? Math.sin(t * 3) * (cat.state === 'walk' ? 2 : 0.5) : 0;
-
-  // Squish/stretch deformation
-  let scaleX = 1, scaleY = 1;
-  if (cat.squish > 0) { scaleX = 1 + cat.squish * 0.03; scaleY = 1 - cat.squish * 0.04; }
-  if (cat.stretch > 0) { scaleX = 1 - cat.stretch * 0.02; scaleY = 1 + cat.stretch * 0.04; }
-  ctx.scale(scaleX, scaleY);
-
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath(); ctx.ellipse(0, cat.h/2+2, cat.w*0.4, 3, 0, 0, Math.PI*2); ctx.fill();
-
-  // Tail
-  const tailPuff = cat.puffTail > 0 ? 1 + cat.puffTail * 0.3 : 1;
-  ctx.strokeStyle = '#FF8C00'; ctx.lineWidth = 4 * tailPuff; ctx.lineCap = 'round';
-  const tailAngle = (cat.tail * Math.PI) / 180;
-  ctx.beginPath();
-  ctx.moveTo(-cat.w/2+3, bodyBob+3);
-  ctx.quadraticCurveTo(-cat.w/2-14+Math.cos(tailAngle)*8, bodyBob-10+Math.sin(tailAngle)*6, -cat.w/2-18, bodyBob-18+Math.sin(tailAngle)*12);
-  ctx.stroke();
-
-  // Body
-  ctx.fillStyle = '#FF8C00';
-  ctx.beginPath(); ctx.ellipse(0, bodyBob, cat.w*0.45, cat.h*0.35, 0, 0, Math.PI*2); ctx.fill();
-
-  // Head
-  ctx.fillStyle = '#FFA500';
-  ctx.beginPath(); ctx.ellipse(cat.w*0.2, bodyBob-cat.h*0.2, cat.h*0.27, cat.h*0.27, 0, 0, Math.PI*2); ctx.fill();
-
-  // Ears
-  ctx.fillStyle = '#FF8C00';
-  ctx.beginPath(); ctx.moveTo(cat.w*0.08, bodyBob-cat.h*0.42);
-  ctx.lineTo(cat.w*0.0, bodyBob-cat.h*0.6); ctx.lineTo(cat.w*0.2, bodyBob-cat.h*0.42); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cat.w*0.26, bodyBob-cat.h*0.42);
-  ctx.lineTo(cat.w*0.36, bodyBob-cat.h*0.56); ctx.lineTo(cat.w*0.43, bodyBob-cat.h*0.38); ctx.fill();
-  ctx.fillStyle = '#ff6b9d';
-  ctx.beginPath(); ctx.moveTo(cat.w*0.1, bodyBob-cat.h*0.45);
-  ctx.lineTo(cat.w*0.03, bodyBob-cat.h*0.56); ctx.lineTo(cat.w*0.18, bodyBob-cat.h*0.45); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cat.w*0.28, bodyBob-cat.h*0.43);
-  ctx.lineTo(cat.w*0.35, bodyBob-cat.h*0.52); ctx.lineTo(cat.w*0.41, bodyBob-cat.h*0.40); ctx.fill();
-
-  // Eyes
-  const eyeX = cat.w*0.22, eyeY = bodyBob-cat.h*0.22;
-  if (cat.state === 'push' || cat.scratchTarget) {
-    ctx.fillStyle = '#333';
-    ctx.beginPath(); ctx.ellipse(eyeX-5, eyeY, 3, 2, -0.3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(eyeX+5, eyeY, 3, 2, 0.3, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(eyeX-7, eyeY-4); ctx.lineTo(eyeX-2, eyeY-2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(eyeX+2, eyeY-2); ctx.lineTo(eyeX+7, eyeY-4); ctx.stroke();
-  } else if (cat.state === 'wallslide') {
-    ctx.fillStyle = '#1a1a2e';
-    ctx.beginPath(); ctx.ellipse(eyeX-5, eyeY, 4, 4, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(eyeX+5, eyeY, 4, 4, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath(); ctx.ellipse(eyeX-4, eyeY-1, 2, 2, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(eyeX+6, eyeY-1, 2, 2, 0, 0, Math.PI*2); ctx.fill();
-  } else {
-    ctx.fillStyle = '#1a1a2e';
-    ctx.beginPath(); ctx.ellipse(eyeX-5, eyeY, 3, 3.5, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(eyeX+5, eyeY, 3, 3.5, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.ellipse(eyeX-4, eyeY-1, 1.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(eyeX+6, eyeY-1, 1.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
-  }
-
-  // Nose
-  ctx.fillStyle = '#ff9999';
-  ctx.beginPath(); ctx.moveTo(eyeX, eyeY+4); ctx.lineTo(eyeX-2, eyeY+6); ctx.lineTo(eyeX+2, eyeY+6); ctx.fill();
-
-  // Whiskers
-  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
-  [[-12,-1],[-14,1],[-12,3],[12,-1],[14,1],[12,3]].forEach((wh,i) => {
-    ctx.beginPath(); ctx.moveTo(eyeX+(i<3?-2:2), eyeY+5); ctx.lineTo(eyeX+wh[0], eyeY+wh[1]*2); ctx.stroke();
-  });
-
-  // Legs
-  const legSwing = cat.state === 'walk' ? Math.sin(t*8)*7 : 0;
-  ctx.fillStyle = '#FF8C00';
-  ctx.fillRect(cat.w*0.1, bodyBob+5, 5, 9+Math.max(0,legSwing));
-  ctx.fillRect(cat.w*0.22, bodyBob+5, 5, 9+Math.max(0,-legSwing));
-  ctx.fillRect(-cat.w*0.32, bodyBob+5, 5, 9+Math.max(0,-legSwing));
-  ctx.fillRect(-cat.w*0.18, bodyBob+5, 5, 9+Math.max(0,legSwing));
-
-  // Stripes
-  ctx.strokeStyle = 'rgba(200,80,0,0.35)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(-5, bodyBob-7); ctx.lineTo(-5, bodyBob+7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(2, bodyBob-5); ctx.lineTo(2, bodyBob+7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(9, bodyBob-3); ctx.lineTo(9, bodyBob+5); ctx.stroke();
-
-  // Lighter indicator
-  if (puzzleState.hasLighter) {
-    ctx.fillStyle = '#e67e22'; ctx.font = '10px serif'; ctx.textAlign = 'center';
-    ctx.fillText('🔥', 0, bodyBob-cat.h*0.7);
-  }
-
-  ctx.restore();
-}
-
-function drawDog() {
-  if (!dogChaseActive) return;
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-
-  const bx = dogX, by = cat.y;
-  // Simple dog
-  ctx.fillStyle = '#8B4513';
-  ctx.beginPath(); ctx.ellipse(bx, by+10, 20, 14, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#A0522D';
-  ctx.beginPath(); ctx.ellipse(bx+16, by, 10, 10, 0, 0, Math.PI*2); ctx.fill();
-  // Ears
-  ctx.fillStyle = '#6B3410';
-  ctx.beginPath(); ctx.ellipse(bx+10, by-10, 6, 8, -0.3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(bx+22, by-10, 6, 8, 0.3, 0, Math.PI*2); ctx.fill();
-  // Eyes
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(bx+13, by-2, 2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(bx+20, by-2, 2, 0, Math.PI*2); ctx.fill();
-  // Mouth
-  ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(bx+16, by+4, 5, 0, Math.PI); ctx.stroke();
-  // Legs
-  ctx.fillStyle = '#8B4513';
-  const dLeg = Math.sin(Date.now()*0.015)*5;
-  ctx.fillRect(bx-10, by+20, 5, 12+dLeg);
-  ctx.fillRect(bx+5, by+20, 5, 12-dLeg);
-  ctx.fillRect(bx-5, by+20, 5, 12-dLeg);
-  ctx.fillRect(bx+10, by+20, 5, 12+dLeg);
-  // WOOF text
-  if (Math.sin(Date.now()*0.005) > 0) {
-    ctx.fillStyle = '#ff4500'; ctx.font = 'bold 14px Bangers'; ctx.textAlign = 'center';
-    ctx.fillText('WOOF!', bx+16, by-20);
-  }
-  ctx.restore();
-}
-
-function drawParticles() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  for (const p of particles) {
-    const alpha = p.life / p.maxLife;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = p.color;
-    if (p.type === 'fire' || p.type === 'smoke') {
-      ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size, p.size, 0, 0, Math.PI*2); ctx.fill();
-    } else {
-      ctx.fillRect(p.x-p.size/2, p.y-p.size/2, p.size, p.size);
-    }
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
-
-function drawFloatingTexts() {
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  for (let i = floatingTexts.length - 1; i >= 0; i--) {
-    const ft = floatingTexts[i];
-    ft.y += ft.vy; ft.life--;
-    const alpha = Math.min(1, ft.life / 40);
-    ctx.globalAlpha = alpha;
-    ctx.font = 'bold 18px Bangers'; ctx.fillStyle = '#ffdd00';
-    ctx.strokeStyle = '#ff4500'; ctx.lineWidth = 2; ctx.textAlign = 'center';
-    ctx.strokeText(ft.text, ft.x, ft.y);
-    ctx.fillText(ft.text, ft.x, ft.y);
-    if (ft.life <= 0) floatingTexts.splice(i, 1);
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
-
-function drawFire() {
-  if (!fireActive) return;
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  const baseX = 1100;
-  const fireWidth = 80 + fireSpread * 15;
-  for (let x = baseX; x < Math.min(baseX + fireWidth, 2600); x += 20) {
-    spawnFireParticles(x, 920);
-    if (fireSpread > 10) spawnFireParticles(x, 850);
-  }
-  if (fireSpread > 20) {
-    for (let x = 400; x < 1000; x += 30) spawnFireParticles(x, GROUND_Y - 20);
-  }
-  const fireGlow = ctx.createRadialGradient(baseX+fireWidth/2, 900, 10, baseX+fireWidth/2, 900, 400);
-  const intensity = Math.min(fireSpread/30, 1);
-  fireGlow.addColorStop(0, `rgba(255,100,0,${0.12*intensity})`);
-  fireGlow.addColorStop(1, 'rgba(255,0,0,0)');
-  ctx.fillStyle = fireGlow;
-  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
-  ctx.restore();
-}
-
-function drawMiniMap() {
-  const mx = CW - 170, my = 10, mw = 160, mh = 80;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(mx-2, my-2, mw+4, mh+4);
-
-  // Scale: world -> minimap
-  const sx = mw / WORLD_W;
-  const sy = mh / (WORLD_H + 400);
-  const oy = 400; // offset for attic
-
-  for (const r of rooms) {
-    if (r.name === 'Secret Room' && !puzzleState.secretRoomOpen) continue;
-    if (r.name === 'Attic' && !puzzleState.atticHatchOpen) continue;
-    const visited = visitedRooms[r.name];
-    const rd = roomDestructionMap[r.name];
-    const pct = rd && rd.total > 0 ? rd.destroyed / rd.total : 0;
-
-    // Room fill based on destruction
-    const g = Math.floor(200 - pct * 200);
-    const red = Math.floor(pct * 255);
-    ctx.fillStyle = visited ? `rgb(${red},${g},50)` : 'rgba(80,80,80,0.5)';
-    ctx.fillRect(mx + (r.x)*sx, my + (r.y+oy)*sy, r.w*sx, r.h*sy);
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-    ctx.strokeRect(mx + (r.x)*sx, my + (r.y+oy)*sy, r.w*sx, r.h*sy);
-
-    // Room label
-    if (visited && r.w * sx > 20) {
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '6px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(Math.round(pct*100)+'%', mx + r.x*sx + r.w*sx/2, my + (r.y+oy)*sy + r.h*sy/2 + 2);
-    }
-  }
-
-  // Cat position
-  ctx.fillStyle = '#FFA500';
-  ctx.beginPath();
-  ctx.arc(mx + cat.x*sx, my + (cat.y+oy)*sy, 3, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
-
-  // Camera view
-  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-  ctx.strokeRect(mx + camera.x*sx, my + (camera.y+oy)*sy, CW*sx, CH*sy);
-
-  // Label
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '8px Fredoka One'; ctx.textAlign = 'right';
-  ctx.fillText('MINI-MAP', mx + mw, my + mh + 10);
-}
-
-function drawHUD() {
-  // Current room label
-  const room = getRoomAt(cat.x + cat.w/2, cat.y + cat.h/2);
-  if (room) {
-    document.getElementById('roomLabel').textContent = room.name;
-    const rd = roomDestructionMap[room.name];
-    if (rd && rd.total > 0) {
-      const pct = Math.round((rd.destroyed / rd.total) * 100);
-      document.getElementById('roomLabel').textContent = `${room.name} — ${pct}% destroyed`;
-    }
-  }
-
-  // Ability hints near cat
-  if (gameState === 'playing') {
-    ctx.save(); ctx.translate(-camera.x, -camera.y);
-    // Hint near interactive objects
-    for (const obj of objects) {
-      if (obj.destroyed) continue;
-      if (obj.type === 'safe' && !puzzleState.safeOpen) {
-        const d = Math.hypot(cat.x - obj.x, cat.y - obj.y);
-        if (d < 80) {
-          ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.font = '10px Fredoka One'; ctx.textAlign = 'center';
-          const clueCount = puzzleState.cluesFound.filter(c => c !== undefined).length;
-          ctx.fillStyle = '#ffdd00';
-          ctx.fillText(`Clues: ${clueCount}/3`, obj.x + obj.w/2, obj.y - 18);
-        }
-      }
-    }
-    ctx.restore();
-
-    // Lighter + stove hint
-    if (puzzleState.hasLighter && puzzleState.stoveOn && !puzzleState.fireStarted) {
-      ctx.fillStyle = '#ff4500'; ctx.font = 'bold 14px Bangers'; ctx.textAlign = 'center';
-      ctx.fillText('🔥 Use lighter on stove! [E]', CW/2, 30);
-    }
-  }
-}
-
-// ===== SLEEPING DOG SYSTEM =====
-function updateSleepingDog() {
-  if (!sleepingDog.active || gameState !== 'playing') return;
-  const dog = sleepingDog;
-  dog.breathScale = Math.sin(Date.now() * 0.002) * 0.03;
-  dog.legAnim += 0.15;
-
-  if (dog.state === 'sleeping') {
-    // Snore sound
-    dog.snoreTimer++;
-    if (dog.snoreTimer > 180) { playDogSound('snore'); dog.snoreTimer = 0; }
-
-    // Zzz particles
-    if (Math.random() < 0.03) {
-      dog.zzzParticles.push({ x: dog.x + dog.w/2 + 10, y: dog.y - 10, vy: -0.5, life: 80, size: 12 + Math.random()*8 });
-    }
-
-    // Detection zone check
-    const catCX = cat.x + cat.w/2, catCY = cat.y + cat.h/2;
-    const dogCX = dog.x + dog.w/2, dogCY = dog.y + dog.h/2;
-    const dist = Math.hypot(catCX - dogCX, catCY - dogCY);
-
-    if (dist < dog.detectionRadius) {
-      const catSpeed = Math.hypot(cat.vx, cat.vy);
-      const isJumping = !cat.onGround;
-      const isStill = catSpeed < 0.3;
-
-      if (!isStill) {
-        let rate = 0.3;
-        if (catSpeed > 3) rate = 1.2;
-        if (isJumping) rate = 1.5;
-        if (catSpeed > 6) rate = 2.0; // pouncing
-        dog.detectionMeter = Math.min(100, dog.detectionMeter + rate);
-      } else {
-        // Standing still - slowly decrease
-        dog.detectionMeter = Math.max(0, dog.detectionMeter - 0.15);
-      }
-
-      // Wake up threshold
-      if (dog.detectionMeter >= 100) {
-        dog.state = 'alert';
-        dog.alertTimer = 60;
-        dog.exclamationTimer = 90;
-        playDogSound('growl');
-        showWarning('🐕 DOG WAKING UP!!!', '#ff0000');
-        cat.puffTail = 10;
-      }
-    } else {
-      // Outside zone, slowly decrease
-      dog.detectionMeter = Math.max(0, dog.detectionMeter - 0.3);
-    }
-  } else if (dog.state === 'alert') {
-    dog.alertTimer--;
-    if (dog.alertTimer <= 0) {
-      dog.state = 'chasing';
-      playDogSound('bark');
-      showWarning('🐕 WOOF WOOF! DOG IS CHASING YOU!', '#ff0000');
-    }
-  } else if (dog.state === 'chasing') {
-    // Chase cat at 1.3x speed
-    const chaseSpeed = 4.2 * 1.3;
-    const dx = (cat.x + cat.w/2) - (dog.x + dog.w/2);
-    dog.chaseVx = dx > 0 ? chaseSpeed : -chaseSpeed;
-    dog.x += dog.chaseVx;
-
-    // Simple jump if cat is above
-    if (cat.y < dog.y - 40 && dog.y >= GROUND_Y - dog.h - 5) {
-      dog.y -= 8; // crude jump
-    }
-    // Gravity
-    if (dog.y < GROUND_Y - dog.h) dog.y += 5;
-    if (dog.y > GROUND_Y - dog.h) dog.y = GROUND_Y - dog.h;
-
-    // Keep in world
-    dog.x = Math.max(0, Math.min(WORLD_W - dog.w, dog.x));
-
-    // Bark periodically
-    dog.barkTimer++;
-    if (dog.barkTimer > 40) { playDogSound('bark'); dog.barkTimer = 0; }
-
-    // Check if caught cat
-    if (rectOverlap({ x: dog.x, y: dog.y, w: dog.w, h: dog.h }, { x: cat.x, y: cat.y, w: cat.w, h: cat.h })) {
-      dog.state = 'caught';
-      score = 0;
-      document.getElementById('scoreVal').textContent = '0';
-      endGameDogCaught();
-      return;
-    }
-  } else if (dog.state === 'fled') {
-    dog.x += dog.fleeDir * 10;
-    dog.bonkTimer--;
-    if (dog.bonkTimer <= 0) dog.active = false;
-  }
-
-  // Update zzz particles
-  dog.zzzParticles = dog.zzzParticles.filter(p => p.life > 0);
-  for (const p of dog.zzzParticles) { p.y += p.vy; p.x += Math.sin(p.y * 0.05) * 0.3; p.life--; }
-}
-
-function checkObjectBonkDog() {
-  if (!sleepingDog.active || sleepingDog.state !== 'sleeping') return;
-  const dog = sleepingDog;
-  const dogRect = { x: dog.x, y: dog.y, w: dog.w, h: dog.h };
-  for (const obj of objects) {
-    if (obj.destroyed || obj.fixed || !obj.pushable) continue;
-    if (Math.abs(obj.vy) > 2 && rectOverlap({ x: obj.x, y: obj.y, w: obj.w, h: obj.h }, dogRect)) {
-      // BONK!
-      dog.state = 'fled';
-      dog.bonked = true;
-      dog.bonkTimer = 60;
-      dog.fleeDir = obj.x < dog.x + dog.w/2 ? 1 : -1;
-      score += 25;
-      document.getElementById('scoreVal').textContent = score;
-      playDogSound('yelp');
-      showWarning('BONK! +25 Dog Startled! 🐕💫', '#ffdd00');
-      floatingTexts.push({ x: dog.x + dog.w/2, y: dog.y - 30, text: 'BONK! +25 Dog Startled!', life: 150, vy: -2 });
-      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#f1c40f', 30);
-      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#D4A574', 20);
-      // Destroy the object too
-      if (obj.smashable) {
-        obj.destroyed = true;
-        spawnParticles(obj.x + obj.w/2, obj.y, obj.color, 15);
-      }
-      return;
-    }
-  }
-  // Also check push boxes
-  for (const box of pushBoxes) {
-    if (Math.abs(box.vy) > 2 && rectOverlap({ x: box.x, y: box.y, w: box.w, h: box.h }, dogRect)) {
-      dog.state = 'fled';
-      dog.bonked = true;
-      dog.bonkTimer = 60;
-      dog.fleeDir = box.x < dog.x + dog.w/2 ? 1 : -1;
-      score += 25;
-      document.getElementById('scoreVal').textContent = score;
-      playDogSound('yelp');
-      showWarning('BONK! +25 Dog Startled! 🐕💫', '#ffdd00');
-      floatingTexts.push({ x: dog.x + dog.w/2, y: dog.y - 30, text: 'BONK! +25 Dog Startled!', life: 150, vy: -2 });
-      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#f1c40f', 30);
-      spawnParticles(dog.x + dog.w/2, dog.y + dog.h/2, '#D4A574', 20);
-      return;
-    }
-  }
-}
-
-function drawSleepingDog() {
-  if (!sleepingDog.active) return;
-  const dog = sleepingDog;
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-
-  const dx = dog.x, dy = dog.y;
-  const facing = dog.state === 'chasing' ? (dog.chaseVx >= 0 ? 1 : -1) : 1;
-
-  // Warning label visible from distance
-  if (dog.state === 'sleeping') {
-    ctx.fillStyle = 'rgba(255,200,0,0.7)';
-    ctx.font = 'bold 11px Fredoka One'; ctx.textAlign = 'center';
-    ctx.fillText('⚠️ SLEEPING DOG', dx + dog.w/2, dy - 40);
-  }
-
-  // Dog bed
-  if (dog.state === 'sleeping' || dog.state === 'alert') {
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(dx - 10, dy + dog.h - 8, dog.w + 20, 12, 6);
-    else ctx.rect(dx - 10, dy + dog.h - 8, dog.w + 20, 12);
-    ctx.fill();
-    ctx.fillStyle = '#A0522D';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(dx - 5, dy + dog.h - 5, dog.w + 10, 8, 4);
-    else ctx.rect(dx - 5, dy + dog.h - 5, dog.w + 10, 8);
-    ctx.fill();
-  }
-
-  ctx.save();
-  ctx.translate(dx + dog.w/2, dy + dog.h/2);
-  ctx.scale(facing, 1);
-  const breath = 1 + dog.breathScale;
-
-  if (dog.state === 'sleeping' || dog.state === 'alert') {
-    ctx.scale(breath, 1/breath * 0.97 + 0.03);
-    // Body - curled up
-    ctx.fillStyle = '#D4A574';
-    ctx.beginPath(); ctx.ellipse(0, 4, 32, 16, 0, 0, Math.PI*2); ctx.fill();
-    // Darker patches
-    ctx.fillStyle = '#C49A6C';
-    ctx.beginPath(); ctx.ellipse(-8, 2, 12, 8, 0.3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(10, 6, 10, 6, -0.2, 0, Math.PI*2); ctx.fill();
-    // Head
-    ctx.fillStyle = '#D4A574';
-    ctx.beginPath(); ctx.ellipse(22, -6, 14, 12, 0.2, 0, Math.PI*2); ctx.fill();
-    // Snout
-    ctx.fillStyle = '#C49A6C';
-    ctx.beginPath(); ctx.ellipse(32, -2, 8, 6, 0.1, 0, Math.PI*2); ctx.fill();
-    // Nose
-    ctx.fillStyle = '#333';
-    ctx.beginPath(); ctx.ellipse(38, -3, 3, 2.5, 0, 0, Math.PI*2); ctx.fill();
-    // Ear
-    ctx.fillStyle = '#B8895C';
-    ctx.beginPath(); ctx.ellipse(16, -16, 8, 10, -0.4, 0, Math.PI*2); ctx.fill();
-    // Eye (closed)
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(26, -8, 4, 0, Math.PI); ctx.stroke();
-    // Tail curled
-    ctx.strokeStyle = '#D4A574'; ctx.lineWidth = 6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(-25, -2, 12, 0, Math.PI * 1.2); ctx.stroke();
-    // Front paw
-    ctx.fillStyle = '#D4A574';
-    ctx.beginPath(); ctx.ellipse(15, 16, 6, 4, 0, 0, Math.PI*2); ctx.fill();
-    // Belly highlight
-    ctx.fillStyle = '#E8C9A0';
-    ctx.beginPath(); ctx.ellipse(0, 12, 18, 6, 0, 0, Math.PI); ctx.fill();
-  } else if (dog.state === 'chasing' || dog.state === 'fled') {
-    // Running dog
-    const legSwing = Math.sin(dog.legAnim) * 10;
-    // Body
-    ctx.fillStyle = '#D4A574';
-    ctx.beginPath(); ctx.ellipse(0, 0, 30, 16, 0, 0, Math.PI*2); ctx.fill();
-    // Darker patches
-    ctx.fillStyle = '#C49A6C';
-    ctx.beginPath(); ctx.ellipse(-5, -2, 14, 8, 0, 0, Math.PI*2); ctx.fill();
-    // Head
-    ctx.fillStyle = '#D4A574';
-    ctx.beginPath(); ctx.ellipse(28, -10, 14, 12, 0, 0, Math.PI*2); ctx.fill();
-    // Snout
-    ctx.fillStyle = '#C49A6C';
-    ctx.beginPath(); ctx.ellipse(38, -6, 9, 7, 0, 0, Math.PI*2); ctx.fill();
-    // Nose
-    ctx.fillStyle = '#333';
-    ctx.beginPath(); ctx.ellipse(45, -7, 3, 2.5, 0, 0, Math.PI*2); ctx.fill();
-    // Ear flopping
-    ctx.fillStyle = '#B8895C';
-    ctx.beginPath(); ctx.ellipse(22, -20 + Math.sin(dog.legAnim*2)*3, 8, 11, -0.3+Math.sin(dog.legAnim)*0.2, 0, Math.PI*2); ctx.fill();
-    // Eye (angry)
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(32, -12, 4, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(33, -12, 2.5, 0, Math.PI*2); ctx.fill();
-    // Angry brow
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(28, -18); ctx.lineTo(34, -16); ctx.stroke();
-    // Mouth open
-    if (dog.state === 'chasing') {
-      ctx.fillStyle = '#c0392b';
-      ctx.beginPath(); ctx.ellipse(42, -2, 6, 4, 0, 0, Math.PI); ctx.fill();
-    }
-    // Legs running
-    ctx.fillStyle = '#D4A574';
-    ctx.fillRect(-15, 14, 6, 14 + legSwing);
-    ctx.fillRect(-5, 14, 6, 14 - legSwing);
-    ctx.fillRect(8, 14, 6, 14 - legSwing);
-    ctx.fillRect(18, 14, 6, 14 + legSwing);
-    // Tail up
-    ctx.strokeStyle = '#D4A574'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-28, -2); ctx.quadraticCurveTo(-36, -20, -30, -28); ctx.stroke();
-  }
-  ctx.restore();
-
-  // Zzz particles
-  if (dog.state === 'sleeping') {
-    for (const p of dog.zzzParticles) {
-      const alpha = p.life / 80;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#aaccff';
-      ctx.font = `${p.size}px Bangers`;
-      ctx.textAlign = 'center';
-      ctx.fillText('Z', p.x, p.y);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Exclamation mark
-  if (dog.state === 'alert' || (dog.exclamationTimer > 0 && dog.state === 'chasing')) {
-    dog.exclamationTimer--;
-    ctx.fillStyle = '#ff0000';
-    ctx.font = 'bold 28px Bangers'; ctx.textAlign = 'center';
-    ctx.fillText('!', dx + dog.w/2, dy - 20 + Math.sin(Date.now()*0.01)*3);
-  }
-
-  // Detection meter (stealth indicator)
-  if (dog.state === 'sleeping' && dog.detectionMeter > 0) {
-    const catCX = cat.x + cat.w/2, catCY = cat.y + cat.h/2;
-    const dogCX = dx + dog.w/2, dogCY = dy + dog.h/2;
-    const dist = Math.hypot(catCX - dogCX, catCY - dogCY);
-    if (dist < dog.detectionRadius + 50) {
-      // Eye icon above cat
-      const mx = cat.x + cat.w/2, my = cat.y - 20;
-      const pct = dog.detectionMeter / 100;
-      // Background
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(mx - 22, my - 6, 44, 10);
-      // Fill
-      const r = Math.floor(255 * pct), g = Math.floor(255 * (1-pct));
-      ctx.fillStyle = `rgb(${r},${g},0)`;
-      ctx.fillRect(mx - 21, my - 5, 42 * pct, 8);
-      // Eye icon
-      ctx.fillStyle = '#fff'; ctx.font = '10px serif'; ctx.textAlign = 'center';
-      ctx.fillText('👁', mx - 28, my + 3);
-    }
-  }
-
-  // Detection zone ring (subtle)
-  if (dog.state === 'sleeping') {
-    ctx.strokeStyle = 'rgba(255,200,0,0.1)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5,5]);
-    ctx.beginPath(); ctx.arc(dx + dog.w/2, dy + dog.h/2, dog.detectionRadius, 0, Math.PI*2); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  ctx.restore();
-}
-
-function endGameDogCaught() {
-  clearInterval(timerInterval);
-  gameState = 'ended';
-  cancelAnimationFrame(animFrame);
-
-  const overlay = document.getElementById('overlay');
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <div id="scoreCard">
-      <h1 style="font-family:Bangers,cursive;font-size:52px;color:#ff4500;text-shadow:3px 3px 0 #1a0a2e;">🐕 BUSTED!</h1>
-      <p style="color:#f7c59f;font-size:24px;margin:12px 0">The dog caught you!</p>
-      <div class="big-score" style="color:#ff2200">0</div>
-      <p style="color:#ff6b35;font-size:18px">SCORE GOES TO ZERO</p>
-      <p style="color:#aaa;font-size:14px;margin-top:12px">Tip: Move slowly near the dog, or drop something on it for +25 points!</p>
-    </div>
-    <button class="btn" onclick="startGame()">TRY AGAIN 😈</button>
-    <a href="../" class="btn" style="display:inline-block;text-decoration:none;text-align:center;background:#555;margin-top:8px">Back to Homepage</a>
-    <div class="control-hint" style="margin-top:10px">
-      <span class="hint-badge">← → Move</span>
-      <span class="hint-badge">↑/Z Jump</span>
-      <span class="hint-badge">E Push/Scratch</span>
-      <span class="hint-badge">Sneak past the dog!</span>
-    </div>
-    <div id="end-recommendations"></div>
-  `;
-  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
-}
-
-// ===== MAIN LOOP =====
-function gameLoop(timestamp) {
-  ctx.clearRect(0, 0, CW, CH);
-
-  drawBackground();
-  drawFire();
-  drawPlatforms();
-  drawBoxes();
-  drawObjects();
-
-  updateCat();
-  updateObjects();
-  updateBoxes();
-  updateSleepingDog();
-  checkObjectBonkDog();
-  updateParticles();
-  updateCombo();
-  updateCamera();
-
-  drawCat();
-  drawSleepingDog();
-  drawDog();
-  drawParticles();
-  drawFloatingTexts();
-  drawMiniMap();
-  drawHUD();
-
-  if (gameState === 'playing') {
-    updateWarnings();
-    animFrame = requestAnimationFrame(gameLoop);
-  }
-}
-
-function startGame() {
-  if (!audioCtx) initAudio();
-  document.getElementById('overlay').style.display = 'none';
-  score = 0; timeLeft = 120;
-  fireActive = false; fireSpread = 0;
-  particles = []; floatingTexts = []; glassShards = []; slipperyZones = [];
-  combo = { count:0, timer:0, multiplier:1 };
-  ownerWarningTriggered = false; dogWarningTriggered = false; dogChaseActive = false;
-  puzzleState = {
-    garageDoorOpen:false, atticHatchOpen:false,
-    safeOpen:false, safeCombo:[0,0,0], safeTarget:[3,7,1],
-    bathroomFlooded:false,
-    secretRoomOpen:false, booksRemoved:0, totalBooks:5,
-    hasLighter:false, stoveOn:false, fireStarted:false,
-    cluesFound: [], boxesStacked:0
-  };
-  cat = {
-    x:100, y:900, w:30, h:26, vx:0, vy:0, onGround:false, facing:1,
-    state:'idle', frame:0, frameTimer:0, eHeld:0, pushCooldown:0, tail:0,
-    jumpHeld:false, jumpReleased:false, jumpTime:0,
-    wallSlide:0, pounce:0, pounceTimer:0,
-    squish:0, stretch:0, puffTail:0,
-    scratchTarget:null, scratchProgress:0
-  };
-  camera = { x: 0, y: 500 };
-  totalDestroyed = 0;
-
-  sleepingDog = {
-    x: 350, y: GROUND_Y - 50, w: 70, h: 40,
-    active: true, state: 'sleeping',
-    detectionRadius: 150,
-    detectionMeter: 0,
-    snoreTimer: 0,
-    breathScale: 0,
-    zzzParticles: [],
-    alertTimer: 0,
-    chaseVx: 0,
-    barkTimer: 0,
-    legAnim: 0,
-    exclamationTimer: 0,
-    bonked: false,
-    bonkTimer: 0,
-    fleeX: 0, fleeDir: 0
-  };
-
-  document.getElementById('scoreVal').textContent = '0';
-  document.getElementById('timerVal').textContent = '120';
-  document.getElementById('timerDisplay').classList.remove('danger');
-  document.getElementById('chaosVal').textContent = '😴 Napping';
-  document.getElementById('destructionVal').textContent = '0%';
-  document.getElementById('comboDisplay').style.opacity = '0';
-  document.getElementById('warningBanner').style.opacity = '0';
-
-  initLevel();
-  initObjects();
-  gameState = 'playing';
-
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    document.getElementById('timerVal').textContent = timeLeft;
-    if (timeLeft <= 20) document.getElementById('timerDisplay').classList.add('danger');
-    if (timeLeft <= 0) endGame();
-  }, 1000);
-
-  animFrame = requestAnimationFrame(gameLoop);
-}
-
-function endGame() {
-  clearInterval(timerInterval);
-  gameState = 'ended';
-  cancelAnimationFrame(animFrame);
-
-  const pct = totalDestructibles > 0 ? Math.round((totalDestroyed / totalDestructibles) * 100) : 0;
-  let rank = '😺 Curious Kitty';
-  if (score >= 300) rank = '☢️ LEGENDARY DESTROYER';
-  else if (score >= 200) rank = '💥 CATASTROPHIC';
-  else if (score >= 150) rank = '🔥 Arsonist';
-  else if (score >= 100) rank = '😈 Demon Cat';
-  else if (score >= 60) rank = '😼 Menace';
-  else if (score >= 30) rank = '😏 Naughty Kitty';
-
-  const roomSummary = rooms.filter(r => visitedRooms[r.name]).map(r => {
-    const rd = roomDestructionMap[r.name];
-    const rpct = rd && rd.total > 0 ? Math.round((rd.destroyed/rd.total)*100) : 0;
-    return `<span style="color:#f7c59f;font-size:14px">${r.name}: ${rpct}%</span>`;
-  }).join(' &bull; ');
-
-  const overlay = document.getElementById('overlay');
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <div id="scoreCard">
-      <p style="color:#f7c59f;font-size:22px;margin-bottom:8px">TIME'S UP! 🐱</p>
-      <div class="big-score">${score}</div>
-      <p style="color:#ffdd00;font-size:20px">POINTS OF CHAOS</p>
-      <p class="rank">${rank}</p>
-      <p style="color:#aaa;font-size:16px;margin-top:6px">${pct}% total destruction</p>
-      <p style="margin-top:8px">${roomSummary}</p>
-      ${fireActive ? '<p style="color:#ff4500;font-size:18px;margin-top:6px">🔥 You burned the house down!</p>' : ''}
-      ${puzzleState.safeOpen ? '<p style="color:#f1c40f;font-size:16px">💎 Cracked the safe!</p>' : ''}
-      ${puzzleState.secretRoomOpen ? '<p style="color:#9b59b6;font-size:16px">🔮 Found the secret room!</p>' : ''}
-      ${!puzzleState.hasLighter ? '<p style="color:#888;font-size:13px;margin-top:6px">Tip: Find the lighter in the attic!</p>' : ''}
-    </div>
-    <button class="btn" onclick="startGame()">PLAY AGAIN 😈</button>
-    <a href="../" class="btn" style="display:inline-block;text-decoration:none;text-align:center;background:#555;margin-top:8px">Back to Homepage</a>
-    <div class="control-hint" style="margin-top:10px">
-      <span class="hint-badge">← → Move</span>
-      <span class="hint-badge">↑/Z Jump (hold=higher)</span>
-      <span class="hint-badge">E Push/Scratch</span>
-      <span class="hint-badge">Wall Jump!</span>
-      <span class="hint-badge">Double-tap = Pounce</span>
-    </div>
-    <div id="end-recommendations"></div>
-  `;
-  if (window.BrainSmacks) BrainSmacks.showRecommendations(document.getElementById('end-recommendations'));
-}
-</script>
-<script src="../shared/recommendations.js"></script>
-</body>
-</html>
