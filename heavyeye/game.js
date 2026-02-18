@@ -70,6 +70,127 @@
         }
     };
 
+    // ─── Background Music (procedural ambient lo-fi) ───
+    let musicPlaying = false;
+    let musicNodes = [];
+
+    function startMusic() {
+        if (musicPlaying) return;
+        const ctx = getAudio();
+        musicPlaying = true;
+        musicNodes = [];
+
+        // Master volume for music
+        const master = ctx.createGain();
+        master.gain.value = 0;
+        master.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 2);
+        master.connect(ctx.destination);
+        musicNodes.push(master);
+
+        // Warm pad - two detuned oscillators for thickness
+        function makePad(freq, detune) {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            osc.detune.value = detune || 0;
+            const g = ctx.createGain();
+            g.gain.value = 0.5;
+            osc.connect(g);
+            g.connect(master);
+            osc.start();
+            musicNodes.push(osc, g);
+            return osc;
+        }
+
+        // Chord progression: Cmaj7 → Am7 → Fmaj7 → G7 (gentle jazz cycle)
+        const chords = [
+            [261.6, 329.6, 392.0, 493.9],  // Cmaj7
+            [220.0, 261.6, 329.6, 392.0],  // Am7
+            [174.6, 220.0, 261.6, 329.6],  // Fmaj7
+            [196.0, 246.9, 293.7, 349.2],  // G7
+        ];
+
+        const pads = [makePad(261.6, -5), makePad(329.6, 5), makePad(392.0, -3), makePad(493.9, 3)];
+        let chordIdx = 0;
+
+        // Slowly morph between chords
+        function nextChord() {
+            if (!musicPlaying) return;
+            chordIdx = (chordIdx + 1) % chords.length;
+            const chord = chords[chordIdx];
+            const t = getAudio().currentTime;
+            pads.forEach((osc, i) => {
+                osc.frequency.linearRampToValueAtTime(chord[i], t + 3);
+            });
+        }
+        const chordInterval = setInterval(nextChord, 6000);
+        musicNodes.push({ stop() { clearInterval(chordInterval); } });
+
+        // Gentle high sparkle notes (random pentatonic)
+        const sparkleNotes = [523, 587, 659, 784, 880, 1047, 1175];
+        function sparkle() {
+            if (!musicPlaying) return;
+            const ctx2 = getAudio();
+            const t = ctx2.currentTime;
+            const freq = sparkleNotes[Math.floor(Math.random() * sparkleNotes.length)];
+            const osc = ctx2.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const g = ctx2.createGain();
+            g.gain.setValueAtTime(0.03, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 2);
+            osc.connect(g);
+            g.connect(master);
+            osc.start(t);
+            osc.stop(t + 2);
+            // Random interval 2-5s
+            setTimeout(sparkle, 2000 + Math.random() * 3000);
+        }
+        setTimeout(sparkle, 1000);
+
+        // Very subtle low bass pulse
+        const bass = ctx.createOscillator();
+        bass.type = 'sine';
+        bass.frequency.value = 65.4; // Low C
+        const bassGain = ctx.createGain();
+        bassGain.gain.value = 0.3;
+        bass.connect(bassGain);
+        bassGain.connect(master);
+        bass.start();
+        musicNodes.push(bass, bassGain);
+
+        // Bass follows root of chord
+        const bassRoots = [65.4, 55.0, 43.7, 49.0];
+        let bassIdx = 0;
+        function nextBass() {
+            if (!musicPlaying) return;
+            bassIdx = (bassIdx + 1) % bassRoots.length;
+            bass.frequency.linearRampToValueAtTime(bassRoots[bassIdx], getAudio().currentTime + 2);
+        }
+        const bassInterval = setInterval(nextBass, 6000);
+        musicNodes.push({ stop() { clearInterval(bassInterval); } });
+    }
+
+    function stopMusic() {
+        if (!musicPlaying) return;
+        musicPlaying = false;
+        musicNodes.forEach(n => { try { n.stop(); } catch(e) { /* gain nodes etc */ } });
+        musicNodes = [];
+    }
+
+    function fadeOutMusic() {
+        if (!musicPlaying) return;
+        // Find the master gain (first node)
+        const master = musicNodes[0];
+        if (master && master.gain) {
+            const ctx = getAudio();
+            master.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+            setTimeout(stopMusic, 2200);
+        } else {
+            stopMusic();
+        }
+    }
+
     // ─── Emoji to OpenMoji ───
     function emojiToCodePoints(emoji) {
         const codePoints = [];
@@ -519,6 +640,7 @@
 
     // ─── End screen ───
     function showEnd() {
+        fadeOutMusic();
         showScreen('end');
         if (window.BrainSmacks) BrainSmacks.showRecommendations($('end-recommendations'));
         const total = rounds.length;
@@ -560,6 +682,7 @@
     document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
         btn.addEventListener('click', () => {
             SFX.start();
+            startMusic();
             pickRounds(btn.dataset.mode);
             showScreen('game');
             setTimeout(() => startRound(), 300);
@@ -582,12 +705,13 @@
 
     $('play-again-btn').addEventListener('click', () => {
         SFX.start();
+        startMusic();
         pickRounds(mode);
         showScreen('game');
         setTimeout(() => startRound(), 300);
     });
-    $('home-btn').addEventListener('click', () => window.location.href = '../');
-    $('exit-btn').addEventListener('click', () => window.location.href = '../');
+    $('home-btn').addEventListener('click', () => { stopMusic(); window.location.href = '../'; });
+    $('exit-btn').addEventListener('click', () => { stopMusic(); window.location.href = '../'; });
 
     // ─── Init ───
     initScales();
