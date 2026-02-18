@@ -126,7 +126,9 @@ a{text-decoration:none;color:inherit}
 .coming-soon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;max-width:700px;margin:0 auto}
 .cauldron-container{display:flex;justify-content:center;padding:1rem 0}
 .cauldron-svg{filter:drop-shadow(0 0 25px rgba(139,92,246,0.35))}
-.spoon{transform-origin:155px 172px;animation:stir 3s ease-in-out infinite}
+.spoon{transform-origin:155px 175px;animation:stir 3s ease-in-out infinite}
+.nerd-dude{animation:gentleBob 3s ease-in-out infinite}
+@keyframes gentleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 @keyframes stir{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
 .steam-p{animation:rise 3s ease-in-out infinite}
 .steam-1{animation-delay:0s}
@@ -396,7 +398,7 @@ footer p+p{margin-top:.3rem}
   <h2>More games cooking...</h2>
   <p>New brain-busters are on the way. Stay tuned.</p>
   <div class="cauldron-container">
-    <svg viewBox="0 0 320 320" width="320" height="320" class="cauldron-svg">
+    <svg viewBox="0 0 320 340" width="320" height="340" class="cauldron-svg">
       <defs>
         <!-- Stew gradient -->
         <radialGradient id="stewGrad" cx="50%" cy="40%">
@@ -444,6 +446,93 @@ footer p+p{margin-top:.3rem}
         <circle cx="184" cy="170" r="2" fill="#a78bfa"/>
       </g>
 
+      <!-- Nerdy dude on wooden chair behind cauldron -->
+      <g class="nerd-dude">
+        <!-- Wooden chair -->
+        <!-- Chair back -->
+        <rect x="48" y="130" width="4" height="80" rx="2" fill="#8B5E3C"/>
+        <rect x="88" y="130" width="4" height="80" rx="2" fill="#8B5E3C"/>
+        <!-- Chair back slats -->
+        <rect x="48" y="135" width="44" height="4" rx="2" fill="#a0703c"/>
+        <rect x="48" y="155" width="44" height="4" rx="2" fill="#a0703c"/>
+        <rect x="48" y="175" width="44" height="3" rx="1" fill="#a0703c"/>
+        <!-- Chair seat -->
+        <rect x="42" y="205" width="56" height="6" rx="3" fill="#a0703c"/>
+        <!-- Chair front legs -->
+        <rect x="44" y="205" width="4" height="50" rx="2" fill="#8B5E3C"/>
+        <rect x="92" y="205" width="4" height="50" rx="2" fill="#8B5E3C"/>
+        <!-- Chair back legs -->
+        <rect x="48" y="200" width="4" height="55" rx="2" fill="#7a5232"/>
+        <rect x="88" y="200" width="4" height="55" rx="2" fill="#7a5232"/>
+
+        <!-- Body (sitting on chair) -->
+        <!-- Torso -->
+        <rect x="52" y="170" width="36" height="38" rx="8" fill="#4a6fa5"/>
+        <!-- Shirt collar -->
+        <path d="M62,170 L70,178 L78,170" stroke="#5b82b8" stroke-width="1.5" fill="none"/>
+
+        <!-- Arms reaching to stir -->
+        <!-- Left arm (behind, reaching toward spoon) -->
+        <path d="M55,180 Q45,175 50,160 Q55,145 80,130" stroke="#c4a882" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <!-- Right arm (reaching toward spoon handle) -->
+        <path d="M85,178 Q95,170 100,155 Q105,140 100,125" stroke="#c4a882" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <!-- Hands gripping spoon area -->
+        <circle cx="82" cy="128" r="5" fill="#c4a882"/>
+        <circle cx="98" cy="124" r="5" fill="#c4a882"/>
+
+        <!-- Head -->
+        <ellipse cx="70" cy="148" rx="18" ry="20" fill="#c4a882"/>
+        <!-- Ears -->
+        <ellipse cx="52" cy="150" rx="4" ry="6" fill="#b8976e"/>
+        <ellipse cx="88" cy="150" rx="4" ry="6" fill="#b8976e"/>
+
+        <!-- Curly brown hair -->
+        <g fill="#5c3a1e">
+          <circle cx="56" cy="133" r="6"/>
+          <circle cx="64" cy="129" r="7"/>
+          <circle cx="74" cy="128" r="7"/>
+          <circle cx="83" cy="131" r="6"/>
+          <circle cx="88" cy="137" r="5"/>
+          <circle cx="52" cy="139" r="5"/>
+          <circle cx="60" cy="131" r="5"/>
+          <circle cx="78" cy="129" r="5"/>
+          <circle cx="69" cy="127" r="5"/>
+          <!-- Side curls -->
+          <circle cx="50" cy="145" r="4"/>
+          <circle cx="90" cy="144" r="4"/>
+        </g>
+
+        <!-- Glasses -->
+        <circle cx="63" cy="150" r="7" fill="none" stroke="#333" stroke-width="1.8"/>
+        <circle cx="79" cy="150" r="7" fill="none" stroke="#333" stroke-width="1.8"/>
+        <line x1="70" y1="150" x2="72" y2="150" stroke="#333" stroke-width="1.5"/>
+        <!-- Glasses arms -->
+        <line x1="56" y1="149" x2="52" y2="148" stroke="#333" stroke-width="1.2"/>
+        <line x1="86" y1="149" x2="90" y2="148" stroke="#333" stroke-width="1.2"/>
+        <!-- Lens glare -->
+        <circle cx="60" cy="148" r="1.5" fill="rgba(255,255,255,0.25)"/>
+        <circle cx="76" cy="148" r="1.5" fill="rgba(255,255,255,0.25)"/>
+
+        <!-- Eyes behind glasses -->
+        <circle cx="63" cy="151" r="2" fill="#2d1810"/>
+        <circle cx="79" cy="151" r="2" fill="#2d1810"/>
+        <circle cx="63.5" cy="150.5" r="0.8" fill="white"/>
+        <circle cx="79.5" cy="150.5" r="0.8" fill="white"/>
+
+        <!-- Friendly smile -->
+        <path d="M65,159 Q70,163 76,159" stroke="#8b6550" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+
+        <!-- Nose -->
+        <path d="M70,153 Q72,156 70,157" stroke="#b8976e" stroke-width="1.2" fill="none"/>
+
+        <!-- Legs (sitting) -->
+        <rect x="56" y="206" width="12" height="30" rx="5" fill="#3d5a80"/>
+        <rect x="72" y="206" width="12" height="30" rx="5" fill="#3d5a80"/>
+        <!-- Shoes -->
+        <ellipse cx="62" cy="238" rx="8" ry="4" fill="#333"/>
+        <ellipse cx="78" cy="238" rx="8" ry="4" fill="#333"/>
+      </g>
+
       <!-- Cauldron body - rounded pot shape -->
       <path d="M68,170 Q65,210 80,240 Q100,270 160,272 Q220,270 240,240 Q255,210 252,170 Z" fill="url(#potGrad)" stroke="#6d28d9" stroke-width="2.5"/>
       <!-- Highlight on pot for 3D effect -->
@@ -473,12 +562,12 @@ footer p+p{margin-top:.3rem}
         <path class="chunk chunk-4" d="M192,173 c-2,-3 2,-6 5,-4 c3,2 2,5 0,6 c-2,1 -4,0 -5,-2z" fill="#ec4899" opacity="0.5"/>
       </g>
 
-      <!-- Spoon handle only (bowl hidden in stew) - sticking out at angle, stirring -->
+      <!-- Spoon handle - extends from his hands down into the stew -->
       <g class="spoon">
-        <line x1="110" y1="90" x2="155" y2="172" stroke="#d97706" stroke-width="7" stroke-linecap="round"/>
+        <line x1="90" y1="125" x2="155" y2="175" stroke="#d97706" stroke-width="7" stroke-linecap="round"/>
         <!-- Wood grain lines -->
-        <line x1="115" y1="100" x2="148" y2="162" stroke="#b45309" stroke-width="1" opacity="0.4"/>
-        <line x1="118" y1="98" x2="151" y2="160" stroke="#fbbf24" stroke-width="0.8" opacity="0.2"/>
+        <line x1="95" y1="130" x2="150" y2="168" stroke="#b45309" stroke-width="1" opacity="0.4"/>
+        <line x1="97" y1="128" x2="152" y2="166" stroke="#fbbf24" stroke-width="0.8" opacity="0.2"/>
       </g>
 
       <!-- Legs - curved iron legs -->
