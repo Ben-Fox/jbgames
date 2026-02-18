@@ -29,12 +29,12 @@ a{text-decoration:none;color:inherit}
 /* HERO */
 .hero{text-align:center;padding:5rem 1.5rem 3rem;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,92,246,.15),transparent 70%);pointer-events:none}
-.hero-logo{animation:fadeUp .8s ease;max-width:600px;width:90%;margin:0 auto}
+.hero-logo{animation:fadeUp .8s ease;max-width:750px;width:95%;margin:0 auto}
 .logo-svg{width:100%;height:auto}
 .crunch-particles{animation:crunchBob 2s ease-in-out infinite}
 @keyframes crunchBob{0%,100%{transform:translate(0,0)}50%{transform:translate(-3px,2px)}}
-.tagline{font-size:1.4rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .8s ease .1s both}
-.subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
+.tagline{font-size:1.7rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .8s ease .1s both}
+.subtitle{color:var(--muted);font-size:1.2rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
 
 /* GRID */
 .games{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;max-width:1200px;margin:2rem auto 4rem;padding:0 1.5rem}
@@ -124,6 +124,29 @@ a{text-decoration:none;color:inherit}
 .coming-soon h2{font-size:1.6rem;color:var(--text);margin-bottom:.5rem;animation:fadeUp .6s ease .5s both}
 .coming-soon p{color:var(--muted);font-size:1.05rem;margin-bottom:2rem;animation:fadeUp .6s ease .6s both}
 .coming-soon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;max-width:700px;margin:0 auto}
+.cauldron-container{display:flex;justify-content:center;padding:1rem 0}
+.cauldron-svg{filter:drop-shadow(0 0 20px rgba(139,92,246,0.3))}
+.spoon{transform-origin:150px 170px;animation:stir 3s ease-in-out infinite}
+@keyframes stir{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(15deg)}}
+.steam-p{animation:rise 2.5s ease-in-out infinite}
+.steam-1{animation-delay:0s}
+.steam-2{animation-delay:0.5s}
+.steam-3{animation-delay:1s}
+.steam-4{animation-delay:1.5s}
+.steam-5{animation-delay:2s}
+@keyframes rise{0%{opacity:0;transform:translateY(0)}30%{opacity:0.4}70%{opacity:0.2}100%{opacity:0;transform:translateY(-50px)}}
+.bubble{animation:bloop 2s ease-in-out infinite}
+.b1{animation-delay:0s}
+.b2{animation-delay:0.4s}
+.b3{animation-delay:0.8s}
+.b4{animation-delay:1.2s}
+.b5{animation-delay:1.6s}
+@keyframes bloop{0%,100%{r:3;opacity:0.4;transform:translateY(0)}50%{r:6;opacity:0.7;transform:translateY(-8px)}}
+.chunk{animation:float 4s ease-in-out infinite}
+.chunk-1{animation-delay:0s}
+.chunk-2{animation-delay:1.3s}
+.chunk-3{animation-delay:2.6s}
+@keyframes float{0%,100%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
 .ghost-card{background:linear-gradient(160deg,rgba(255,255,255,.03),rgba(255,255,255,.06));border:1px dashed rgba(255,255,255,.1);border-radius:20px;height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;animation:fadeUp .6s ease .7s both;transition:border-color .3s,transform .3s}
 .ghost-card:hover{border-color:rgba(255,255,255,.25);transform:translateY(-4px)}
 .ghost-card .ghost-icon{font-size:2.5rem;opacity:.4}
@@ -364,19 +387,47 @@ footer p+p{margin-top:.3rem}
 <section class="coming-soon">
   <h2>More games cooking...</h2>
   <p>New brain-busters are on the way. Stay tuned.</p>
-  <div class="coming-soon-grid">
-    <div class="ghost-card">
-      <span class="ghost-icon">?</span>
-      <span class="ghost-label">Coming Soon</span>
-    </div>
-    <div class="ghost-card">
-      <span class="ghost-icon">+</span>
-      <span class="ghost-label">Coming Soon</span>
-    </div>
-    <div class="ghost-card">
-      <span class="ghost-icon">!</span>
-      <span class="ghost-label">Coming Soon</span>
-    </div>
+  <div class="cauldron-container">
+    <svg viewBox="0 0 300 280" width="300" height="280" class="cauldron-svg">
+      <!-- Steam particles -->
+      <g class="steam">
+        <circle class="steam-p steam-1" cx="120" cy="80" r="6" fill="rgba(200,180,255,0.3)"/>
+        <circle class="steam-p steam-2" cx="150" cy="70" r="8" fill="rgba(200,180,255,0.25)"/>
+        <circle class="steam-p steam-3" cx="175" cy="75" r="5" fill="rgba(200,180,255,0.3)"/>
+        <circle class="steam-p steam-4" cx="135" cy="60" r="7" fill="rgba(200,180,255,0.2)"/>
+        <circle class="steam-p steam-5" cx="165" cy="65" r="6" fill="rgba(200,180,255,0.25)"/>
+      </g>
+      <!-- Cauldron body -->
+      <ellipse cx="150" cy="200" rx="90" ry="55" fill="#1a1a2e" stroke="#6d28d9" stroke-width="3"/>
+      <ellipse cx="150" cy="155" rx="90" ry="20" fill="#1a1a2e" stroke="#6d28d9" stroke-width="3"/>
+      <!-- Rim -->
+      <ellipse cx="150" cy="155" rx="95" ry="12" fill="none" stroke="#8b5cf6" stroke-width="5"/>
+      <!-- Stew surface -->
+      <ellipse cx="150" cy="158" rx="82" ry="15" fill="#4c1d95" opacity="0.9"/>
+      <!-- Bubbles -->
+      <g class="bubbles">
+        <circle class="bubble b1" cx="125" cy="155" r="4" fill="rgba(167,139,250,0.6)"/>
+        <circle class="bubble b2" cx="160" cy="152" r="3" fill="rgba(167,139,250,0.5)"/>
+        <circle class="bubble b3" cx="140" cy="158" r="5" fill="rgba(167,139,250,0.4)"/>
+        <circle class="bubble b4" cx="175" cy="156" r="3.5" fill="rgba(196,181,253,0.5)"/>
+        <circle class="bubble b5" cx="130" cy="150" r="3" fill="rgba(167,139,250,0.6)"/>
+      </g>
+      <!-- Brain chunks floating in stew -->
+      <g class="brain-chunks">
+        <path class="chunk chunk-1" d="M128,154 c-3,-4 2,-8 6,-6 c4,2 5,6 1,7 c-3,1 -5,-1 -7,-1z" fill="#f472b6" opacity="0.7"/>
+        <path class="chunk chunk-2" d="M158,150 c2,-3 7,-2 7,2 c0,4 -4,5 -6,3 c-2,-2 -3,-3 -1,-5z" fill="#fb7185" opacity="0.6"/>
+        <path class="chunk chunk-3" d="M145,156 c-2,-3 3,-6 6,-4 c3,2 2,6 -1,7 c-3,0 -4,-1 -5,-3z" fill="#f472b6" opacity="0.5"/>
+      </g>
+      <!-- Legs -->
+      <line x1="85" y1="230" x2="75" y2="265" stroke="#6d28d9" stroke-width="5" stroke-linecap="round"/>
+      <line x1="215" y1="230" x2="225" y2="265" stroke="#6d28d9" stroke-width="5" stroke-linecap="round"/>
+      <line x1="150" y1="245" x2="150" y2="270" stroke="#6d28d9" stroke-width="5" stroke-linecap="round"/>
+      <!-- Wooden spoon -->
+      <g class="spoon">
+        <line x1="150" y1="60" x2="150" y2="170" stroke="#d97706" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="150" cy="170" rx="12" ry="8" fill="#b45309" stroke="#d97706" stroke-width="2"/>
+      </g>
+    </svg>
   </div>
 </section>
 
