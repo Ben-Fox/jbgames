@@ -710,7 +710,7 @@
         showScreen('game');
         setTimeout(() => startRound(), 300);
     });
-    $('home-btn').addEventListener('click', () => { stopMusic(); window.location.href = '../'; });
+    if ($('home-btn')) $('home-btn').addEventListener('click', () => { stopMusic(); window.location.href = '../'; });
     $('exit-btn').addEventListener('click', () => { stopMusic(); window.location.href = '../'; });
 
     // ─── Init ───
