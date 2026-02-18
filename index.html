@@ -50,14 +50,12 @@ a{text-decoration:none;color:inherit}
 .daily-title{font-size:1.6rem;font-weight:700;color:#fff;margin-bottom:.3rem}
 .daily-sub{color:rgba(255,255,255,.45);font-size:.9rem}
 
-.daily-games{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;position:relative}
+.daily-games{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;position:relative}
 
 .daily-card{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;transition:transform .3s cubic-bezier(.25,.46,.45,.94),box-shadow .3s,border-color .3s;cursor:pointer;text-decoration:none;color:inherit;position:relative;border:1px solid rgba(255,255,255,.1);animation:fadeUp .6s ease both}
 .daily-card:nth-child(1){animation-delay:.1s}.daily-card:nth-child(2){animation-delay:.18s}.daily-card:nth-child(3){animation-delay:.26s}.daily-card:nth-child(4){animation-delay:.34s}.daily-card:nth-child(5){animation-delay:.42s}
 .daily-card:hover{transform:translateY(-8px) scale(1.03)}
 
-.daily-card--nexus{background:linear-gradient(160deg,#1a1508 0%,#241c06 100%);border-color:rgba(184,134,11,.25)}
-.daily-card--nexus:hover{border-color:rgba(184,134,11,.6);box-shadow:0 8px 36px rgba(184,134,11,.25),0 0 20px rgba(184,134,11,.08)}
 .daily-card--cipher{background:linear-gradient(160deg,#0a1a0e 0%,#0e2214 100%);border-color:rgba(74,103,65,.25)}
 .daily-card--cipher:hover{border-color:rgba(74,103,65,.6);box-shadow:0 8px 36px rgba(74,103,65,.25),0 0 20px rgba(74,103,65,.08)}
 .daily-card--chronicle{background:linear-gradient(160deg,#0e151a 0%,#142028 100%);border-color:rgba(61,79,92,.3)}
@@ -68,15 +66,29 @@ a{text-decoration:none;color:inherit}
 .daily-card--mimic:hover{border-color:rgba(107,58,125,.6);box-shadow:0 8px 36px rgba(107,58,125,.25),0 0 20px rgba(107,58,125,.08)}
 
 .daily-thumb{height:100px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.daily-thumb::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(255,255,255,.04),transparent 70%)}
-.daily-thumb svg{filter:drop-shadow(0 2px 10px rgba(0,0,0,.4));transition:transform .3s}
-.daily-card:hover .daily-thumb svg{transform:scale(1.08)}
+.daily-thumb::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(255,255,255,.06),transparent 70%)}
+.daily-thumb svg{filter:drop-shadow(0 2px 12px rgba(0,0,0,.5));transition:transform .3s}
+.daily-card:hover .daily-thumb svg{transform:scale(1.1)}
+
+/* Daily card SVG animations */
+.cipher-blink{animation:cipherReveal 3s ease-in-out infinite}
+@keyframes cipherReveal{0%,100%{opacity:.6}50%{opacity:1}}
+.timeline-dot{animation:timelinePop 2.5s ease-in-out infinite}
+.timeline-dot:nth-child(3){animation-delay:.3s}
+.timeline-dot:nth-child(4){animation-delay:.6s}
+@keyframes timelinePop{0%,100%{r:4}50%{r:5.5}}
+.wave-marker{animation:waveBounce 2s ease-in-out infinite}
+@keyframes waveBounce{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.mimic-box{animation:mimicFlip 4s ease-in-out infinite}
+.mimic-box:nth-child(1){animation-delay:0s}
+.mimic-box:nth-child(2){animation-delay:.5s}
+.mimic-box:nth-child(3){animation-delay:1s}
+@keyframes mimicFlip{0%,80%,100%{opacity:1;transform:translateY(0)}90%{opacity:.6;transform:translateY(-2px)}}
 
 .daily-body{padding:.8rem 1rem 1rem;display:flex;flex-direction:column;flex:1}
 .daily-name{font-weight:700;font-size:1rem;color:#fff;margin-bottom:.25rem}
 .daily-desc{font-size:.78rem;color:rgba(255,255,255,.55);line-height:1.4;flex:1}
 .daily-play{display:block;margin-top:.6rem;padding:.45rem;border-radius:8px;font-weight:700;font-size:.8rem;text-align:center;color:#fff;transition:filter .2s,transform .15s;letter-spacing:.3px}
-.daily-card--nexus .daily-play{background:linear-gradient(135deg,#b8860b,#d4a017)}
 .daily-card--cipher .daily-play{background:linear-gradient(135deg,#4a6741,#6a9960)}
 .daily-card--chronicle .daily-play{background:linear-gradient(135deg,#3d4f5c,#5a7a8e)}
 .daily-card--wavelength .daily-play{background:linear-gradient(135deg,#8b3a2a,#c05540)}
@@ -87,7 +99,7 @@ a{text-decoration:none;color:inherit}
 .daily-play-all:hover{color:#c4b5fd;transform:translateX(4px)}
 
 @media (max-width: 900px){
-  .daily-games{grid-template-columns:repeat(3,1fr)}
+  .daily-games{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width: 600px){
   .daily-inner{padding:1.5rem 1.2rem}
@@ -309,33 +321,14 @@ footer p+p{margin-top:.3rem}
       <p class="daily-sub">Fresh puzzles every week</p>
     </div>
     <div class="daily-games">
-      <a href="/fivefold/" class="daily-card daily-card--nexus">
-        <div class="daily-thumb">
-          <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
-            <rect x="10" y="10" width="44" height="26" rx="4" fill="rgba(184,134,11,.35)" stroke="rgba(184,134,11,.6)" stroke-width="1"/>
-            <rect x="66" y="10" width="44" height="26" rx="4" fill="rgba(74,103,65,.35)" stroke="rgba(74,103,65,.6)" stroke-width="1"/>
-            <rect x="10" y="44" width="44" height="26" rx="4" fill="rgba(61,79,92,.35)" stroke="rgba(61,79,92,.6)" stroke-width="1"/>
-            <rect x="66" y="44" width="44" height="26" rx="4" fill="rgba(139,58,42,.35)" stroke="rgba(139,58,42,.6)" stroke-width="1"/>
-            <text x="32" y="27" text-anchor="middle" font-size="8" fill="#b8860b" font-weight="600">TAP</text>
-            <text x="88" y="27" text-anchor="middle" font-size="8" fill="#4a6741" font-weight="600">MOON</text>
-            <text x="32" y="61" text-anchor="middle" font-size="8" fill="#3d4f5c" font-weight="600">BIRD</text>
-            <text x="88" y="61" text-anchor="middle" font-size="8" fill="#8b3a2a" font-weight="600">JAZZ</text>
-          </svg>
-        </div>
-        <div class="daily-body">
-          <div class="daily-name">Nexus</div>
-          <p class="daily-desc">Group 16 words into 4 hidden categories</p>
-          <span class="daily-play">▶ Play</span>
-        </div>
-      </a>
       <a href="/fivefold/" class="daily-card daily-card--cipher">
         <div class="daily-thumb">
           <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
-            <rect x="8" y="15" width="104" height="50" rx="4" fill="rgba(74,103,65,.08)" stroke="rgba(74,103,65,.2)" stroke-width="1"/>
-            <text x="60" y="36" text-anchor="middle" font-size="10" fill="rgba(74,103,65,.8)" font-family="serif" font-style="italic" letter-spacing="3">QEB LKIV</text>
-            <text x="60" y="52" text-anchor="middle" font-size="10" fill="rgba(74,103,65,.6)" font-family="serif" font-style="italic" letter-spacing="3">T▯▯ QL AL</text>
-            <line x1="15" y1="65" x2="28" y2="65" stroke="#4a6741" stroke-width="1.5" opacity=".5"/>
-            <text x="21" y="73" text-anchor="middle" font-size="6" fill="#4a6741" opacity=".6">A→Q</text>
+            <rect x="8" y="12" width="104" height="52" rx="6" fill="rgba(106,153,85,.12)" stroke="rgba(106,153,85,.35)" stroke-width="1"/>
+            <text x="60" y="34" text-anchor="middle" font-size="12" fill="#8bc06c" font-family="serif" font-style="italic" letter-spacing="3">QEB LKIV</text>
+            <text x="60" y="50" text-anchor="middle" font-size="12" fill="#6a9960" font-family="serif" font-style="italic" letter-spacing="3" class="cipher-blink">T_Y QL AL</text>
+            <line x1="18" y1="62" x2="34" y2="62" stroke="#8bc06c" stroke-width="2" opacity=".7"/>
+            <text x="26" y="72" text-anchor="middle" font-size="7" fill="#8bc06c" font-weight="600" opacity=".8">A → Q</text>
           </svg>
         </div>
         <div class="daily-body">
@@ -347,18 +340,18 @@ footer p+p{margin-top:.3rem}
       <a href="/fivefold/" class="daily-card daily-card--chronicle">
         <div class="daily-thumb">
           <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
-            <line x1="25" y1="12" x2="25" y2="68" stroke="rgba(61,79,92,.6)" stroke-width="2"/>
-            <circle cx="25" cy="18" r="3" fill="#3d4f5c"/>
-            <circle cx="25" cy="33" r="3" fill="#3d4f5c"/>
-            <circle cx="25" cy="48" r="3" fill="#3d4f5c"/>
-            <circle cx="25" cy="63" r="3" fill="rgba(61,79,92,.3)"/>
-            <rect x="35" y="12" width="72" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
-            <rect x="35" y="27" width="60" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
-            <rect x="35" y="42" width="68" height="10" rx="3" fill="rgba(61,79,92,.15)" stroke="rgba(61,79,92,.25)" stroke-width=".5"/>
-            <rect x="35" y="57" width="55" height="10" rx="3" fill="rgba(61,79,92,.08)" stroke="rgba(61,79,92,.15)" stroke-width=".5" stroke-dasharray="2 2"/>
-            <text x="71" y="20" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.8)">1903</text>
-            <text x="65" y="35" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.8)">1928</text>
-            <text x="69" y="50" text-anchor="middle" font-size="6" fill="rgba(61,79,92,.8)">1953</text>
+            <line x1="25" y1="8" x2="25" y2="72" stroke="rgba(126,184,216,.35)" stroke-width="2"/>
+            <circle cx="25" cy="16" r="4" fill="#7eb8d8" class="timeline-dot"/>
+            <circle cx="25" cy="33" r="4" fill="#7eb8d8" class="timeline-dot"/>
+            <circle cx="25" cy="50" r="4" fill="#7eb8d8" class="timeline-dot"/>
+            <circle cx="25" cy="67" r="3" fill="rgba(126,184,216,.3)"/>
+            <rect x="35" y="10" width="74" height="12" rx="4" fill="rgba(126,184,216,.18)" stroke="rgba(126,184,216,.35)" stroke-width="1"/>
+            <rect x="35" y="27" width="62" height="12" rx="4" fill="rgba(126,184,216,.18)" stroke="rgba(126,184,216,.35)" stroke-width="1"/>
+            <rect x="35" y="44" width="70" height="12" rx="4" fill="rgba(126,184,216,.18)" stroke="rgba(126,184,216,.35)" stroke-width="1"/>
+            <rect x="35" y="61" width="55" height="12" rx="4" fill="rgba(126,184,216,.08)" stroke="rgba(126,184,216,.2)" stroke-width="1" stroke-dasharray="3 2"/>
+            <text x="72" y="19" text-anchor="middle" font-size="7" fill="#a8d4f0" font-weight="600">1903</text>
+            <text x="66" y="36" text-anchor="middle" font-size="7" fill="#a8d4f0" font-weight="600">1928</text>
+            <text x="70" y="53" text-anchor="middle" font-size="7" fill="#a8d4f0" font-weight="600">1953</text>
           </svg>
         </div>
         <div class="daily-body">
@@ -370,13 +363,13 @@ footer p+p{margin-top:.3rem}
       <a href="/fivefold/" class="daily-card daily-card--wavelength">
         <div class="daily-thumb">
           <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
-            <defs><linearGradient id="specG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#3d4f5c"/><stop offset="50%" stop-color="#f5f0e8"/><stop offset="100%" stop-color="#8b3a2a"/></linearGradient></defs>
-            <rect x="10" y="30" width="100" height="18" rx="9" fill="url(#specG)" opacity=".6"/>
-            <circle cx="62" cy="39" r="7" fill="none" stroke="#fff" stroke-width="2"/>
-            <line x1="62" y1="26" x2="62" y2="52" stroke="rgba(255,255,255,.3)" stroke-width="1" stroke-dasharray="2 2"/>
-            <text x="10" y="64" font-size="6" fill="rgba(255,255,255,.6)">COLD</text>
-            <text x="110" y="64" text-anchor="end" font-size="6" fill="rgba(255,255,255,.6)">HOT</text>
-            <text x="62" y="22" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">TEPID</text>
+            <defs><linearGradient id="specG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5a7a8e"/><stop offset="50%" stop-color="#f0e8d8"/><stop offset="100%" stop-color="#ef6b5b"/></linearGradient></defs>
+            <rect x="10" y="30" width="100" height="18" rx="9" fill="url(#specG)" opacity=".8"/>
+            <circle cx="62" cy="39" r="8" fill="none" stroke="#fff" stroke-width="2.5" class="wave-marker"/>
+            <line x1="62" y1="24" x2="62" y2="54" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="3 2"/>
+            <text x="10" y="64" font-size="7" fill="rgba(255,255,255,.7)" font-weight="500">COLD</text>
+            <text x="110" y="64" text-anchor="end" font-size="7" fill="rgba(255,255,255,.7)" font-weight="500">HOT</text>
+            <text x="62" y="22" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">TEPID</text>
           </svg>
         </div>
         <div class="daily-body">
@@ -388,17 +381,17 @@ footer p+p{margin-top:.3rem}
       <a href="/fivefold/" class="daily-card daily-card--mimic">
         <div class="daily-thumb">
           <svg viewBox="0 0 120 80" fill="none" width="120" height="80">
-            <rect x="12" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.25)" stroke="rgba(107,58,125,.6)" stroke-width="1.5"/>
-            <rect x="33" y="25" width="17" height="22" rx="3" fill="rgba(74,103,65,.15)" stroke="rgba(74,103,65,.5)" stroke-width="1.5"/>
-            <rect x="54" y="25" width="17" height="22" rx="3" fill="rgba(184,134,11,.15)" stroke="rgba(184,134,11,.5)" stroke-width="1.5"/>
-            <rect x="75" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.08)" stroke="rgba(107,58,125,.2)" stroke-width="1.5"/>
-            <rect x="96" y="25" width="17" height="22" rx="3" fill="rgba(107,58,125,.08)" stroke="rgba(107,58,125,.2)" stroke-width="1.5"/>
-            <text x="20" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.9)" font-weight="700">C</text>
-            <text x="41" y="40" text-anchor="middle" font-size="11" fill="#4a6741" font-weight="700">R</text>
-            <text x="62" y="40" text-anchor="middle" font-size="11" fill="#b8860b" font-weight="700">A</text>
-            <text x="83" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.5)" font-weight="700">_</text>
-            <text x="104" y="40" text-anchor="middle" font-size="11" fill="rgba(107,58,125,.5)" font-weight="700">_</text>
-            <text x="60" y="62" text-anchor="middle" font-size="7" fill="rgba(107,58,125,.6)">5 letters · 3 clues</text>
+            <rect x="10" y="22" width="19" height="26" rx="4" fill="rgba(155,94,184,.25)" stroke="#9b5eb8" stroke-width="1.5" class="mimic-box"/>
+            <rect x="32" y="22" width="19" height="26" rx="4" fill="rgba(106,153,85,.2)" stroke="#6a9960" stroke-width="1.5" class="mimic-box"/>
+            <rect x="54" y="22" width="19" height="26" rx="4" fill="rgba(212,160,23,.2)" stroke="#d4a017" stroke-width="1.5" class="mimic-box"/>
+            <rect x="76" y="22" width="19" height="26" rx="4" fill="rgba(155,94,184,.08)" stroke="rgba(155,94,184,.3)" stroke-width="1.5"/>
+            <rect x="98" y="22" width="19" height="26" rx="4" fill="rgba(155,94,184,.08)" stroke="rgba(155,94,184,.3)" stroke-width="1.5"/>
+            <text x="19" y="40" text-anchor="middle" font-size="14" fill="#c490e0" font-weight="700">C</text>
+            <text x="41" y="40" text-anchor="middle" font-size="14" fill="#8bc06c" font-weight="700">R</text>
+            <text x="63" y="40" text-anchor="middle" font-size="14" fill="#f0c040" font-weight="700">A</text>
+            <text x="85" y="40" text-anchor="middle" font-size="14" fill="rgba(155,94,184,.4)" font-weight="700">_</text>
+            <text x="107" y="40" text-anchor="middle" font-size="14" fill="rgba(155,94,184,.4)" font-weight="700">_</text>
+            <text x="60" y="62" text-anchor="middle" font-size="7" fill="rgba(155,94,184,.7)" font-weight="500">5 letters · 3 clues</text>
           </svg>
         </div>
         <div class="daily-body">
@@ -408,7 +401,7 @@ footer p+p{margin-top:.3rem}
         </div>
       </a>
     </div>
-    <a href="/fivefold/" class="daily-play-all">Play All Five →</a>
+    <a href="/fivefold/" class="daily-play-all">Play All Four →</a>
   </div>
 </section>
 
