@@ -200,6 +200,127 @@ let scorePopups; // floating score text
 let screenFlashAlpha; // white flash overlay for multi-kills
 let recentKillTimes; // timestamps for multi-kill detection
 let healOrbs; // healing orb array
+let dashCooldown; // dash cooldown timer
+let iframeTimer; // invulnerability timer after hit
+
+// ============ UPGRADE SYSTEM ============
+let shards = 0;
+let upgrades = {}; // track purchased upgrade counts by id
+let shopOpen = false;
+let shopOffered = []; // current wave's offered upgrades
+
+// Player stat modifiers from upgrades
+let statMods = {};
+
+function resetStatMods() {
+    statMods = {
+        extraFragments: 0,
+        fragSpeedMult: 1,
+        fragDamageMult: 1,
+        scatterConeMult: 1,
+        beamRangeMult: 1,
+        extraLives: 0,
+        barrierDurationMult: 1,
+        extraBarriers: 0,
+        barrierCooldownMult: 1,
+        moveSpeedMult: 1,
+        dashAbility: false,
+        iframeDuration: 0,
+        chainExplosionBonus: 0,
+        healOrbDropBonus: 0,
+        comboHealReduction: 0,
+        magnetRadius: 0,
+    };
+}
+
+const UPGRADE_DEFS = [
+    // Firepower
+    { id: 'frag_count', cat: 'fire', icon: '🔫', name: 'Fragment Storm', desc: '+4 fragments per scatter shot', apply: () => { statMods.extraFragments += 4; }, baseCost: 3, costScale: 2 },
+    { id: 'frag_speed', cat: 'fire', icon: '💨', name: 'Velocity Boost', desc: '+20% fragment speed', apply: () => { statMods.fragSpeedMult += 0.2; }, baseCost: 3, costScale: 2 },
+    { id: 'frag_damage', cat: 'fire', icon: '💥', name: 'Shatter Force', desc: '+25% fragment damage', apply: () => { statMods.fragDamageMult += 0.25; }, baseCost: 4, costScale: 3 },
+    { id: 'scatter_wide', cat: 'fire', icon: '🌊', name: 'Wide Scatter', desc: '+15% scatter cone width', apply: () => { statMods.scatterConeMult += 0.15; }, baseCost: 2, costScale: 1 },
+    { id: 'beam_range', cat: 'fire', icon: '⚡', name: 'Beam Extend', desc: '+25% beam range', apply: () => { statMods.beamRangeMult += 0.25; }, baseCost: 3, costScale: 2 },
+    // Defense
+    { id: 'extra_life', cat: 'defense', icon: '❤️', name: 'Extra Life', desc: '+1 max life', apply: () => { statMods.extraLives += 1; lives++; }, baseCost: 5, costScale: 4 },
+    { id: 'barrier_dur', cat: 'defense', icon: '🛡️', name: 'Barrier Fortify', desc: '+30% barrier duration', apply: () => { statMods.barrierDurationMult += 0.3; }, baseCost: 3, costScale: 2 },
+    { id: 'barrier_extra', cat: 'defense', icon: '⬡', name: 'Extra Barrier', desc: '+1 max barrier', apply: () => { statMods.extraBarriers += 1; }, baseCost: 4, costScale: 3 },
+    { id: 'barrier_cd', cat: 'defense', icon: '⏱️', name: 'Quick Barriers', desc: 'Barriers cost 20% less size', apply: () => { statMods.barrierCooldownMult -= 0.2; }, baseCost: 3, costScale: 2 },
+    // Movement
+    { id: 'move_speed', cat: 'move', icon: '👟', name: 'Swift Step', desc: '+15% movement speed', apply: () => { statMods.moveSpeedMult += 0.15; }, baseCost: 2, costScale: 2 },
+    { id: 'dash', cat: 'move', icon: '💨', name: 'Dash', desc: 'Press SHIFT to dash forward', apply: () => { statMods.dashAbility = true; }, baseCost: 5, costScale: 99, maxCount: 1 },
+    { id: 'iframes', cat: 'move', icon: '✨', name: 'Phase Shift', desc: '0.5s invulnerability after hit', apply: () => { statMods.iframeDuration += 0.5; }, baseCost: 4, costScale: 3 },
+    // Special
+    { id: 'chain_boom', cat: 'special', icon: '🔥', name: 'Chain Reaction', desc: '+10% chain explosion chance', apply: () => { statMods.chainExplosionBonus += 0.1; }, baseCost: 3, costScale: 2 },
+    { id: 'heal_drop', cat: 'special', icon: '💚', name: 'Vital Essence', desc: '+50% heal orb drop rate', apply: () => { statMods.healOrbDropBonus += 0.5; }, baseCost: 3, costScale: 2 },
+    { id: 'combo_heal', cat: 'special', icon: '🔗', name: 'Combo Heal', desc: 'Heal every 8 kills instead of 10', apply: () => { statMods.comboHealReduction += 2; }, baseCost: 4, costScale: 3, maxCount: 2 },
+    { id: 'magnet', cat: 'special', icon: '🧲', name: 'Shard Magnet', desc: 'Attract nearby orbs from farther', apply: () => { statMods.magnetRadius += 80; }, baseCost: 3, costScale: 2 },
+];
+
+function getUpgradeCost(def) {
+    const count = upgrades[def.id] || 0;
+    return def.baseCost + count * def.costScale;
+}
+
+function openShop() {
+    shopOpen = true;
+    // Pick 3 random upgrades, no duplicates, respect maxCount
+    const available = UPGRADE_DEFS.filter(d => {
+        const count = upgrades[d.id] || 0;
+        if (d.maxCount && count >= d.maxCount) return false;
+        return true;
+    });
+    // Shuffle and pick 3
+    const shuffled = available.sort(() => Math.random() - 0.5);
+    shopOffered = shuffled.slice(0, Math.min(3, shuffled.length));
+    renderShopUI();
+    document.getElementById('shop-screen').classList.add('active');
+}
+
+function closeShop() {
+    shopOpen = false;
+    document.getElementById('shop-screen').classList.remove('active');
+    waveTimer = 2; // resume normal wave countdown
+}
+
+function buyUpgrade(index) {
+    const def = shopOffered[index];
+    if (!def) return;
+    const cost = getUpgradeCost(def);
+    if (shards < cost) return;
+    shards -= cost;
+    upgrades[def.id] = (upgrades[def.id] || 0) + 1;
+    def.apply();
+    // Play a sound
+    playTone(600, 0.15, 'sine', 0.1);
+    playTone(900, 0.1, 'sine', 0.08);
+    renderShopUI();
+    updateHUD();
+}
+
+function renderShopUI() {
+    const container = document.getElementById('shop-cards');
+    if (!container) return;
+    document.getElementById('shop-shards').textContent = shards;
+    container.innerHTML = '';
+    shopOffered.forEach((def, i) => {
+        const cost = getUpgradeCost(def);
+        const canAfford = shards >= cost;
+        const count = upgrades[def.id] || 0;
+        const card = document.createElement('div');
+        card.className = 'shop-card' + (canAfford ? '' : ' shop-card-disabled');
+        card.innerHTML = `
+            <div class="shop-card-icon">${def.icon}</div>
+            <div class="shop-card-name">${def.name}</div>
+            <div class="shop-card-desc">${def.desc}</div>
+            ${count > 0 ? `<div class="shop-card-level">Lv ${count}</div>` : ''}
+            <div class="shop-card-cost">${canAfford ? '' : '🔒 '}${cost} ◆</div>
+        `;
+        if (canAfford) {
+            card.addEventListener('click', () => buyUpgrade(i));
+        }
+        container.appendChild(card);
+    });
+}
 const keysDown = new Set();
 const SHOOT_COOLDOWN = 0.4;
 const MIN_SHOOT_SIZE = 20;
@@ -218,6 +339,11 @@ const COMBO_WINDOW = 1.5;
 function resetGame() {
     const diff = DIFF_SETTINGS[difficulty];
     score = 0;
+    shards = 0;
+    upgrades = {};
+    resetStatMods();
+    shopOpen = false;
+    shopOffered = [];
     lives = diff.lives;
     wave = 1;
     enemiesKilled = 0;
@@ -262,6 +388,8 @@ function resetGame() {
     screenFlashAlpha = 0;
     recentKillTimes = [];
     healOrbs = [];
+    dashCooldown = 0;
+    iframeTimer = 0;
     keysDown.clear();
     updateModeUI();
     updateBarrierUI();
@@ -436,7 +564,7 @@ function addScorePopup(x, y, text, color) {
 }
 
 function healPlayer() {
-    const maxLives = DIFF_SETTINGS[difficulty].lives;
+    const maxLives = DIFF_SETTINGS[difficulty].lives + statMods.extraLives;
     if (lives < maxLives) {
         lives++;
         sfxHeal();
@@ -479,7 +607,7 @@ function addParticle(x, y, color, speed, life, size) {
 }
 
 function addBeam(targetAngle, sizeRatio) {
-    const length = Math.max(W, H) * (0.6 + sizeRatio * 0.4);
+    const length = Math.max(W, H) * (0.6 + sizeRatio * 0.4) * statMods.beamRangeMult;
     const width = 8 + sizeRatio * 20;
     beams.push({
         angle: targetAngle,
@@ -512,19 +640,20 @@ function shootScatter(targetAngle) {
     if (shootCooldown > 0) return;
 
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
-    const fragmentCount = Math.floor(8 + sizeRatio * 24);
-    const fragmentSpeed = 400 + sizeRatio * 600;
+    const fragmentCount = Math.floor(8 + sizeRatio * 24) + statMods.extraFragments;
+    const fragmentSpeed = (400 + sizeRatio * 600) * statMods.fragSpeedMult;
     const fragmentSize = 4 + sizeRatio * 8;
+    const cone = SCATTER_CONE * statMods.scatterConeMult;
 
     biggestShatter = Math.max(biggestShatter, fragmentCount);
     sfxShatter(playerSize);
 
     for (let i = 0; i < fragmentCount; i++) {
-        const spread = (Math.random() - 0.5) * SCATTER_CONE;
+        const spread = (Math.random() - 0.5) * cone;
         const a = targetAngle + spread;
         const speed = fragmentSpeed * (0.7 + Math.random() * 0.6);
         const hue = 190 + Math.random() * 40;
-        addFragment(playerX, playerY, a, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`, 1, 'scatter');
+        addFragment(playerX, playerY, a, speed, fragmentSize * (0.6 + Math.random() * 0.8), `hsl(${hue}, 100%, 70%)`, Math.ceil(statMods.fragDamageMult), 'scatter');
     }
 
     for (let i = 0; i < 20; i++) {
@@ -589,10 +718,13 @@ function triggerScreenShake(duration, intensity) {
 
 // ============ BARRIERS ============
 function placeBarrier(worldX, worldY) {
-    if (barriers.length >= MAX_BARRIERS) return false;
-    if (playerSize < MIN_SIZE + BARRIER_SIZE_COST) return false;
+    const maxBarriers = MAX_BARRIERS + statMods.extraBarriers;
+    if (barriers.length >= maxBarriers) return false;
+    const barrierCost = Math.max(5, Math.floor(BARRIER_SIZE_COST * Math.max(0.2, statMods.barrierCooldownMult)));
+    if (playerSize < MIN_SIZE + barrierCost) return false;
 
     const angle = Math.atan2(worldY - playerY, worldX - playerX);
+    const dur = BARRIER_DURATION * statMods.barrierDurationMult;
 
     barriers.push({
         x: worldX,
@@ -600,11 +732,11 @@ function placeBarrier(worldX, worldY) {
         angle: angle + Math.PI / 2,
         width: BARRIER_WIDTH,
         thickness: BARRIER_THICKNESS,
-        life: BARRIER_DURATION,
-        maxLife: BARRIER_DURATION,
+        life: dur,
+        maxLife: dur,
     });
 
-    playerSize -= BARRIER_SIZE_COST;
+    playerSize -= barrierCost;
     sfxBarrierPlace();
     shakeDur = 0.05;
     updateBarrierUI();
@@ -615,7 +747,8 @@ function updateBarrierUI() {
     const el = document.getElementById('hud-barriers');
     if (!el) return;
     const count = barriers ? barriers.length : 0;
-    const remaining = MAX_BARRIERS - count;
+    const maxB = MAX_BARRIERS + (statMods ? statMods.extraBarriers : 0);
+    const remaining = maxB - count;
     el.textContent = remaining;
     const container = document.getElementById('barrier-indicator');
     if (container) {
@@ -663,6 +796,7 @@ function isShielded(enemy, hitAngle) {
 // ============ UPDATE ============
 function update(dt) {
     if (state !== 'playing') return;
+    if (shopOpen) return;
 
     // Slow motion
     if (slowMoTimer > 0) {
@@ -697,10 +831,15 @@ function update(dt) {
         moveY /= moveMag;
     }
     // Apply acceleration toward target velocity
-    const targetVX = moveX * PLAYER_SPEED;
-    const targetVY = moveY * PLAYER_SPEED;
+    const effectiveSpeed = PLAYER_SPEED * statMods.moveSpeedMult;
+    const targetVX = moveX * effectiveSpeed;
+    const targetVY = moveY * effectiveSpeed;
     playerVX += (targetVX - playerVX) * Math.min(1, PLAYER_FRICTION * dt);
     playerVY += (targetVY - playerVY) * Math.min(1, PLAYER_FRICTION * dt);
+    // Dash ability
+    if (dashCooldown > 0) dashCooldown -= dt;
+    if (iframeTimer > 0) iframeTimer -= dt;
+
     playerX += playerVX * dt;
     playerY += playerVY * dt;
     // Clamp to world bounds
@@ -746,15 +885,20 @@ function update(dt) {
             spawnTimer = spawnInterval;
         }
 
-        if (waveEnemiesSpawned >= waveEnemies && enemies.length === 0) {
+        if (waveEnemiesSpawned >= waveEnemies && enemies.length === 0 && !shopOpen) {
             wave++;
             waveEnemies = Math.floor(5 + wave * 3 + wave * wave * 0.3);
             waveEnemiesSpawned = 0;
             waveTimer = 2;
             sfxWave();
             for (let i = 0; i < 2 + Math.floor(wave / 3); i++) spawnOrb();
-            if (wave >= 5 && lives < DIFF_SETTINGS[difficulty].lives) {
+            if (wave >= 5 && lives < DIFF_SETTINGS[difficulty].lives + statMods.extraLives) {
                 spawnHealOrb();
+            }
+            // Open shop between waves (starting from wave 2)
+            if (wave >= 2) {
+                waveTimer = 99999; // pause wave spawning until shop closes
+                openShop();
             }
         }
     }
@@ -763,8 +907,8 @@ function update(dt) {
     if (Math.random() < 0.005 * dt * 60) spawnOrb();
 
     // Heal orb spawns
-    const healOrbChance = wave >= 7 ? 0.0015 : 0.0008;
-    if (Math.random() < healOrbChance * dt * 60 && lives < DIFF_SETTINGS[difficulty].lives) {
+    const healOrbChance = (wave >= 7 ? 0.0015 : 0.0008) * (1 + statMods.healOrbDropBonus);
+    if (Math.random() < healOrbChance * dt * 60 && lives < DIFF_SETTINGS[difficulty].lives + statMods.extraLives) {
         spawnHealOrb();
     }
 
@@ -918,10 +1062,17 @@ function update(dt) {
         // Hit player
         const d = distFn(e.x, e.y, playerX, playerY);
         if (d < playerSize + e.size) {
+            if (iframeTimer > 0) {
+                // Invulnerable — destroy the enemy but take no damage
+                enemies.splice(i, 1);
+                for (let j = 0; j < 8; j++) addParticle(e.x, e.y, '#ffffff', 100, 0.3, 3);
+                continue;
+            }
             enemies.splice(i, 1);
             lives--;
             sfxHit();
             shakeDur = 0.3;
+            if (statMods.iframeDuration > 0) iframeTimer = statMods.iframeDuration;
 
             for (let j = 0; j < 15; j++) {
                 addParticle(playerX, playerY, '#ff3366', 200, 0.5, 4);
@@ -1069,9 +1220,16 @@ function update(dt) {
 
         // Hit player
         if (distFn(p.x, p.y, playerX, playerY) < playerSize + p.size) {
+            if (iframeTimer > 0) {
+                // Invulnerable — absorb projectile
+                for (let j = 0; j < 4; j++) addParticle(p.x, p.y, '#ffffff', 60, 0.2, 2);
+                enemyProjectiles.splice(i, 1);
+                continue;
+            }
             lives -= p.damage;
             sfxHit();
             shakeDur = 0.2;
+            if (statMods.iframeDuration > 0) iframeTimer = statMods.iframeDuration;
             for (let j = 0; j < 10; j++) {
                 addParticle(playerX, playerY, '#ff3366', 150, 0.4, 3);
             }
@@ -1102,6 +1260,17 @@ function update(dt) {
         if (o.life <= 0) {
             orbs.splice(i, 1);
             continue;
+        }
+
+        // Magnet effect
+        if (statMods.magnetRadius > 0) {
+            const md = distFn(o.x, o.y, playerX, playerY);
+            if (md < playerSize + o.size + statMods.magnetRadius) {
+                const ma = Math.atan2(playerY - o.y, playerX - o.x);
+                const mspeed = 200 * dt;
+                o.x += Math.cos(ma) * mspeed;
+                o.y += Math.sin(ma) * mspeed;
+            }
         }
 
         if (distFn(o.x, o.y, playerX, playerY) < playerSize + o.size + 5) {
@@ -1135,6 +1304,15 @@ function update(dt) {
         o.pulse += dt * 3;
         o.life -= dt;
         if (o.life <= 0) { healOrbs.splice(i, 1); continue; }
+        // Magnet
+        if (statMods.magnetRadius > 0) {
+            const md = distFn(o.x, o.y, playerX, playerY);
+            if (md < playerSize + o.size + statMods.magnetRadius) {
+                const ma = Math.atan2(playerY - o.y, playerX - o.x);
+                o.x += Math.cos(ma) * 200 * dt;
+                o.y += Math.sin(ma) * 200 * dt;
+            }
+        }
         if (distFn(o.x, o.y, playerX, playerY) < playerSize + o.size + 5) {
             healPlayer();
             healOrbs.splice(i, 1);
@@ -1188,6 +1366,12 @@ function killEnemy(e, index) {
     comboMultiplier = 1 + Math.floor(comboCount / 3) * 0.5;
     bestCombo = Math.max(bestCombo, comboCount);
 
+    // Award shards
+    const isToughEnemy = e.type === 'diamond' || e.type === 'shielded' || e.type === 'sniper';
+    let shardAward = isToughEnemy ? 2 : 1;
+    if (comboCount >= 5) shardAward += 1; // combo bonus
+    shards += shardAward;
+
     const killScore = Math.floor((25 + wave * 5) * comboMultiplier);
     score += killScore;
     sfxKill(comboCount, e.type);
@@ -1196,7 +1380,7 @@ function killEnemy(e, index) {
     const popupColor = comboMultiplier >= 2 ? '#ffdd00' : comboMultiplier > 1 ? '#00ddff' : '#ffffff';
     addScorePopup(e.x, e.y, popupText, popupColor);
 
-    const chainChance = 0.15 + Math.min(comboCount * 0.02, 0.25);
+    const chainChance = 0.15 + Math.min(comboCount * 0.02, 0.25) + statMods.chainExplosionBonus;
     if (Math.random() < chainChance) {
         for (let j = enemies.length - 1; j >= 0; j--) {
             const nearby = enemies[j];
@@ -1221,7 +1405,8 @@ function killEnemy(e, index) {
         screenFlashAlpha = 0.25;
     }
 
-    if (comboCount > 0 && comboCount % 10 === 0) {
+    const comboHealThreshold = Math.max(3, 10 - statMods.comboHealReduction);
+    if (comboCount > 0 && comboCount % comboHealThreshold === 0) {
         healPlayer();
     }
 }
@@ -1232,6 +1417,11 @@ function drawPlayer() {
     const y = playerY;
     const s = playerSize;
     const sizeRatio = (s - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
+
+    // Iframe flicker
+    if (iframeTimer > 0 && Math.floor(gameTime * 20) % 2 === 0) {
+        return; // skip drawing every other frame for flicker effect
+    }
 
     ctx.save();
     ctx.translate(x, y);
@@ -2006,6 +2196,8 @@ function drawMenuBg() {
 function updateHUD() {
     document.getElementById('hud-score-val').textContent = Math.floor(score).toLocaleString();
     document.getElementById('hud-wave-val').textContent = wave;
+    const shardEl = document.getElementById('hud-shards-val');
+    if (shardEl) shardEl.textContent = shards;
 
     const sizeRatio = (playerSize - MIN_SIZE) / (playerMaxSize - MIN_SIZE);
     const sizeBar = document.getElementById('size-bar');
@@ -2021,7 +2213,7 @@ function updateHUD() {
     }
 
     const livesEl = document.getElementById('hud-lives');
-    const totalLives = DIFF_SETTINGS[difficulty].lives;
+    const totalLives = DIFF_SETTINGS[difficulty].lives + statMods.extraLives;
     if (livesEl.children.length !== totalLives) {
         livesEl.innerHTML = '';
         for (let i = 0; i < totalLives; i++) {
@@ -2093,6 +2285,7 @@ function gameOver() {
     document.getElementById('go-kills').textContent = enemiesKilled;
     document.getElementById('go-combo').textContent = 'x' + (1 + Math.floor(bestCombo / 3) * 0.5).toFixed(1) + ` (${bestCombo} chain)`;
     document.getElementById('go-shatter').textContent = biggestShatter + ' fragments';
+    document.getElementById('go-shards').textContent = shards + ' ◆';
     document.getElementById('new-record').classList.toggle('hidden', !isNew);
 
     setTimeout(() => {
@@ -2236,6 +2429,24 @@ document.addEventListener('keydown', e => {
         barrierPlaceMode = !barrierPlaceMode;
         updateBarrierUI();
     }
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+        if (state === 'playing' && statMods.dashAbility && dashCooldown <= 0) {
+            // Dash in movement direction or aim direction
+            let dashAngle = aimAngle;
+            const mx = (keysDown.has('KeyA') || keysDown.has('ArrowLeft') ? -1 : 0) + (keysDown.has('KeyD') || keysDown.has('ArrowRight') ? 1 : 0);
+            const my = (keysDown.has('KeyW') || keysDown.has('ArrowUp') ? -1 : 0) + (keysDown.has('KeyS') || keysDown.has('ArrowDown') ? 1 : 0);
+            if (mx !== 0 || my !== 0) dashAngle = Math.atan2(my, mx);
+            const dashDist = 180;
+            playerX += Math.cos(dashAngle) * dashDist;
+            playerY += Math.sin(dashAngle) * dashDist;
+            playerX = Math.max(playerSize + 5, Math.min(WORLD_W - playerSize - 5, playerX));
+            playerY = Math.max(playerSize + 5, Math.min(WORLD_H - playerSize - 5, playerY));
+            dashCooldown = 1.5;
+            iframeTimer = 0.2; // brief invuln during dash
+            for (let i = 0; i < 10; i++) addParticle(playerX, playerY, '#00c8ff', 150, 0.3, 3);
+            playTone(400, 0.1, 'sine', 0.08);
+        }
+    }
 });
 
 document.addEventListener('keyup', e => {
@@ -2280,6 +2491,15 @@ if (barrierBtn) {
             updateBarrierUI();
         }
     }, { passive: false });
+}
+
+// Shop continue button
+const shopContinueBtn = document.getElementById('btn-shop-continue');
+if (shopContinueBtn) {
+    shopContinueBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeShop();
+    });
 }
 
 // Difficulty buttons

@@ -430,6 +430,124 @@ canvas {
     box-shadow: 0 0 8px rgba(0, 200, 255, 0.5);
 }
 
+/* Shard HUD */
+.hud-shards {
+    text-align: center;
+}
+
+#hud-shards-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #aa88ff;
+}
+
+/* Upgrade Shop */
+#shop-screen {
+    background: rgba(5, 5, 20, 0.85);
+    backdrop-filter: blur(4px);
+}
+
+.shop-content {
+    text-align: center;
+    padding: 2rem;
+    max-width: 700px;
+    width: 95%;
+}
+
+.shop-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    font-weight: 900;
+    color: #00c8ff;
+    text-shadow: 0 0 30px rgba(0, 200, 255, 0.5);
+    margin-bottom: 0.5rem;
+}
+
+.shop-shards-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    color: #aa88ff;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px rgba(170, 136, 255, 0.5);
+}
+
+.shop-cards {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.shop-card {
+    background: rgba(0, 200, 255, 0.08);
+    border: 1px solid rgba(0, 200, 255, 0.3);
+    border-radius: 12px;
+    padding: 1.2rem 1rem;
+    width: 180px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 15px rgba(0, 200, 255, 0.1);
+}
+
+.shop-card:hover {
+    background: rgba(0, 200, 255, 0.15);
+    border-color: rgba(0, 200, 255, 0.6);
+    box-shadow: 0 0 25px rgba(0, 200, 255, 0.3);
+    transform: translateY(-4px);
+}
+
+.shop-card-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.shop-card-disabled:hover {
+    background: rgba(0, 200, 255, 0.08);
+    border-color: rgba(0, 200, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 200, 255, 0.1);
+    transform: none;
+}
+
+.shop-card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.shop-card-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #00c8ff;
+    margin-bottom: 0.4rem;
+}
+
+.shop-card-desc {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.3;
+    margin-bottom: 0.6rem;
+}
+
+.shop-card-level {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    color: rgba(0, 200, 255, 0.5);
+    margin-bottom: 0.3rem;
+}
+
+.shop-card-cost {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #aa88ff;
+}
+
+.shop-continue {
+    margin-top: 0.5rem;
+}
+
 /* Game Over */
 .gameover-title {
     font-family: 'Orbitron', sans-serif;
