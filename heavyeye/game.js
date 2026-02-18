@@ -1,5 +1,75 @@
 // Heavy Eye Game Engine
 (() => {
+    // ─── Sound System (Web Audio API) ───
+    let audioCtx;
+    function getAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+    }
+
+    function playTone(freq, dur, type, vol, delay) {
+        const ctx = getAudio();
+        const t = ctx.currentTime + (delay || 0);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(vol || 0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+    }
+
+    const SFX = {
+        // Gentle pick/click sound
+        pick() {
+            playTone(880, 0.08, 'sine', 0.1);
+            playTone(1320, 0.06, 'sine', 0.06, 0.03);
+        },
+        // Scale tilting - low warm creak
+        tilt() {
+            playTone(180, 0.4, 'triangle', 0.08);
+            playTone(160, 0.3, 'triangle', 0.05, 0.1);
+        },
+        // Weight reveal - soft chime ascending
+        reveal() {
+            playTone(523, 0.15, 'sine', 0.08);
+            playTone(659, 0.15, 'sine', 0.08, 0.1);
+            playTone(784, 0.2, 'sine', 0.06, 0.2);
+        },
+        // Correct - happy ascending arpeggio
+        correct() {
+            playTone(523, 0.12, 'sine', 0.12);
+            playTone(659, 0.12, 'sine', 0.12, 0.08);
+            playTone(784, 0.12, 'sine', 0.12, 0.16);
+            playTone(1047, 0.3, 'sine', 0.1, 0.24);
+        },
+        // Wrong - gentle descending two-note
+        wrong() {
+            playTone(400, 0.2, 'triangle', 0.1);
+            playTone(300, 0.3, 'triangle', 0.08, 0.15);
+        },
+        // Next round - soft pop
+        next() {
+            playTone(660, 0.08, 'sine', 0.08);
+            playTone(880, 0.1, 'sine', 0.06, 0.05);
+        },
+        // Game start - warm welcome chord
+        start() {
+            playTone(392, 0.3, 'sine', 0.08);
+            playTone(494, 0.3, 'sine', 0.08, 0.05);
+            playTone(587, 0.4, 'sine', 0.06, 0.1);
+        },
+        // Game over - gentle resolution
+        end() {
+            playTone(784, 0.2, 'sine', 0.08);
+            playTone(659, 0.2, 'sine', 0.08, 0.15);
+            playTone(523, 0.4, 'sine', 0.1, 0.3);
+        }
+    };
+
     // ─── Emoji to OpenMoji ───
     function emojiToCodePoints(emoji) {
         const codePoints = [];
@@ -330,6 +400,7 @@
         if (revealed) return;
         revealed = true;
 
+        SFX.pick();
         const pickedCard = side === 'left' ? cardLeft : cardRight;
         pickedCard.classList.add('picked');
         cardLeft.disabled = true;
@@ -353,6 +424,7 @@
         // Tilt scale
         const tiltDir = heavierSide === 'left' ? -1 : 1;
         setTimeout(() => {
+            SFX.tilt();
             targetTilt = tiltDir * 8;
             // Overshoot then settle
             setTimeout(() => { targetTilt = tiltDir * 6; }, 400);
@@ -361,6 +433,7 @@
 
         // Reveal weights with counter animation
         setTimeout(() => {
+            SFX.reveal();
             animateWeight($('weight-left'), leftObj.weight_lbs);
             animateWeight($('weight-right'), rightObj.weight_lbs);
             $('weight-left').classList.add('visible');
@@ -378,11 +451,13 @@
         // Result feedback
         setTimeout(() => {
             if (correct) {
+                SFX.correct();
                 spawnConfetti();
                 $('result-emoji').textContent = '🎉';
                 $('result-text').textContent = 'Correct!';
                 $('result-text').className = 'result-text correct';
             } else {
+                SFX.wrong();
                 // Shake + red flash
                 document.body.classList.add('shake');
                 $('flash-overlay').classList.add('red');
@@ -484,6 +559,7 @@
     // ─── Events ───
     document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
         btn.addEventListener('click', () => {
+            SFX.start();
             pickRounds(btn.dataset.mode);
             showScreen('game');
             setTimeout(() => startRound(), 300);
@@ -494,15 +570,18 @@
     cardRight.addEventListener('click', () => !revealed && handlePick('right'));
 
     $('next-btn').addEventListener('click', () => {
+        SFX.next();
         roundIndex++;
         if (roundIndex >= rounds.length) {
             showEnd();
+            SFX.end();
         } else {
             startRound();
         }
     });
 
     $('play-again-btn').addEventListener('click', () => {
+        SFX.start();
         pickRounds(mode);
         showScreen('game');
         setTimeout(() => startRound(), 300);
