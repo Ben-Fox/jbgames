@@ -127,8 +127,8 @@ a{text-decoration:none;color:inherit}
 .cauldron-container{display:flex;justify-content:center;padding:1rem 0}
 .cauldron-svg{filter:drop-shadow(0 0 25px rgba(139,92,246,0.35))}
 .spoon{transform-origin:155px 175px;animation:stir 3s ease-in-out infinite}
-.nerd-dude{animation:gentleBob 3s ease-in-out infinite}
-@keyframes gentleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+
 @keyframes stir{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
 .steam-p{animation:rise 3s ease-in-out infinite}
 .steam-1{animation-delay:0s}
@@ -398,7 +398,7 @@ footer p+p{margin-top:.3rem}
   <h2>More games cooking...</h2>
   <p>New brain-busters are on the way. Stay tuned.</p>
   <div class="cauldron-container">
-    <svg viewBox="-40 0 400 360" width="380" height="360" class="cauldron-svg">
+    <svg viewBox="0 0 320 320" width="320" height="320" class="cauldron-svg">
       <defs>
         <!-- Stew gradient -->
         <radialGradient id="stewGrad" cx="50%" cy="40%">
@@ -446,128 +446,6 @@ footer p+p{margin-top:.3rem}
         <circle cx="184" cy="170" r="2" fill="#a78bfa"/>
       </g>
 
-      <!-- Nerdy dude - Pixar "Up" style, large head, thick glasses, bored -->
-      <g class="nerd-dude">
-        <!-- Wooden chair -->
-        <rect x="10" y="108" width="6" height="120" rx="3" fill="#8B5E3C"/>
-        <rect x="104" y="108" width="6" height="120" rx="3" fill="#8B5E3C"/>
-        <rect x="10" y="115" width="100" height="6" rx="3" fill="#a0703c"/>
-        <rect x="10" y="140" width="100" height="5" rx="2" fill="#a0703c"/>
-        <rect x="10" y="162" width="100" height="4" rx="2" fill="#a0703c"/>
-        <!-- Chair seat -->
-        <rect x="4" y="195" width="112" height="8" rx="4" fill="#a0703c"/>
-        <!-- Chair legs -->
-        <rect x="8" y="195" width="5" height="70" rx="2" fill="#8B5E3C"/>
-        <rect x="107" y="195" width="5" height="70" rx="2" fill="#8B5E3C"/>
-        <rect x="14" y="195" width="5" height="72" rx="2" fill="#7a5232"/>
-        <rect x="101" y="195" width="5" height="72" rx="2" fill="#7a5232"/>
-        <!-- Chair cross bar -->
-        <rect x="14" y="240" width="92" height="4" rx="2" fill="#8B5E3C"/>
-
-        <!-- Legs (sitting, bent at knee) -->
-        <path d="M38,200 Q36,225 42,245" stroke="#3d5a80" stroke-width="16" fill="none" stroke-linecap="round"/>
-        <path d="M82,200 Q84,225 78,245" stroke="#3d5a80" stroke-width="16" fill="none" stroke-linecap="round"/>
-        <!-- Shoes -->
-        <ellipse cx="44" cy="250" rx="12" ry="6" fill="#2a2a2a"/>
-        <ellipse cx="76" cy="250" rx="12" ry="6" fill="#2a2a2a"/>
-        <!-- Shoe soles -->
-        <ellipse cx="46" cy="253" rx="11" ry="3" fill="#1a1a1a"/>
-        <ellipse cx="74" cy="253" rx="11" ry="3" fill="#1a1a1a"/>
-
-        <!-- Torso - slightly slouched (bored posture) -->
-        <path d="M35,175 Q30,155 38,140 L82,140 Q90,155 85,175 Z" fill="#4a6fa5" stroke="#3d5a80" stroke-width="1"/>
-        <!-- Shirt pocket -->
-        <rect x="42" y="148" width="10" height="12" rx="2" fill="#3d5a80" opacity="0.5"/>
-        <!-- Pen in pocket -->
-        <line x1="48" y1="145" x2="48" y2="152" stroke="#e74c3c" stroke-width="1.5" stroke-linecap="round"/>
-        <!-- Shirt collar / neckline -->
-        <path d="M46,140 L60,150 L74,140" stroke="#5b82b8" stroke-width="2" fill="#4a6fa5"/>
-
-        <!-- Arms reaching forward to stir -->
-        <!-- Left arm -->
-        <path d="M38,155 Q20,148 25,130 Q30,112 75,100" stroke="#dfc09f" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <!-- Right arm -->
-        <path d="M82,152 Q102,142 105,125 Q108,108 95,98" stroke="#dfc09f" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <!-- Hands gripping spoon -->
-        <circle cx="78" cy="99" r="8" fill="#dfc09f"/>
-        <circle cx="93" cy="96" r="8" fill="#dfc09f"/>
-        <!-- Finger details -->
-        <path d="M72,96 Q70,92 73,90" stroke="#c9a87c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <path d="M77,93 Q76,89 78,87" stroke="#c9a87c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <path d="M97,90 Q99,87 97,85" stroke="#c9a87c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-
-        <!-- BIG HEAD (Up-style exaggerated proportions) -->
-        <ellipse cx="60" cy="105" rx="32" ry="36" fill="#dfc09f"/>
-        <!-- Cheek shading -->
-        <ellipse cx="38" cy="112" rx="8" ry="5" fill="#d4a97a" opacity="0.3"/>
-        <ellipse cx="82" cy="112" rx="8" ry="5" fill="#d4a97a" opacity="0.3"/>
-        <!-- Ears (big, slightly sticking out) -->
-        <ellipse cx="28" cy="108" rx="7" ry="10" fill="#d4a97a"/>
-        <ellipse cx="28" cy="108" rx="4" ry="7" fill="#dfc09f"/>
-        <ellipse cx="92" cy="108" rx="7" ry="10" fill="#d4a97a"/>
-        <ellipse cx="92" cy="108" rx="4" ry="7" fill="#dfc09f"/>
-
-        <!-- Curly brown hair (big and messy, "Up" volume) -->
-        <g fill="#4a2c12">
-          <circle cx="36" cy="76" r="10"/>
-          <circle cx="50" cy="70" r="12"/>
-          <circle cx="66" cy="68" r="12"/>
-          <circle cx="80" cy="72" r="11"/>
-          <circle cx="90" cy="80" r="9"/>
-          <circle cx="30" cy="85" r="8"/>
-          <circle cx="44" cy="72" r="9"/>
-          <circle cx="58" cy="67" r="8"/>
-          <circle cx="74" cy="68" r="9"/>
-          <circle cx="86" cy="75" r="8"/>
-          <!-- Side curls -->
-          <circle cx="27" cy="94" r="7"/>
-          <circle cx="93" cy="92" r="7"/>
-          <!-- Extra volume on top -->
-          <circle cx="55" cy="65" r="7"/>
-          <circle cx="70" cy="64" r="7"/>
-        </g>
-        <!-- Hair highlights -->
-        <circle cx="52" cy="69" r="4" fill="#5c3a1e" opacity="0.6"/>
-        <circle cx="72" cy="67" r="4" fill="#5c3a1e" opacity="0.6"/>
-
-        <!-- THICK frame glasses (Up-style chunky) -->
-        <rect x="40" y="99" width="18" height="16" rx="4" fill="rgba(200,220,255,0.1)" stroke="#1a1a1a" stroke-width="3"/>
-        <rect x="62" y="99" width="18" height="16" rx="4" fill="rgba(200,220,255,0.1)" stroke="#1a1a1a" stroke-width="3"/>
-        <!-- Bridge -->
-        <line x1="58" y1="107" x2="62" y2="107" stroke="#1a1a1a" stroke-width="3"/>
-        <!-- Temple arms -->
-        <line x1="40" y1="104" x2="30" y2="102" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="80" y1="104" x2="90" y2="102" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <!-- Lens glare -->
-        <ellipse cx="45" cy="103" rx="3" ry="2" fill="rgba(255,255,255,0.2)" transform="rotate(-15,45,103)"/>
-        <ellipse cx="67" cy="103" rx="3" ry="2" fill="rgba(255,255,255,0.2)" transform="rotate(-15,67,103)"/>
-
-        <!-- Eyes (bored/half-lidded) -->
-        <ellipse cx="49" cy="108" rx="3.5" ry="3" fill="white"/>
-        <ellipse cx="71" cy="108" rx="3.5" ry="3" fill="white"/>
-        <!-- Irises (looking slightly to the side = bored) -->
-        <circle cx="50" cy="109" r="2.2" fill="#4a3728"/>
-        <circle cx="72" cy="109" r="2.2" fill="#4a3728"/>
-        <circle cx="50.3" cy="108.5" r="0.8" fill="#111"/>
-        <circle cx="72.3" cy="108.5" r="0.8" fill="#111"/>
-        <!-- Bored heavy eyelids (drooping down) -->
-        <path d="M44,105 Q49,103 54,105" stroke="#dfc09f" stroke-width="3" fill="#dfc09f"/>
-        <path d="M66,105 Q71,103 76,105" stroke="#dfc09f" stroke-width="3" fill="#dfc09f"/>
-        <!-- Eyebrows (slightly raised on one side = bored/unimpressed) -->
-        <path d="M43,96 Q49,93 55,95" stroke="#4a2c12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M65,95 Q71,92 77,96" stroke="#4a2c12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-        <!-- Nose (round, Up-style) -->
-        <ellipse cx="60" cy="115" rx="5" ry="4" fill="#d4a97a"/>
-        <path d="M57,116 Q60,119 63,116" stroke="#c49a74" stroke-width="1" fill="none"/>
-
-        <!-- Mouth (flat/slightly frowny = bored) -->
-        <path d="M50,122 Q60,120 70,122" stroke="#b8876a" stroke-width="2" fill="none" stroke-linecap="round"/>
-
-        <!-- Chin -->
-        <ellipse cx="60" cy="130" rx="12" ry="6" fill="#dfc09f"/>
-      </g>
-
       <!-- Cauldron body - rounded pot shape -->
       <path d="M68,170 Q65,210 80,240 Q100,270 160,272 Q220,270 240,240 Q255,210 252,170 Z" fill="url(#potGrad)" stroke="#6d28d9" stroke-width="2.5"/>
       <!-- Highlight on pot for 3D effect -->
@@ -597,12 +475,11 @@ footer p+p{margin-top:.3rem}
         <path class="chunk chunk-4" d="M192,173 c-2,-3 2,-6 5,-4 c3,2 2,5 0,6 c-2,1 -4,0 -5,-2z" fill="#ec4899" opacity="0.5"/>
       </g>
 
-      <!-- Spoon handle - from his hands into the stew -->
+      <!-- Spoon handle sticking out of stew -->
       <g class="spoon">
-        <line x1="85" y1="97" x2="160" y2="175" stroke="#d97706" stroke-width="8" stroke-linecap="round"/>
-        <!-- Wood grain -->
-        <line x1="90" y1="103" x2="155" y2="170" stroke="#b45309" stroke-width="1.2" opacity="0.4"/>
-        <line x1="92" y1="101" x2="157" y2="168" stroke="#fbbf24" stroke-width="1" opacity="0.2"/>
+        <line x1="110" y1="90" x2="158" y2="175" stroke="#d97706" stroke-width="7" stroke-linecap="round"/>
+        <line x1="115" y1="100" x2="153" y2="168" stroke="#b45309" stroke-width="1" opacity="0.4"/>
+        <line x1="117" y1="98" x2="155" y2="166" stroke="#fbbf24" stroke-width="0.8" opacity="0.2"/>
       </g>
 
       <!-- Legs - curved iron legs -->
