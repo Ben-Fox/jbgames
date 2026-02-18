@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Fivefold — Five Weekly Puzzle Games | BrainSmacks</title>
-<meta name="description" content="Play Fivefold — five free weekly puzzle games: word groups, ciphers, history ordering, spectrum guessing, and word clues. No download needed.">
+<title>Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks</title>
+<meta name="description" content="Play Daily Puzzles — four free weekly puzzle games: ciphers, history ordering, spectrum guessing, and word clues. No download needed.">
 <link rel="canonical" href="https://brainsmacks.com/fivefold/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Fivefold — Five Weekly Puzzle Games | BrainSmacks">
-<meta property="og:description" content="Five games, one week, infinite curiosity. Free browser puzzle games — play instantly.">
+<meta property="og:title" content="Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks">
+<meta property="og:description" content="Four games, one week, infinite curiosity. Free browser puzzle games — play instantly.">
 <meta property="og:url" content="https://brainsmacks.com/fivefold/">
 <meta property="og:image" content="https://brainsmacks.com/fivefold/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="BrainSmacks">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Fivefold — Five Weekly Puzzle Games | BrainSmacks">
-<meta name="twitter:description" content="Five games, one week, infinite curiosity. Free browser puzzle games.">
+<meta name="twitter:title" content="Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks">
+<meta name="twitter:description" content="Four games, one week, infinite curiosity. Free browser puzzle games.">
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300;1,600&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
@@ -63,7 +63,7 @@ body {
 
 .hub-logo {
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(52px, 8vw, 88px);
+  font-size: clamp(42px, 7vw, 76px);
   font-weight: 700;
   letter-spacing: -2px;
   line-height: 1;
@@ -378,86 +378,104 @@ body {
 }
 .result-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 
-/* ── NEXUS (Connections-style) ── */
-.nexus-words {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.nexus-word {
-  padding: 14px 8px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  background: var(--paper2);
-  border: 2px solid var(--border);
-  cursor: pointer;
-  transition: all 0.15s;
-  user-select: none;
-}
-.nexus-word:hover { border-color: var(--gold); }
-.nexus-word.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.nexus-word.solved-1 { background: #c9a84c22; border-color: var(--gold); color: var(--gold); cursor: default; }
-.nexus-word.solved-2 { background: rgba(74,103,65,0.15); border-color: var(--sage); color: var(--sage); cursor: default; }
-.nexus-word.solved-3 { background: rgba(61,79,92,0.15); border-color: var(--slate); color: var(--slate); cursor: default; }
-.nexus-word.solved-4 { background: rgba(139,58,42,0.15); border-color: var(--rust); color: var(--rust); cursor: default; }
-.nexus-word.wrong-shake { animation: shake 0.4s; }
-
-.nexus-submit-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.nexus-mistakes {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.mistake-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--rust);
-  opacity: 0.3;
-  transition: opacity 0.3s;
-}
-.mistake-dot.used { opacity: 1; }
-
-.solved-row {
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  animation: pop 0.3s;
-}
-
-/* ── CIPHER ── */
-.cipher-display {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(16px, 2.5vw, 20px);
-  font-style: italic;
-  line-height: 2;
+/* ── CIPHER (reworked) ── */
+.cipher-quote-area {
   padding: 20px;
   background: var(--paper3);
   border-left: 3px solid var(--gold);
   margin-bottom: 20px;
-  letter-spacing: 2px;
+  line-height: 1.2;
 }
 
-.cipher-char {
+.cipher-word {
   display: inline-block;
-  position: relative;
-  min-width: 14px;
-  text-align: center;
+  margin-right: 12px;
+  margin-bottom: 8px;
 }
-.cipher-char.solved { color: var(--sage); }
-.cipher-char.selected { color: var(--gold); text-decoration: underline; }
+
+.cipher-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 26px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.cipher-cell.punct {
+  cursor: default;
+  width: auto;
+  min-width: 10px;
+}
+
+.cipher-encoded {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  height: 16px;
+  line-height: 16px;
+}
+
+.cipher-decoded {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 700;
+  height: 30px;
+  line-height: 30px;
+  min-width: 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--border);
+  transition: all 0.25s ease;
+}
+
+.cipher-cell.selected .cipher-decoded {
+  border-color: var(--gold);
+  background: rgba(184,134,11,0.1);
+}
+
+.cipher-cell.locked .cipher-decoded {
+  border-color: var(--sage);
+  background: rgba(74,103,65,0.1);
+  color: var(--sage);
+}
+
+.cipher-cell.mapped .cipher-decoded {
+  color: var(--ink);
+  border-color: var(--slate);
+}
+
+.cipher-cell.locked .cipher-encoded {
+  color: var(--sage);
+}
+
+.cipher-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cipher-progress {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.cipher-hint-btn {
+  padding: 8px 16px;
+  background: var(--gold);
+  color: white;
+  border: none;
+  font-family: 'Azeret Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cipher-hint-btn:hover { background: var(--gold-light); }
 
 .cipher-keyboard {
   display: grid;
@@ -477,24 +495,90 @@ body {
   text-transform: uppercase;
 }
 .cipher-key:hover { background: var(--ink); color: var(--paper); }
-.cipher-key.used { background: var(--paper3); color: var(--muted); text-decoration: line-through; cursor: default; }
-.cipher-key.correct-mapped { background: rgba(74,103,65,0.15); color: var(--sage); cursor: default; }
+.cipher-key.used { background: var(--paper3); color: var(--muted); opacity: 0.5; }
+.cipher-key.locked { background: rgba(74,103,65,0.15); color: var(--sage); cursor: default; border-color: var(--sage); }
 
-.cipher-mapping-display {
+/* Mapping table */
+.cipher-map-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 3px;
   margin-bottom: 16px;
 }
-.mapping-pair {
+
+.cipher-map-cell {
   text-align: center;
-  padding: 6px 4px;
+  padding: 4px 2px;
   background: var(--paper2);
   border: 1px solid var(--border);
-  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.mapping-encoded { color: var(--muted); font-size: 9px; }
-.mapping-decoded { font-weight: 600; color: var(--sage); min-height: 14px; }
+.cipher-map-cell:hover { border-color: var(--gold); }
+.cipher-map-cell.locked { border-color: var(--sage); background: rgba(74,103,65,0.1); }
+.cipher-map-enc {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.cipher-map-arrow {
+  font-size: 8px;
+  color: var(--muted);
+}
+.cipher-map-dec {
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 16px;
+  color: var(--sage);
+}
+
+/* Frequency analysis */
+.cipher-freq {
+  margin-bottom: 20px;
+}
+.cipher-freq-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.cipher-freq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 60px;
+  padding: 0 2px;
+}
+.cipher-freq-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.cipher-freq-col:hover .cipher-freq-bar { background: var(--gold); }
+.cipher-freq-col.selected .cipher-freq-bar { background: var(--gold); }
+.cipher-freq-bar {
+  width: 100%;
+  background: var(--slate);
+  opacity: 0.6;
+  transition: all 0.2s;
+  border-radius: 1px 1px 0 0;
+  min-height: 2px;
+}
+.cipher-freq-lbl {
+  font-size: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cipher-freq-hint {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-style: italic;
+}
 
 /* ── CHRONICLE ── */
 .chronicle-events {
@@ -635,9 +719,9 @@ body {
 
 /* Responsive */
 @media (max-width: 480px) {
-  .nexus-words { grid-template-columns: repeat(2, 1fr); }
   .cipher-keyboard { grid-template-columns: repeat(7, 1fr); }
-  .hub-logo { font-size: 42px; }
+  .cipher-map-grid { grid-template-columns: repeat(9, 1fr); }
+  .hub-logo { font-size: 36px; }
 }
 </style>
 </head>
@@ -648,8 +732,8 @@ body {
 <!-- HUB -->
 <div id="hub">
   <div class="hub-masthead">
-    <div class="hub-logo">Five<span>fold</span></div>
-    <div class="hub-tagline">Five games · One week · Infinite curiosity</div>
+    <div class="hub-logo">Daily <span>Puzzles</span></div>
+    <div class="hub-tagline">Four games · One week · Infinite curiosity</div>
     <div class="week-badge" id="week-badge"></div>
   </div>
   <div class="game-grid" id="game-grid"></div>
@@ -701,51 +785,7 @@ function loadProgress(gameId) {
 // PUZZLE DATA POOLS
 // ═══════════════════════════════════════════════
 
-// NEXUS — 4 groups of 4 words sharing a theme
-const NEXUS_POOL = [
-  {
-    groups: [
-      { theme: "Things that can 'run'", words: ["TAP", "NOSE", "RIVER", "CLOCK"], color: 1 },
-      { theme: "Types of 'light'", words: ["MOON", "CANDLE", "FLASH", "STAR"], color: 2 },
-      { theme: "Can follow 'black'", words: ["BIRD", "BOARD", "BERRY", "SMITH"], color: 3 },
-      { theme: "Types of music", words: ["SOUL", "JAZZ", "BLUES", "FOLK"], color: 4 },
-    ]
-  },
-  {
-    groups: [
-      { theme: "Things with keys", words: ["PIANO", "LOCK", "CAR", "MAP"], color: 1 },
-      { theme: "Can precede 'stone'", words: ["LIME", "SAND", "COBBLE", "KEY"], color: 2 },
-      { theme: "Shades of red", words: ["CRIMSON", "SCARLET", "RUBY", "VERMILLION"], color: 3 },
-      { theme: "Parts of an eye", words: ["IRIS", "PUPIL", "LENS", "CORNEA"], color: 4 },
-    ]
-  },
-  {
-    groups: [
-      { theme: "Can follow 'fire'", words: ["PLACE", "SIDE", "WORK", "FLY"], color: 1 },
-      { theme: "Types of bridges", words: ["ARCH", "SWING", "ROPE", "DRAW"], color: 2 },
-      { theme: "Famous Willies", words: ["WONKA", "NELSON", "SHAKESPEARE", "SHATNER"], color: 3 },
-      { theme: "Things that shine", words: ["GLIMMER", "GLEAM", "GLOW", "GLINT"], color: 4 },
-    ]
-  },
-  {
-    groups: [
-      { theme: "Can precede 'house'", words: ["TREE", "POWER", "GREEN", "FULL"], color: 1 },
-      { theme: "Types of bread", words: ["RYE", "SOURDOUGH", "BRIOCHE", "NAAN"], color: 2 },
-      { theme: "Space words", words: ["ORBIT", "LUNAR", "SOLAR", "COSMIC"], color: 3 },
-      { theme: "Old measures of time", words: ["EPOCH", "ERA", "EON", "AGE"], color: 4 },
-    ]
-  },
-  {
-    groups: [
-      { theme: "Synonyms for 'cold'", words: ["FRIGID", "ARCTIC", "BRISK", "NIPPY"], color: 1 },
-      { theme: "Famous Maries", words: ["CURIE", "KONDO", "ANTOINETTE", "SHELLEY"], color: 2 },
-      { theme: "Can follow 'thunder'", words: ["BOLT", "STORM", "CLOUD", "BIRD"], color: 3 },
-      { theme: "Parts of a boat", words: ["BOW", "STERN", "HULL", "KEEL"], color: 4 },
-    ]
-  },
-];
-
-// CIPHER — scrambled quotes (substitution cipher — Caesar shift 7)
+// CIPHER — scrambled quotes (random substitution cipher)
 const CIPHER_POOL = [
   { plain: "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO", author: "Steve Jobs" },
   { plain: "IN THE MIDDLE OF DIFFICULTY LIES OPPORTUNITY", author: "Albert Einstein" },
@@ -755,7 +795,6 @@ const CIPHER_POOL = [
 ];
 
 function makeCipher(plain) {
-  // Random substitution based on week seed
   const week = getWeekIndex(997);
   const shuffle = (arr, seed) => {
     const a = [...arr];
@@ -773,7 +812,7 @@ function makeCipher(plain) {
   const decMap = {};
   letters.forEach((l, i) => { encMap[l] = shuffled[i]; decMap[shuffled[i]] = l; });
   const encoded = plain.split('').map(c => c === ' ' ? ' ' : (encMap[c] || c)).join('');
-  return { plain, encoded, encMap, decMap, author: '' };
+  return { plain, encoded, encMap, decMap };
 }
 
 // CHRONICLE — ordering events
@@ -874,7 +913,7 @@ const WAVELENGTH_POOL = [
   },
 ];
 
-// MIMIC — 5-letter words with clues (Wordle-inspired but clue-based)
+// MIMIC — 5-letter words with clues
 const MIMIC_POOL = [
   {
     rounds: [
@@ -927,7 +966,6 @@ const MIMIC_POOL = [
 // GAME REGISTRY
 // ═══════════════════════════════════════════════
 const GAMES = [
-  { id: "nexus",      name: "Nexus",      emoji: "🔗", type: "Single Puzzle", desc: "Group 16 words into four hidden categories. One wrong guess costs a life.", accent: "#b8860b", render: renderNexus },
   { id: "cipher",     name: "Cipher",     emoji: "🔐", type: "Single Puzzle", desc: "Decode an encrypted quote by cracking the letter substitution cipher.", accent: "#4a6741", render: renderCipher },
   { id: "chronicle",  name: "Chronicle",  emoji: "📜", type: "5 Rounds",      desc: "Arrange five historical events in the correct chronological order.", accent: "#3d4f5c", render: renderChronicle },
   { id: "wavelength", name: "Wavelength", emoji: "🌊", type: "5 Rounds",      desc: "Place a word on the correct spot of a spectrum. Closer = more points.", accent: "#8b3a2a", render: renderWavelength },
@@ -1036,163 +1074,16 @@ function resultBanner(won, title, answer, sub, scoreEl) {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 1: NEXUS
-// ═══════════════════════════════════════════════
-function renderNexus() {
-  howToPlay(`
-    <strong>16 words</strong> are hidden on the board. Your job is to find <strong>four groups of four</strong> words that share a hidden category.<br><br>
-    Click words to select them, then hit <strong>Submit</strong>. If all four belong to the same group, they're removed from the board.<br><br>
-    You have <strong>4 mistakes</strong> allowed. Groups can be tricky — words may seem to fit multiple categories. Think carefully!<br><br>
-    A new puzzle appears every <strong>Monday</strong>.
-  `, startNexus);
-}
-
-function startNexus() {
-  const puzzle = NEXUS_POOL[getWeekIndex(NEXUS_POOL.length)];
-  const prog = loadProgress('nexus') || { mistakes: 0, solved: [], finished: false };
-
-  const allWords = puzzle.groups.flatMap(g => g.words);
-  // Stable weekly shuffle
-  const seed = getWeekIndex(9999) * 31 + 7;
-  const shuffled = [...allWords];
-  let s = seed;
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const j = Math.abs(s) % (i + 1);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  const content = document.getElementById('game-content');
-  const colors = ['#c9a84c40','rgba(74,103,65,0.25)','rgba(61,79,92,0.25)','rgba(139,58,42,0.25)'];
-  const borderColors = ['var(--gold)','var(--sage)','var(--slate)','var(--rust)'];
-
-  function render() {
-    content.innerHTML = '';
-    const area = document.createElement('div');
-    area.className = 'game-area';
-
-    // Solved rows
-    prog.solved.forEach(si => {
-      const g = puzzle.groups[si];
-      const row = document.createElement('div');
-      row.className = 'solved-row';
-      row.style.background = colors[g.color - 1];
-      row.style.borderLeft = `3px solid ${borderColors[g.color - 1]}`;
-      row.textContent = g.theme + ': ' + g.words.join(', ');
-      area.appendChild(row);
-    });
-
-    if (prog.finished) {
-      const won = prog.mistakes < 4;
-      area.appendChild(resultBanner(won,
-        won ? 'Brilliant!' : 'Tough one!',
-        won ? `Solved with ${prog.mistakes} mistake${prog.mistakes !== 1 ? 's' : ''}` : 'Better luck next week',
-        'New puzzle every Monday'
-      ));
-      content.appendChild(area);
-      return;
-    }
-
-    // Mistakes
-    const mistakeRow = document.createElement('div');
-    mistakeRow.innerHTML = `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Mistakes remaining</div>`;
-    const dots = document.createElement('div');
-    dots.className = 'nexus-mistakes';
-    for (let i = 0; i < 4; i++) {
-      const d = document.createElement('div');
-      d.className = 'mistake-dot' + (i < prog.mistakes ? ' used' : '');
-      dots.appendChild(d);
-    }
-    mistakeRow.appendChild(dots);
-    area.appendChild(mistakeRow);
-
-    // Word grid
-    let selected = [];
-    const remainingWords = shuffled.filter(w => {
-      const grpIdx = puzzle.groups.findIndex(g => g.words.includes(w));
-      return !prog.solved.includes(grpIdx);
-    });
-
-    const grid = document.createElement('div');
-    grid.className = 'nexus-words';
-    grid.style.marginTop = '16px';
-
-    const wordEls = {};
-    remainingWords.forEach(w => {
-      const el = document.createElement('div');
-      el.className = 'nexus-word';
-      el.textContent = w;
-      el.onclick = () => {
-        if (el.classList.contains('solved-1') || el.classList.contains('solved-2')) return;
-        const idx = selected.indexOf(w);
-        if (idx === -1) {
-          if (selected.length < 4) { selected.push(w); el.classList.add('selected'); }
-        } else {
-          selected.splice(idx, 1); el.classList.remove('selected');
-        }
-        submitBtn.disabled = selected.length !== 4;
-      };
-      wordEls[w] = el;
-      grid.appendChild(el);
-    });
-    area.appendChild(grid);
-
-    // Submit row
-    const submitRow = document.createElement('div');
-    submitRow.className = 'nexus-submit-row';
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'submit-btn';
-    submitBtn.textContent = 'Submit Group';
-    submitBtn.disabled = true;
-    submitBtn.onclick = () => {
-      const grpIdx = puzzle.groups.findIndex(g => selected.every(w => g.words.includes(w)) && g.words.every(w => selected.includes(w)));
-      if (grpIdx !== -1 && !prog.solved.includes(grpIdx)) {
-        prog.solved.push(grpIdx);
-        if (prog.solved.length === puzzle.groups.length) { prog.finished = true; }
-        saveProgress('nexus', prog);
-        selected = [];
-        render();
-      } else {
-        prog.mistakes++;
-        if (prog.mistakes >= 4) { prog.solved = [0,1,2,3]; prog.finished = true; }
-        saveProgress('nexus', prog);
-        selected.forEach(w => { wordEls[w].classList.add('wrong-shake'); setTimeout(() => wordEls[w].classList.remove('wrong-shake'), 500); });
-        selected = [];
-        submitBtn.disabled = true;
-        setTimeout(render, 600);
-      }
-    };
-    submitRow.appendChild(submitBtn);
-
-    const deselBtn = document.createElement('button');
-    deselBtn.className = 'back-btn';
-    deselBtn.textContent = 'Deselect All';
-    deselBtn.onclick = () => {
-      selected = [];
-      Object.values(wordEls).forEach(el => el.classList.remove('selected'));
-      submitBtn.disabled = true;
-    };
-    submitRow.appendChild(deselBtn);
-    area.appendChild(submitRow);
-
-    const fbDiv = document.createElement('div');
-    fbDiv.id = 'nexus-fb';
-    area.appendChild(fbDiv);
-
-    content.appendChild(area);
-  }
-  render();
-}
-
-// ═══════════════════════════════════════════════
-// GAME 2: CIPHER
+// GAME 1: CIPHER (reworked)
 // ═══════════════════════════════════════════════
 function renderCipher() {
   howToPlay(`
-    A famous quote has been <strong>encrypted</strong> using a letter substitution cipher — every letter in the alphabet has been swapped with a different letter.<br><br>
-    Click a <strong>coded letter</strong> in the quote to select it, then click the letter you think it <strong>decodes to</strong> on the keyboard below.<br><br>
-    Spaces and punctuation are left unchanged. Use logic and context to work out the full quote!<br><br>
-    A new cipher appears every <strong>Monday</strong>.
+    A famous quote has been <strong>encrypted</strong> with a substitution cipher — each letter of the alphabet has been swapped with a different letter. The same swap is used throughout.<br><br>
+    <strong>Spaces and punctuation are unchanged</strong> — only letters are encoded.<br><br>
+    <strong>How to play:</strong> Click a coded letter in the quote (or in the mapping table), then click the letter you think it decodes to on the keyboard. All instances update instantly.<br><br>
+    <strong>Tips:</strong> Use <strong>letter frequency</strong> — in English, E, T, A, O, I, N are the most common letters. Short words like "THE", "IS", "TO" are good starting points.<br><br>
+    <strong>Hints:</strong> You get <strong>3 free hints</strong> that reveal a correct letter mapping. Correct letters <span style="color:var(--sage)">lock in green</span>.<br><br>
+    Click a mapped letter to <strong>undo</strong> that mapping. A new cipher appears every <strong>Monday</strong>.
   `, startCipher);
 }
 
@@ -1201,15 +1092,51 @@ function startCipher() {
   const { plain, author } = raw;
   const cipherData = makeCipher(plain);
 
-  const prog = loadProgress('cipher') || { userMap: {}, finished: false };
+  const prog = loadProgress('cipher') || { userMap: {}, hints: 0, finished: false };
   const content = document.getElementById('game-content');
 
-  function isComplete() {
-    return plain.split('').every((c, i) => {
-      if (c === ' ') return true;
-      return prog.userMap[cipherData.encoded[i]] === c;
-    });
+  // Get unique encoded letters and their frequencies
+  const encLetters = new Set();
+  const encFreq = {};
+  for (const c of cipherData.encoded) {
+    if (c >= 'A' && c <= 'Z') {
+      encLetters.add(c);
+      encFreq[c] = (encFreq[c] || 0) + 1;
+    }
   }
+  const maxFreq = Math.max(...Object.values(encFreq));
+
+  // Count unique plain letters needed
+  const plainLettersNeeded = new Set();
+  for (const c of plain) {
+    if (c >= 'A' && c <= 'Z') plainLettersNeeded.add(c);
+  }
+  const totalLettersNeeded = plainLettersNeeded.size;
+
+  function isCorrect(encLetter, decLetter) {
+    return cipherData.decMap[encLetter] === decLetter;
+  }
+
+  function countCorrectMappings() {
+    let n = 0;
+    for (const [enc, dec] of Object.entries(prog.userMap)) {
+      if (isCorrect(enc, dec)) n++;
+    }
+    return n;
+  }
+
+  function countMappings() {
+    return Object.keys(prog.userMap).length;
+  }
+
+  function isComplete() {
+    for (const enc of encLetters) {
+      if (!prog.userMap[enc] || !isCorrect(enc, prog.userMap[enc])) return false;
+    }
+    return true;
+  }
+
+  let selectedEnc = null;
 
   function render() {
     content.innerHTML = '';
@@ -1224,97 +1151,240 @@ function startCipher() {
       return;
     }
 
+    // Toolbar: progress + hints
+    const toolbar = document.createElement('div');
+    toolbar.className = 'cipher-toolbar';
+
+    const progressSpan = document.createElement('span');
+    progressSpan.className = 'cipher-progress';
+    const correct = countCorrectMappings();
+    progressSpan.textContent = `${correct} of ${totalLettersNeeded} letters decoded`;
+    toolbar.appendChild(progressSpan);
+
+    if (prog.hints < 3) {
+      const hintBtn = document.createElement('button');
+      hintBtn.className = 'cipher-hint-btn';
+      hintBtn.textContent = `💡 Hint (${3 - prog.hints} left)`;
+      hintBtn.onclick = () => {
+        // Find an unmapped or incorrectly mapped encoded letter
+        for (const enc of encLetters) {
+          if (!prog.userMap[enc] || !isCorrect(enc, prog.userMap[enc])) {
+            // Remove any existing mapping that targets this decoded letter
+            const correctDec = cipherData.decMap[enc];
+            Object.keys(prog.userMap).forEach(k => {
+              if (prog.userMap[k] === correctDec) delete prog.userMap[k];
+            });
+            prog.userMap[enc] = correctDec;
+            prog.hints++;
+            if (isComplete()) prog.finished = true;
+            saveProgress('cipher', prog);
+            selectedEnc = null;
+            render();
+            return;
+          }
+        }
+      };
+      toolbar.appendChild(hintBtn);
+    }
+
+    area.appendChild(toolbar);
+
     // Quote display
     const lbl = document.createElement('div');
     lbl.className = 'prompt-label';
     lbl.textContent = 'Decode the quote';
     area.appendChild(lbl);
 
-    let selectedEncLetter = null;
+    const quoteArea = document.createElement('div');
+    quoteArea.className = 'cipher-quote-area';
 
-    const display = document.createElement('div');
-    display.className = 'cipher-display';
+    // Split encoded into words
+    const encWords = cipherData.encoded.split(' ');
+    const plainWords = plain.split(' ');
+    let charIdx = 0;
 
-    const updateDisplay = () => {
-      display.innerHTML = '';
-      let i = 0;
-      while (i < cipherData.encoded.length) {
-        if (cipherData.encoded[i] === ' ') {
-          display.appendChild(document.createTextNode(' '));
+    encWords.forEach((encWord, wi) => {
+      const wordSpan = document.createElement('span');
+      wordSpan.className = 'cipher-word';
+
+      for (let ci = 0; ci < encWord.length; ci++) {
+        const enc = encWord[ci];
+        const plainChar = plainWords[wi][ci];
+        const isLetter = enc >= 'A' && enc <= 'Z';
+
+        const cell = document.createElement('span');
+
+        if (!isLetter) {
+          // Punctuation
+          cell.className = 'cipher-cell punct';
+          cell.innerHTML = `<span class="cipher-encoded">&nbsp;</span><span class="cipher-decoded" style="border:none;color:var(--muted)">${enc}</span>`;
         } else {
-          const enc = cipherData.encoded[i];
-          const decoded = prog.userMap[enc];
-          const correct = plain[i];
-          const span = document.createElement('span');
-          span.className = 'cipher-char';
-          if (decoded) {
-            span.textContent = decoded;
-            span.classList.add(decoded === correct ? 'solved' : '');
-          } else {
-            span.textContent = enc;
-          }
-          if (enc === selectedEncLetter) span.classList.add('selected');
-          span.onclick = () => {
-            selectedEncLetter = enc;
-            updateDisplay();
-            updateKeyboard();
+          cell.className = 'cipher-cell';
+          const mapped = prog.userMap[enc];
+          const correct = mapped && isCorrect(enc, mapped);
+          const locked = correct;
+
+          if (locked) cell.classList.add('locked');
+          else if (mapped) cell.classList.add('mapped');
+          if (enc === selectedEnc && !locked) cell.classList.add('selected');
+
+          const encSpan = document.createElement('span');
+          encSpan.className = 'cipher-encoded';
+          encSpan.textContent = enc;
+
+          const decSpan = document.createElement('span');
+          decSpan.className = 'cipher-decoded';
+          decSpan.textContent = mapped || '_';
+
+          cell.appendChild(encSpan);
+          cell.appendChild(decSpan);
+
+          cell.onclick = () => {
+            if (locked) return;
+            if (mapped && enc === selectedEnc) {
+              // Undo: click selected mapped letter to clear
+              delete prog.userMap[enc];
+              saveProgress('cipher', prog);
+              selectedEnc = null;
+              render();
+              return;
+            }
+            selectedEnc = enc;
+            render();
           };
-          display.appendChild(span);
         }
-        i++;
+
+        wordSpan.appendChild(cell);
       }
-    };
-    updateDisplay();
-    area.appendChild(display);
+      quoteArea.appendChild(wordSpan);
+      charIdx += encWord.length + 1;
+    });
+
+    area.appendChild(quoteArea);
 
     const authorDiv = document.createElement('div');
     authorDiv.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:1px;';
     authorDiv.textContent = `— ${author}`;
     area.appendChild(authorDiv);
 
+    // Frequency analysis
+    const freqDiv = document.createElement('div');
+    freqDiv.className = 'cipher-freq';
+    freqDiv.innerHTML = '<div class="cipher-freq-title">Letter Frequency (in cipher text)</div>';
+    const freqBars = document.createElement('div');
+    freqBars.className = 'cipher-freq-bars';
+
+    // Sort encoded letters by frequency descending
+    const sortedEnc = [...encLetters].sort((a, b) => (encFreq[b] || 0) - (encFreq[a] || 0));
+    sortedEnc.forEach(enc => {
+      const col = document.createElement('div');
+      col.className = 'cipher-freq-col';
+      if (enc === selectedEnc) col.classList.add('selected');
+      const bar = document.createElement('div');
+      bar.className = 'cipher-freq-bar';
+      bar.style.height = Math.max(4, (encFreq[enc] / maxFreq) * 50) + 'px';
+      const mapped = prog.userMap[enc];
+      if (mapped && isCorrect(enc, mapped)) {
+        bar.style.background = 'var(--sage)';
+        bar.style.opacity = '0.8';
+      }
+      const lbl = document.createElement('div');
+      lbl.className = 'cipher-freq-lbl';
+      lbl.textContent = enc;
+      col.appendChild(bar);
+      col.appendChild(lbl);
+      col.onclick = () => {
+        if (prog.userMap[enc] && isCorrect(enc, prog.userMap[enc])) return;
+        selectedEnc = enc;
+        render();
+      };
+      freqBars.appendChild(col);
+    });
+    freqDiv.appendChild(freqBars);
+
+    const freqHint = document.createElement('div');
+    freqHint.className = 'cipher-freq-hint';
+    freqHint.textContent = 'English frequency order: E T A O I N S H R D L U';
+    freqDiv.appendChild(freqHint);
+    area.appendChild(freqDiv);
+
+    // Mapping table A→?
+    const mapLbl = document.createElement('div');
+    mapLbl.className = 'prompt-label';
+    mapLbl.textContent = selectedEnc ? `Selected: ${selectedEnc} → click a letter below` : 'Mapping table (click to select)';
+    area.appendChild(mapLbl);
+
+    const mapGrid = document.createElement('div');
+    mapGrid.className = 'cipher-map-grid';
+    // Only show encoded letters that appear in the text
+    const allEnc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => encLetters.has(l));
+    allEnc.forEach(enc => {
+      const cell = document.createElement('div');
+      cell.className = 'cipher-map-cell';
+      const mapped = prog.userMap[enc];
+      const locked = mapped && isCorrect(enc, mapped);
+      if (locked) cell.classList.add('locked');
+
+      cell.innerHTML = `<div class="cipher-map-enc">${enc}</div><div class="cipher-map-arrow">↓</div><div class="cipher-map-dec">${mapped || '?'}</div>`;
+      cell.onclick = () => {
+        if (locked) return;
+        if (mapped && enc === selectedEnc) {
+          delete prog.userMap[enc];
+          saveProgress('cipher', prog);
+          selectedEnc = null;
+          render();
+          return;
+        }
+        selectedEnc = enc;
+        render();
+      };
+      mapGrid.appendChild(cell);
+    });
+    area.appendChild(mapGrid);
+
     // Keyboard
     const kbLbl = document.createElement('div');
     kbLbl.className = 'prompt-label';
-    kbLbl.textContent = selectedEncLetter ? `Select the real letter for: ${selectedEncLetter}` : 'Click a letter in the quote first';
+    kbLbl.textContent = selectedEnc ? `Decode ${selectedEnc} as:` : 'Select a coded letter first';
     area.appendChild(kbLbl);
 
     const keyboard = document.createElement('div');
     keyboard.className = 'cipher-keyboard';
 
-    const updateKeyboard = () => {
-      kbLbl.textContent = selectedEncLetter ? `Decode: ${selectedEncLetter} →` : 'Click a letter in the quote first';
-      keyboard.innerHTML = '';
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
-        const btn = document.createElement('div');
-        btn.className = 'cipher-key';
-        btn.textContent = letter;
-        // Check if this mapping is confirmed correct
-        const isCorrectMapped = Object.entries(prog.userMap).some(([k, v]) => {
-          return v === letter && plain.includes(letter) && cipherData.decMap[k] === letter;
-        });
-        if (isCorrectMapped) btn.classList.add('correct-mapped');
-        btn.onclick = () => {
-          if (!selectedEncLetter || isCorrectMapped) return;
-          // Remove old assignment of this letter
-          Object.keys(prog.userMap).forEach(k => { if (prog.userMap[k] === letter) delete prog.userMap[k]; });
-          prog.userMap[selectedEncLetter] = letter;
-          selectedEncLetter = null;
-          if (isComplete()) { prog.finished = true; }
-          saveProgress('cipher', prog);
-          render();
-        };
-        keyboard.appendChild(btn);
-      });
-    };
-    updateKeyboard();
-    area.appendChild(keyboard);
+    // Track which decoded letters are locked
+    const lockedDec = new Set();
+    const usedDec = new Set();
+    Object.entries(prog.userMap).forEach(([enc, dec]) => {
+      usedDec.add(dec);
+      if (isCorrect(enc, dec)) lockedDec.add(dec);
+    });
 
-    const clearBtn = document.createElement('button');
-    clearBtn.className = 'back-btn';
-    clearBtn.style.marginTop = '12px';
-    clearBtn.textContent = 'Clear Selection';
-    clearBtn.onclick = () => { selectedEncLetter = null; updateDisplay(); updateKeyboard(); };
-    area.appendChild(clearBtn);
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
+      const btn = document.createElement('div');
+      btn.className = 'cipher-key';
+      btn.textContent = letter;
+
+      if (lockedDec.has(letter)) {
+        btn.classList.add('locked');
+      } else if (usedDec.has(letter)) {
+        btn.classList.add('used');
+      }
+
+      btn.onclick = () => {
+        if (!selectedEnc || lockedDec.has(letter)) return;
+        // Remove any existing mapping that uses this decoded letter
+        Object.keys(prog.userMap).forEach(k => {
+          if (prog.userMap[k] === letter && !(isCorrect(k, letter))) delete prog.userMap[k];
+        });
+        prog.userMap[selectedEnc] = letter;
+        selectedEnc = null;
+        if (isComplete()) prog.finished = true;
+        saveProgress('cipher', prog);
+        render();
+      };
+      keyboard.appendChild(btn);
+    });
+    area.appendChild(keyboard);
 
     content.appendChild(area);
   }
@@ -1322,7 +1392,7 @@ function startCipher() {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 3: CHRONICLE
+// GAME 2: CHRONICLE
 // ═══════════════════════════════════════════════
 function renderChronicle() {
   howToPlay(`
@@ -1353,11 +1423,9 @@ function startChronicle() {
       return;
     }
 
-    // For chronicle, show increasing numbers of events per round
     const toSortCount = Math.min(roundIdx + 3, puzzle.events.length);
     const toSort = puzzle.events.slice(0, toSortCount);
 
-    // Shuffle for this round
     const seed = getWeekIndex(9999) + roundIdx * 13 + 5;
     const shuffled = [...toSort];
     let s = seed;
@@ -1421,7 +1489,6 @@ function startChronicle() {
           }
         });
 
-        // Move buttons
         const btnWrap = document.createElement('div');
         btnWrap.style.cssText = 'display:flex;gap:4px;margin-left:auto;flex-shrink:0;';
         if (i > 0 && !correctPositions.has(i)) {
@@ -1472,7 +1539,6 @@ function startChronicle() {
         fb.className = 'feedback-msg bad';
         fb.textContent = `Out of attempts. The correct order was by year.`;
         submitBtn.disabled = true;
-        // Show years
         const hint = document.createElement('div');
         hint.style.cssText = 'font-size:11px;color:var(--muted);margin-top:8px;';
         toSort.sort((a,b)=>a.year-b.year).forEach(e => {
@@ -1503,7 +1569,7 @@ function startChronicle() {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 4: WAVELENGTH
+// GAME 3: WAVELENGTH
 // ═══════════════════════════════════════════════
 function renderWavelength() {
   howToPlay(`
@@ -1594,7 +1660,6 @@ function startWavelength() {
       else if (diff <= round.tolerance) { pts = 1; msg = '≈ Nearby'; }
       else { pts = 0; msg = `✗ Off — target was ${round.target <= 30 ? 'near the left' : round.target >= 70 ? 'near the right' : 'near the center'}`; }
 
-      // Show target
       const targetMarker = document.createElement('div');
       targetMarker.className = 'spectrum-target';
       targetMarker.style.left = round.target + '%';
@@ -1628,7 +1693,7 @@ function startWavelength() {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 5: MIMIC
+// GAME 4: MIMIC
 // ═══════════════════════════════════════════════
 function renderMimic() {
   howToPlay(`
@@ -1725,15 +1790,12 @@ function startMimic() {
       const row = document.createElement('div');
       row.className = 'mimic-blanks';
       row.style.marginBottom = '8px';
-      // Wordle-accurate coloring: green pass first, then gold with remaining counts
       const colors = Array(5).fill('absent');
       const remaining = {};
       for (let i = 0; i < 5; i++) remaining[word[i]] = (remaining[word[i]] || 0) + 1;
-      // Green pass
       for (let i = 0; i < 5; i++) {
         if (guess[i] === word[i]) { colors[i] = 'correct'; remaining[guess[i]]--; }
       }
-      // Gold pass
       for (let i = 0; i < 5; i++) {
         if (colors[i] !== 'correct' && guess[i] && remaining[guess[i]] > 0) {
           colors[i] = 'present'; remaining[guess[i]]--;
@@ -1787,7 +1849,6 @@ function startMimic() {
           fb.className = 'feedback-msg bad';
           fb.textContent = `Next clue unlocked.`;
         } else {
-          // Out of chances
           fb.className = 'feedback-msg bad';
           fb.textContent = `Word was: ${word}`;
           inputRow.style.display = 'none';
