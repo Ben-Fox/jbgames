@@ -102,10 +102,22 @@ a{text-decoration:none;color:inherit}
   .daily-games{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width: 600px){
-  .daily-inner{padding:1.5rem 1.2rem}
-  .daily-games{grid-template-columns:repeat(2,1fr)}
+  .daily-inner{padding:1.2rem 1rem;border-radius:16px}
+  .daily-games{grid-template-columns:repeat(2,1fr);gap:.75rem}
   .daily-title{font-size:1.3rem}
-  .daily-thumb{height:80px}
+  .daily-thumb{height:70px}
+  .daily-name{font-size:.9rem}
+  .daily-desc{font-size:.72rem}
+  .daily-play{font-size:.75rem;padding:.4rem}
+  .daily-body{padding:.6rem .8rem .8rem}
+}
+@media (max-width: 380px){
+  .daily-games{grid-template-columns:1fr 1fr;gap:.5rem}
+  .daily-thumb{height:60px}
+  .daily-thumb svg{width:36px;height:36px}
+  .daily-name{font-size:.85rem}
+  .daily-desc{display:none}
+  .daily-body{padding:.5rem .6rem .6rem}
 }
 
 /* GRID */
