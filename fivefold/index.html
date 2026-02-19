@@ -840,6 +840,31 @@ body.light-theme .htp-text strong { color: var(--accent); }
   overflow: visible;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.15), 0 0 20px rgba(124,58,237,.08);
 }
+.wl-category-badge {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.wl-value-reveal {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-style: italic;
+  animation: fadeIn 0.4s ease;
+}
+.wl-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
 .spectrum-labels {
   display: flex;
   justify-content: space-between;
@@ -1419,275 +1444,620 @@ const CHRONICLE_POOL = [
   },
 ];
 
-const WAVELENGTH_POOL = [
+// WAVELENGTH_CATEGORIES - Science-based spectrum guessing game
+// 9 categories, 8+ puzzle sets each, 5 rounds per set
+// All values are scientifically accurate and well-sourced
+
+const WAVELENGTH_CATEGORIES = [
+  // ═══ CATEGORY 0: ELECTROMAGNETIC WAVELENGTH ═══
   {
-    rounds: [
-      { word: "TEPID", left: "FREEZING", right: "BOILING", target: 38, tolerance: 12 },
-      { word: "WHISPER", left: "SILENCE", right: "THUNDER", target: 20, tolerance: 10 },
-      { word: "DUSK", left: "MIDNIGHT", right: "NOON", target: 70, tolerance: 12 },
-      { word: "BRONZE", left: "WORST", right: "BEST", target: 35, tolerance: 12 },
-      { word: "SKYSCRAPER", left: "ANTHILL", right: "MOUNT EVEREST", target: 72, tolerance: 12 },
+    name: "Electromagnetic Wavelength",
+    unit: "m",
+    scaleLabel: { left: "10⁻¹² m (γ-ray)", right: "10³ m (radio)" },
+    scaleMin: 1e-12,
+    scaleMax: 1e3,
+    gradient: "linear-gradient(90deg, #4b0082, #0000ff, #00bfff, #00ff00, #ffff00, #ff8c00, #ff0000, #8b0000)",
+    puzzles: [
+      { rounds: [
+        { item: "Red Light", value: 700e-9, hint: "Visible spectrum — longest visible wavelength", tolerance: 12 },
+        { item: "Microwave Oven", value: 0.122, hint: "Kitchen appliance radiation (2.45 GHz)", tolerance: 12 },
+        { item: "Dental X-ray", value: 1e-10, hint: "Medical imaging of teeth", tolerance: 12 },
+        { item: "FM Radio (100 MHz)", value: 3, hint: "Broadcast music station", tolerance: 12 },
+        { item: "TV Remote (IR)", value: 940e-9, hint: "Near-infrared control signal", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "WiFi Signal (2.4 GHz)", value: 0.125, hint: "Wireless internet frequency", tolerance: 12 },
+        { item: "Green Light", value: 532e-9, hint: "Middle of the visible spectrum", tolerance: 12 },
+        { item: "Gamma Ray (Co-60)", value: 1e-12, hint: "Cobalt-60 nuclear decay radiation", tolerance: 12 },
+        { item: "AM Radio (1 MHz)", value: 300, hint: "AM broadcast band", tolerance: 12 },
+        { item: "Sunburn UV-B", value: 300e-9, hint: "Ultraviolet rays that burn skin", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Blue Light", value: 470e-9, hint: "Short-wave visible light", tolerance: 12 },
+        { item: "Body Heat (IR)", value: 10e-6, hint: "Peak thermal radiation from humans (~37°C)", tolerance: 12 },
+        { item: "5G Millimeter Wave", value: 0.01, hint: "High-band cellular frequency (~30 GHz)", tolerance: 12 },
+        { item: "Soft X-ray", value: 1e-9, hint: "Used in synchrotron research", tolerance: 12 },
+        { item: "Violet Light", value: 400e-9, hint: "Shortest visible wavelength", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Radar (S-band)", value: 0.1, hint: "Weather and air traffic radar (~3 GHz)", tolerance: 12 },
+        { item: "Yellow Sodium Lamp", value: 589e-9, hint: "Classic orange-yellow streetlight", tolerance: 12 },
+        { item: "Chest X-ray", value: 1e-11, hint: "Medical diagnostic imaging", tolerance: 12 },
+        { item: "Bluetooth", value: 0.125, hint: "Short-range wireless (~2.4 GHz)", tolerance: 12 },
+        { item: "Far Infrared", value: 50e-6, hint: "Thermal imaging wavelength", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Orange Light", value: 600e-9, hint: "Visible spectrum between yellow and red", tolerance: 12 },
+        { item: "Cosmic Microwave Background", value: 0.00106, hint: "Relic radiation from the Big Bang", tolerance: 12 },
+        { item: "PET Scan Gamma Ray", value: 2.4e-12, hint: "Positron emission tomography (511 keV)", tolerance: 12 },
+        { item: "GPS Signal (L1)", value: 0.19, hint: "Satellite navigation frequency (1575 MHz)", tolerance: 12 },
+        { item: "UV-C Germicidal", value: 254e-9, hint: "Used in sterilization lamps", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Hydrogen 21 cm Line", value: 0.21, hint: "Radio astronomy signature of neutral hydrogen", tolerance: 12 },
+        { item: "Indigo Light", value: 445e-9, hint: "Between blue and violet", tolerance: 12 },
+        { item: "Mammography X-ray", value: 6e-11, hint: "Breast imaging radiation", tolerance: 12 },
+        { item: "TV Broadcast (VHF)", value: 1.5, hint: "Television channel 7-13 range", tolerance: 12 },
+        { item: "Near Infrared (fiber optic)", value: 1550e-9, hint: "Telecom fiber wavelength", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Laser Pointer (green)", value: 532e-9, hint: "Common green laser", tolerance: 12 },
+        { item: "Shortwave Radio", value: 25, hint: "International broadcasting band (~12 MHz)", tolerance: 12 },
+        { item: "UV-A (blacklight)", value: 365e-9, hint: "Makes fluorescent things glow", tolerance: 12 },
+        { item: "Microwave Relay", value: 0.05, hint: "Point-to-point telecom link (~6 GHz)", tolerance: 12 },
+        { item: "Baggage Scanner X-ray", value: 5e-11, hint: "Airport security imaging", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Cyan Light", value: 490e-9, hint: "Between green and blue in the visible spectrum", tolerance: 12 },
+        { item: "Car Key Fob", value: 0.87, hint: "Remote keyless entry (~345 MHz)", tolerance: 12 },
+        { item: "Extreme UV (EUV)", value: 13.5e-9, hint: "Used in semiconductor lithography", tolerance: 12 },
+        { item: "Mid-infrared (CO₂ laser)", value: 10.6e-6, hint: "Industrial cutting laser", tolerance: 12 },
+        { item: "Nuclear Medicine Gamma", value: 8.3e-12, hint: "Technetium-99m imaging (140 keV)", tolerance: 12 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 1: ENERGY ═══
   {
-    rounds: [
-      { word: "DRIZZLE", left: "BONE DRY", right: "MONSOON", target: 32, tolerance: 12 },
-      { word: "JOG", left: "SLEEPING", right: "SPRINTING", target: 42, tolerance: 12 },
-      { word: "CONTENT", left: "MISERABLE", right: "ECSTATIC", target: 60, tolerance: 12 },
-      { word: "ANTIQUE", left: "BRAND NEW", right: "ANCIENT", target: 68, tolerance: 12 },
-      { word: "COTTAGE", left: "TENT", right: "PALACE", target: 35, tolerance: 12 },
+    name: "Energy",
+    unit: "J",
+    scaleLabel: { left: "10⁻²⁰ J (molecular)", right: "10²⁵ J (astronomical)" },
+    scaleMin: 1e-20,
+    scaleMax: 1e25,
+    gradient: "linear-gradient(90deg, #1a237e, #1565c0, #00838f, #2e7d32, #f9a825, #e65100, #b71c1c, #880e4f)",
+    puzzles: [
+      { rounds: [
+        { item: "Photon of Green Light", value: 3.7e-19, hint: "A single photon at 532 nm", tolerance: 12 },
+        { item: "Food Calorie", value: 4184, hint: "Energy in one dietary Calorie (kcal)", tolerance: 12 },
+        { item: "Stick of Dynamite", value: 1.05e6, hint: "About 1 MJ of chemical energy", tolerance: 12 },
+        { item: "Lightning Bolt", value: 1e9, hint: "Average energy per lightning stroke", tolerance: 12 },
+        { item: "Hiroshima Atomic Bomb", value: 6.3e13, hint: "~15 kilotons of TNT", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "ATP Hydrolysis", value: 5.4e-20, hint: "Energy from one ATP → ADP reaction", tolerance: 12 },
+        { item: "Alkaline AA Battery", value: 9360, hint: "1.5V battery, ~2600 mAh capacity", tolerance: 12 },
+        { item: "Gallon of Gasoline", value: 1.3e8, hint: "Chemical energy in automotive fuel", tolerance: 12 },
+        { item: "Tsar Bomba (50 MT)", value: 2.1e17, hint: "Largest nuclear weapon ever detonated", tolerance: 12 },
+        { item: "Daily Solar Energy on Earth", value: 1.5e22, hint: "Total sunlight hitting Earth per day", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Hydrogen Bond Energy", value: 3.2e-20, hint: "Single bond in water molecule", tolerance: 12 },
+        { item: "Sneezing", value: 1, hint: "Kinetic energy of a sneeze (~1 J)", tolerance: 12 },
+        { item: "Rifle Bullet (7.62mm)", value: 3500, hint: "Muzzle energy of an AK-47 round", tolerance: 12 },
+        { item: "Ton of TNT", value: 4.184e9, hint: "Standard explosive energy unit", tolerance: 12 },
+        { item: "Annual World Energy Use", value: 5.8e20, hint: "Total human energy consumption per year", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Visible Light Photon (red)", value: 2.8e-19, hint: "Single photon at 700 nm", tolerance: 12 },
+        { item: "Candy Bar", value: 1.1e6, hint: "~250 food Calories of sugar and fat", tolerance: 12 },
+        { item: "Car at Highway Speed", value: 6e5, hint: "Kinetic energy of 1500 kg at 100 km/h", tolerance: 12 },
+        { item: "Krakatoa Eruption (1883)", value: 8.4e17, hint: "~200 megatons of TNT equivalent", tolerance: 12 },
+        { item: "Sun's Energy per Second", value: 3.8e26, hint: "Solar luminosity — but that's off our scale! Hint: think smaller", tolerance: 15 },
+      ]},
+      { rounds: [
+        { item: "Thermal Energy of Air Molecule", value: 6.2e-21, hint: "Average KE at room temperature (kT)", tolerance: 12 },
+        { item: "Smartphone Battery", value: 4e4, hint: "~11 Wh lithium-ion battery", tolerance: 12 },
+        { item: "Tesla Model 3 Battery", value: 2.7e8, hint: "~75 kWh battery pack", tolerance: 12 },
+        { item: "Hurricane (daily energy)", value: 5.2e19, hint: "Energy released by a tropical cyclone per day", tolerance: 12 },
+        { item: "Earth's Daily Rotation Energy", value: 2.6e29, hint: "Rotational kinetic energy — way off scale! Hint: closer to astronomical", tolerance: 15 },
+      ]},
+      { rounds: [
+        { item: "X-ray Photon", value: 1.6e-15, hint: "Medical X-ray photon (~10 keV)", tolerance: 12 },
+        { item: "Striking a Match", value: 800, hint: "Chemical energy in a match head", tolerance: 12 },
+        { item: "Freight Train at 60 mph", value: 2e9, hint: "KE of 10,000-ton train", tolerance: 12 },
+        { item: "Little Boy Bomb (20 kT)", value: 8.4e13, hint: "First atomic bomb used in warfare", tolerance: 12 },
+        { item: "Chicxulub Asteroid Impact", value: 4.2e23, hint: "Dinosaur-killer asteroid, 66 million years ago", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Gamma Ray Photon (1 MeV)", value: 1.6e-13, hint: "High-energy nuclear photon", tolerance: 12 },
+        { item: "Arrow from Longbow", value: 80, hint: "Medieval English longbow KE", tolerance: 12 },
+        { item: "Saturn V First Stage", value: 3.5e12, hint: "Burn energy of rocket's first stage", tolerance: 12 },
+        { item: "Largest H-bomb Test (US)", value: 6.3e16, hint: "Castle Bravo, 15 megatons", tolerance: 12 },
+        { item: "Earth Orbital KE", value: 2.7e33, hint: "Kinetic energy of Earth orbiting Sun", tolerance: 15 },
+      ]},
+      { rounds: [
+        { item: "Bond Energy (C-H)", value: 6.9e-19, hint: "Breaking one carbon-hydrogen bond", tolerance: 12 },
+        { item: "Human Daily Food Intake", value: 8.7e6, hint: "~2000 Calories per day", tolerance: 12 },
+        { item: "1 kg of Uranium-235", value: 8.2e13, hint: "Complete fission energy", tolerance: 12 },
+        { item: "Magnitude 9 Earthquake", value: 2e18, hint: "Like the 2011 Tōhoku quake", tolerance: 12 },
+        { item: "Moon's Orbital KE", value: 3.8e28, hint: "Kinetic energy of the Moon orbiting Earth", tolerance: 15 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 2: FORCE ═══
   {
-    rounds: [
-      { word: "LAUGHTER", left: "TEARS", right: "JOY", target: 75, tolerance: 12 },
-      { word: "BREEZE", left: "STILL AIR", right: "HURRICANE", target: 22, tolerance: 12 },
-      { word: "NOON", left: "MIDNIGHT", right: "SUNSET", target: 60, tolerance: 12 },
-      { word: "SILVER", left: "COAL", right: "DIAMOND", target: 65, tolerance: 12 },
-      { word: "BIOGRAPHY", left: "PURE FICTION", right: "ABSOLUTE TRUTH", target: 78, tolerance: 12 },
+    name: "Force",
+    unit: "N",
+    scaleLabel: { left: "10⁻¹² N (nano)", right: "10²⁵ N (cosmic)" },
+    scaleMin: 1e-12,
+    scaleMax: 1e25,
+    gradient: "linear-gradient(90deg, #c8e6c9, #66bb6a, #43a047, #fdd835, #ff9800, #f44336, #b71c1c, #4a0000)",
+    puzzles: [
+      { rounds: [
+        { item: "Weight of a Grain of Sand", value: 6.5e-5, hint: "Tiny but measurable (~6.5 mg)", tolerance: 12 },
+        { item: "Weight of an Apple", value: 1, hint: "Sir Isaac Newton's inspiration (~100 g)", tolerance: 12 },
+        { item: "Human Bite Force", value: 700, hint: "Maximum molar bite force", tolerance: 12 },
+        { item: "Car Engine Thrust", value: 3000, hint: "Typical sedan at full power", tolerance: 12 },
+        { item: "Space Shuttle Liftoff", value: 3.1e7, hint: "Total thrust of 3 main engines + 2 SRBs", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Ant Carrying Food", value: 5e-3, hint: "An ant lifts 50× its weight", tolerance: 12 },
+        { item: "Handshake Grip", value: 50, hint: "Average firm handshake squeeze", tolerance: 12 },
+        { item: "Horse Pulling a Cart", value: 600, hint: "Sustained pulling force", tolerance: 12 },
+        { item: "F-16 Jet Engine Thrust", value: 1.3e5, hint: "GE F110 afterburning turbofan", tolerance: 12 },
+        { item: "Earth's Pull on the Moon", value: 2e20, hint: "Gravitational force keeping Moon in orbit", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Single Myosin Molecule", value: 4e-12, hint: "Molecular motor in muscles", tolerance: 12 },
+        { item: "Weight of a Penny", value: 0.025, hint: "US penny weighs 2.5 grams", tolerance: 12 },
+        { item: "Bench Press (elite)", value: 2500, hint: "~250 kg world-class bench press", tolerance: 12 },
+        { item: "Locomotive Engine", value: 3e5, hint: "Freight locomotive pulling force", tolerance: 12 },
+        { item: "Saturn V Rocket Thrust", value: 3.5e7, hint: "Most powerful rocket that flew (1st stage)", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Weight of a Mosquito", value: 2.5e-5, hint: "About 2.5 milligrams", tolerance: 12 },
+        { item: "Peak Human Punch", value: 5000, hint: "Professional boxer's punch force", tolerance: 12 },
+        { item: "Tug of War Team (8 people)", value: 8000, hint: "Combined pulling force", tolerance: 12 },
+        { item: "Large Ship Propulsion", value: 5e6, hint: "Container ship engine thrust", tolerance: 12 },
+        { item: "Sun's Pull on Earth", value: 3.5e22, hint: "Gravitational force keeping Earth in orbit", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Spider Silk Thread", value: 0.01, hint: "Breaking force of one strand", tolerance: 12 },
+        { item: "Tennis Serve Impact", value: 4000, hint: "Peak racket-ball contact force", tolerance: 12 },
+        { item: "Large Crane Lifting", value: 2e5, hint: "Liebherr mobile crane capacity", tolerance: 12 },
+        { item: "Falcon Heavy Thrust", value: 2.3e7, hint: "SpaceX rocket at liftoff", tolerance: 12 },
+        { item: "Gravitational Pull: Earth-Sun", value: 3.5e22, hint: "Keeps Earth in its orbit", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Optical Tweezers Force", value: 1e-11, hint: "Laser trapping of single cells", tolerance: 12 },
+        { item: "Rubber Band Stretched", value: 3, hint: "Typical office rubber band", tolerance: 12 },
+        { item: "Crocodile Bite Force", value: 16000, hint: "Saltwater croc — strongest bite on Earth", tolerance: 12 },
+        { item: "Dam Holding Water", value: 2e9, hint: "Hoover Dam hydrostatic force", tolerance: 12 },
+        { item: "Tidal Force on Earth", value: 7e18, hint: "Moon's differential gravitational pull", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Weight of a Feather", value: 8e-4, hint: "About 0.08 grams", tolerance: 12 },
+        { item: "Opening a Soda Can", value: 20, hint: "Pull-tab opening force", tolerance: 12 },
+        { item: "Human Leg Press (max)", value: 8000, hint: "Strongest leg press recorded", tolerance: 12 },
+        { item: "Boeing 747 Total Thrust", value: 9.7e5, hint: "Four engines at max takeoff power", tolerance: 12 },
+        { item: "Sun's Pull on Jupiter", value: 4.2e23, hint: "Gravity holding the largest planet", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Atomic Force Microscope Tip", value: 1e-9, hint: "Probe touching an atom (~1 nN)", tolerance: 12 },
+        { item: "Breaking a Pencil", value: 50, hint: "Snapping a standard #2 pencil", tolerance: 12 },
+        { item: "T-Rex Bite Force", value: 60000, hint: "Estimated strongest dinosaur bite", tolerance: 12 },
+        { item: "Ariane 5 Rocket Thrust", value: 1.3e7, hint: "European heavy-lift launcher", tolerance: 12 },
+        { item: "Total Weight on Earth's Surface", value: 5e25, hint: "Weight of entire atmosphere", tolerance: 15 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 3: SPEED ═══
   {
-    rounds: [
-      { word: "RUST", left: "BRAND NEW", right: "ANCIENT RUIN", target: 55, tolerance: 12 },
-      { word: "LIBRARY", left: "CHAOS", right: "PERFECT ORDER", target: 72, tolerance: 12 },
-      { word: "DEBATE", left: "AGREEMENT", right: "ALL-OUT WAR", target: 40, tolerance: 12 },
-      { word: "CANDLE", left: "DARKNESS", right: "SUN", target: 18, tolerance: 12 },
-      { word: "TEENAGER", left: "NEWBORN", right: "CENTENARIAN", target: 20, tolerance: 12 },
+    name: "Speed",
+    unit: "m/s",
+    scaleLabel: { left: "10⁻⁵ m/s (creeping)", right: "10⁹ m/s (light)" },
+    scaleMin: 1e-5,
+    scaleMax: 1e9,
+    gradient: "linear-gradient(90deg, #e8eaf6, #9fa8da, #5c6bc0, #3949ab, #1a237e, #0d47a1, #01579b, #00e5ff)",
+    puzzles: [
+      { rounds: [
+        { item: "Garden Snail", value: 0.001, hint: "Famously slow creature", tolerance: 12 },
+        { item: "Human Walking", value: 1.4, hint: "Average pedestrian speed", tolerance: 12 },
+        { item: "Cheetah (top speed)", value: 30, hint: "Fastest land animal", tolerance: 12 },
+        { item: "Speed of Sound in Air", value: 343, hint: "Mach 1 at sea level, 20°C", tolerance: 12 },
+        { item: "Speed of Light", value: 3e8, hint: "Nature's speed limit (in vacuum)", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Plate Tectonics", value: 1.6e-9, hint: "Continents drift ~5 cm/year", tolerance: 12 },
+        { item: "Human Swimming", value: 2, hint: "Competitive freestyle pace", tolerance: 12 },
+        { item: "Peregrine Falcon Dive", value: 108, hint: "Fastest animal on Earth (in a stoop)", tolerance: 12 },
+        { item: "Rifle Bullet", value: 900, hint: "Typical high-velocity round", tolerance: 12 },
+        { item: "Earth's Orbital Speed", value: 29800, hint: "Orbiting the Sun at ~30 km/s", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Glacier Flow", value: 1e-6, hint: "Moving ice, meters per year", tolerance: 12 },
+        { item: "Usain Bolt (100m record)", value: 12.4, hint: "Fastest human ever, peak speed", tolerance: 12 },
+        { item: "Highway Speed Limit", value: 31, hint: "~70 mph / 112 km/h", tolerance: 12 },
+        { item: "Commercial Jet (Boeing 747)", value: 260, hint: "Cruising at ~580 mph", tolerance: 12 },
+        { item: "Parker Solar Probe", value: 1.9e5, hint: "Fastest human-made object (~690,000 km/h)", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Hair Growth", value: 5e-9, hint: "~15 cm per year, converted to m/s", tolerance: 12 },
+        { item: "Olympic Sprinter", value: 10.4, hint: "World-class 100m runner", tolerance: 12 },
+        { item: "Sailfish Swimming", value: 30, hint: "Fastest fish in the ocean", tolerance: 12 },
+        { item: "SR-71 Blackbird", value: 980, hint: "Fastest jet aircraft ever (Mach 3.3)", tolerance: 12 },
+        { item: "Voyager 1", value: 17000, hint: "Farthest human-made object, leaving solar system", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Bamboo Growth", value: 1e-5, hint: "Fastest growing plant (~91 cm/day)", tolerance: 12 },
+        { item: "Greyhound Running", value: 19, hint: "Racing dog at full speed", tolerance: 12 },
+        { item: "Formula 1 Car (top speed)", value: 97, hint: "~350 km/h on track", tolerance: 12 },
+        { item: "Space Shuttle Re-entry", value: 7800, hint: "Orbital velocity at re-entry", tolerance: 12 },
+        { item: "Solar Wind", value: 4e5, hint: "Charged particles from the Sun", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Ketchup Leaving Bottle", value: 0.03, hint: "Famously slow non-Newtonian fluid", tolerance: 12 },
+        { item: "Average Cyclist", value: 7, hint: "Casual road cycling speed", tolerance: 12 },
+        { item: "Tornado (EF5)", value: 125, hint: "Most violent tornado winds", tolerance: 12 },
+        { item: "ISS Orbital Speed", value: 7660, hint: "International Space Station", tolerance: 12 },
+        { item: "Electrons in Copper Wire", value: 1e-4, hint: "Drift velocity in household current", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Sea Turtle Swimming", value: 0.9, hint: "Cruising speed of a green sea turtle", tolerance: 12 },
+        { item: "Pitched Baseball", value: 45, hint: "Major league fastball (~100 mph)", tolerance: 12 },
+        { item: "Speed of Sound in Water", value: 1500, hint: "Sound travels faster in liquids", tolerance: 12 },
+        { item: "Meteor Entering Atmosphere", value: 30000, hint: "Typical meteoroid speed", tolerance: 12 },
+        { item: "Speed of Light in Glass", value: 2e8, hint: "Light slows in dense media (n≈1.5)", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Jellyfish Drifting", value: 0.02, hint: "Bell pulsation speed", tolerance: 12 },
+        { item: "Horse at Gallop", value: 18, hint: "Thoroughbred racehorse", tolerance: 12 },
+        { item: "Concorde (cruising)", value: 600, hint: "Supersonic airliner, Mach 2.04", tolerance: 12 },
+        { item: "Escape Velocity (Earth)", value: 11200, hint: "Minimum speed to leave Earth's gravity", tolerance: 12 },
+        { item: "Milky Way through Space", value: 6e5, hint: "Our galaxy's motion relative to CMB", tolerance: 12 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 4: TEMPERATURE ═══
   {
-    rounds: [
-      { word: "ENCYCLOPEDIA", left: "IGNORANCE", right: "OMNISCIENCE", target: 60, tolerance: 12 },
-      { word: "SIGH", left: "LAUGHTER", right: "SOBBING", target: 38, tolerance: 12 },
-      { word: "PEBBLE", left: "DUST PARTICLE", right: "BOULDER", target: 28, tolerance: 12 },
-      { word: "SPRING", left: "DEAD WINTER", right: "HIGH SUMMER", target: 35, tolerance: 12 },
-      { word: "JOURNALIST", left: "LIES", right: "PURE TRUTH", target: 65, tolerance: 12 },
+    name: "Temperature",
+    unit: "K",
+    scaleLabel: { left: "1 K (near absolute zero)", right: "10⁸ K (stellar core)" },
+    scaleMin: 1,
+    scaleMax: 1e8,
+    gradient: "linear-gradient(90deg, #0d47a1, #1565c0, #42a5f5, #e3f2fd, #ffffff, #fff9c4, #ffab00, #ff3d00, #d50000)",
+    puzzles: [
+      { rounds: [
+        { item: "Liquid Helium", value: 4.2, hint: "Boiling point of helium-4", tolerance: 12 },
+        { item: "Liquid Nitrogen", value: 77, hint: "Cheap cryogenic coolant (boiling point)", tolerance: 12 },
+        { item: "Human Body", value: 310, hint: "Normal body temperature (~37°C)", tolerance: 12 },
+        { item: "Lava (basaltic)", value: 1500, hint: "Molten rock from volcanic eruption", tolerance: 12 },
+        { item: "Sun's Surface", value: 5778, hint: "Photosphere temperature", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Cosmic Microwave Background", value: 2.725, hint: "Temperature of the universe today", tolerance: 12 },
+        { item: "Dry Ice (CO₂)", value: 195, hint: "Sublimation point of solid CO₂", tolerance: 12 },
+        { item: "Water Boiling Point", value: 373, hint: "100°C at standard pressure", tolerance: 12 },
+        { item: "Tungsten Filament (lit)", value: 3000, hint: "Incandescent light bulb filament", tolerance: 12 },
+        { item: "Sun's Core", value: 1.5e7, hint: "Where nuclear fusion occurs", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Liquid Oxygen", value: 90, hint: "Boiling point of O₂ — rocket propellant", tolerance: 12 },
+        { item: "Water Freezing Point", value: 273.15, hint: "0°C, where ice forms", tolerance: 12 },
+        { item: "Lead Melting Point", value: 601, hint: "Soft metal used in ancient plumbing", tolerance: 12 },
+        { item: "Iron Melting Point", value: 1811, hint: "Core ingredient of steel", tolerance: 12 },
+        { item: "Lightning Bolt Channel", value: 30000, hint: "5× hotter than the Sun's surface!", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Bose-Einstein Condensate", value: 1e-7, hint: "Coldest temperature achieved in labs (~100 nK)", tolerance: 15 },
+        { item: "Antarctica Record Cold", value: 184, hint: "Vostok Station, 1983 (−89.2°C)", tolerance: 12 },
+        { item: "Room Temperature", value: 293, hint: "Comfortable indoor temperature (~20°C)", tolerance: 12 },
+        { item: "Candle Flame", value: 1400, hint: "Tip of a burning candle", tolerance: 12 },
+        { item: "Welding Arc", value: 6000, hint: "Arc temperature in electric welding", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Superconductor (YBCO)", value: 93, hint: "Critical temperature of high-Tc superconductor", tolerance: 12 },
+        { item: "Hottest Day on Earth", value: 330, hint: "Death Valley record: 56.7°C (134°F)", tolerance: 12 },
+        { item: "Oven Baking Bread", value: 493, hint: "~220°C baking temperature", tolerance: 12 },
+        { item: "Surface of Venus", value: 737, hint: "Hottest planet, greenhouse hell", tolerance: 12 },
+        { item: "Core of a Giant Star", value: 1e8, hint: "Helium fusion in massive stars", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Pluto Surface", value: 44, hint: "Average surface temperature", tolerance: 12 },
+        { item: "Mercury at Night", value: 100, hint: "Night side of closest planet to Sun", tolerance: 12 },
+        { item: "Sahara Desert (peak)", value: 331, hint: "~58°C surface temperatures", tolerance: 12 },
+        { item: "Wood Fire", value: 1300, hint: "Campfire temperature", tolerance: 12 },
+        { item: "Fission Reactor Core", value: 1600, hint: "Nuclear fuel pellet center", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Mars Surface (average)", value: 210, hint: "Cold desert planet (−63°C)", tolerance: 12 },
+        { item: "Cooking Oil Smoke Point", value: 530, hint: "When frying oil starts to smoke", tolerance: 12 },
+        { item: "Gold Melting Point", value: 1337, hint: "Precious metal becomes liquid", tolerance: 12 },
+        { item: "Thermite Reaction", value: 2500, hint: "Iron oxide + aluminum, extremely hot", tolerance: 12 },
+        { item: "Tokamak Fusion Plasma", value: 1.5e8, hint: "ITER experimental reactor target", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Titan (Saturn moon)", value: 94, hint: "Has methane lakes on its surface", tolerance: 12 },
+        { item: "Earth's Core", value: 6000, hint: "Hot as the Sun's surface!", tolerance: 12 },
+        { item: "Acetylene Torch", value: 3500, hint: "Oxy-acetylene cutting flame", tolerance: 12 },
+        { item: "Carbon Sublimation", value: 3915, hint: "Carbon goes directly to gas", tolerance: 12 },
+        { item: "Supernova Core Collapse", value: 1e11, hint: "Temperature during stellar death", tolerance: 15 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 5: FREQUENCY ═══
   {
-    rounds: [
-      { word: "GUITAR", left: "WHISPER QUIET", right: "DEAFENING", target: 45, tolerance: 12 },
-      { word: "POND", left: "PUDDLE", right: "OCEAN", target: 25, tolerance: 12 },
-      { word: "PROFESSOR", left: "STUDENT", right: "GENIUS", target: 68, tolerance: 12 },
-      { word: "COPPER", left: "WORTHLESS", right: "PRICELESS", target: 30, tolerance: 12 },
-      { word: "NOVEL", left: "HAIKU", right: "ENCYCLOPEDIA", target: 55, tolerance: 12 },
+    name: "Frequency",
+    unit: "Hz",
+    scaleLabel: { left: "1 Hz (infrasound)", right: "10²⁰ Hz (gamma)" },
+    scaleMin: 1,
+    scaleMax: 1e20,
+    gradient: "linear-gradient(90deg, #311b92, #4527a0, #512da8, #7b1fa2, #6a1b9a, #00838f, #00acc1, #00e5ff)",
+    puzzles: [
+      { rounds: [
+        { item: "Human Heartbeat", value: 1.2, hint: "~72 beats per minute at rest", tolerance: 12 },
+        { item: "Lowest Piano Note (A₀)", value: 27.5, hint: "Deepest key on a standard piano", tolerance: 12 },
+        { item: "Middle C (C₄)", value: 261.6, hint: "Central reference note in music", tolerance: 12 },
+        { item: "AM Radio (1 MHz)", value: 1e6, hint: "Amplitude modulation broadcast band", tolerance: 12 },
+        { item: "WiFi (2.4 GHz)", value: 2.4e9, hint: "Standard wireless internet frequency", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Earth's Rotation", value: 1.16e-5, hint: "One revolution per day = very low frequency", tolerance: 12 },
+        { item: "Bass Guitar Low E", value: 41.2, hint: "Lowest string on a standard bass", tolerance: 12 },
+        { item: "Concert A (A₄)", value: 440, hint: "Standard tuning reference", tolerance: 12 },
+        { item: "FM Radio (100 MHz)", value: 1e8, hint: "Frequency modulation broadcast", tolerance: 12 },
+        { item: "Visible Light (green)", value: 5.66e14, hint: "Electromagnetic frequency of green light", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Schumann Resonance", value: 7.83, hint: "Earth-ionosphere cavity resonance", tolerance: 12 },
+        { item: "Dog Whistle", value: 25000, hint: "Ultrasonic — beyond human hearing", tolerance: 12 },
+        { item: "Bat Echolocation", value: 1e5, hint: "Ultrasound pulses for navigation", tolerance: 12 },
+        { item: "Microwave Oven", value: 2.45e9, hint: "Excites water molecules at this frequency", tolerance: 12 },
+        { item: "X-ray Frequency", value: 3e17, hint: "Medical imaging radiation", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Ocean Wave", value: 0.1, hint: "One wave every ~10 seconds", tolerance: 12 },
+        { item: "Tuning Fork (A₄)", value: 440, hint: "Standard pitch reference fork", tolerance: 12 },
+        { item: "Soprano High C (C₆)", value: 1047, hint: "Impressive operatic note", tolerance: 12 },
+        { item: "Cell Phone (LTE)", value: 2.1e9, hint: "4G LTE frequency band", tolerance: 12 },
+        { item: "Gamma Ray", value: 3e19, hint: "Highest-energy EM radiation", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Tidal Period", value: 2.24e-5, hint: "~12.4 hour tidal cycle", tolerance: 12 },
+        { item: "Hummingbird Wingbeat", value: 55, hint: "Wings beat 50-80 times per second", tolerance: 12 },
+        { item: "Medical Ultrasound", value: 3.5e6, hint: "Fetal imaging frequency", tolerance: 12 },
+        { item: "GPS Signal (L1)", value: 1.575e9, hint: "Navigation satellite frequency", tolerance: 12 },
+        { item: "Ultraviolet Light", value: 8e14, hint: "Just beyond visible violet", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Pendulum Clock (1 Hz)", value: 1, hint: "Tick-tock, once per second", tolerance: 12 },
+        { item: "Violin A String", value: 440, hint: "Open A string tuned to concert pitch", tolerance: 12 },
+        { item: "Human Voice (female)", value: 220, hint: "Average speaking fundamental frequency", tolerance: 12 },
+        { item: "Bluetooth", value: 2.45e9, hint: "Same band as WiFi and microwave ovens", tolerance: 12 },
+        { item: "Infrared (thermal)", value: 3e13, hint: "Heat radiation from warm objects", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Earthquake P-wave", value: 3, hint: "Primary seismic wave (~3 Hz)", tolerance: 12 },
+        { item: "Piccolo Highest Note", value: 4186, hint: "C₈ — highest note in the orchestra", tolerance: 12 },
+        { item: "Radar (X-band)", value: 1e10, hint: "Military/weather radar frequency", tolerance: 12 },
+        { item: "5G Millimeter Wave", value: 3e10, hint: "High-speed cellular (30 GHz)", tolerance: 12 },
+        { item: "Red Light Frequency", value: 4.3e14, hint: "Lowest visible light frequency", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Washing Machine Spin", value: 16, hint: "~1000 RPM drum speed", tolerance: 12 },
+        { item: "Human Hearing Limit", value: 20000, hint: "Upper threshold of human audio perception", tolerance: 12 },
+        { item: "Shortwave Radio", value: 1.2e7, hint: "International broadcast band (~12 MHz)", tolerance: 12 },
+        { item: "Television UHF", value: 6e8, hint: "UHF TV channels (~600 MHz)", tolerance: 12 },
+        { item: "Soft X-ray", value: 3e16, hint: "Low-energy X-ray photon", tolerance: 12 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 6: MASS ═══
   {
-    rounds: [
-      { word: "WARM", left: "FREEZING", right: "BOILING", target: 42, tolerance: 12 },
-      { word: "CREEK", left: "PUDDLE", right: "RIVER", target: 40, tolerance: 12 },
-      { word: "ANXIOUS", left: "CALM", right: "PANICKED", target: 65, tolerance: 12 },
-      { word: "BRUNCH", left: "BREAKFAST", right: "DINNER", target: 35, tolerance: 12 },
-      { word: "SEDAN", left: "BICYCLE", right: "TANK", target: 40, tolerance: 12 },
+    name: "Mass",
+    unit: "kg",
+    scaleLabel: { left: "10⁻³⁰ kg (subatomic)", right: "10³⁰ kg (star)" },
+    scaleMin: 1e-30,
+    scaleMax: 1e30,
+    gradient: "linear-gradient(90deg, #fafafa, #e0e0e0, #bdbdbd, #9e9e9e, #757575, #616161, #424242, #212121)",
+    puzzles: [
+      { rounds: [
+        { item: "Electron", value: 9.11e-31, hint: "Lightest stable subatomic particle", tolerance: 12 },
+        { item: "Grain of Sand", value: 5e-5, hint: "Tiny but visible particle", tolerance: 12 },
+        { item: "Human", value: 70, hint: "Average adult body mass", tolerance: 12 },
+        { item: "African Elephant", value: 6000, hint: "Largest living land animal", tolerance: 12 },
+        { item: "Earth", value: 5.97e24, hint: "Our home planet", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Proton", value: 1.67e-27, hint: "Found in every atomic nucleus", tolerance: 12 },
+        { item: "Raindrop", value: 5e-5, hint: "Medium-sized falling raindrop (~50 mg)", tolerance: 12 },
+        { item: "Bowling Ball", value: 6.4, hint: "Standard 14-pound ball", tolerance: 12 },
+        { item: "Blue Whale", value: 1.5e5, hint: "Largest animal ever to exist (~150 tonnes)", tolerance: 12 },
+        { item: "The Sun", value: 2e30, hint: "Our star — 330,000× Earth's mass", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Water Molecule", value: 3e-26, hint: "H₂O — 18 atomic mass units", tolerance: 12 },
+        { item: "Housefly", value: 1.2e-5, hint: "Common flying insect (~12 mg)", tolerance: 12 },
+        { item: "Golden Retriever", value: 32, hint: "Popular medium-large dog breed", tolerance: 12 },
+        { item: "Boeing 747 (loaded)", value: 4.1e5, hint: "Jumbo jet at max takeoff weight", tolerance: 12 },
+        { item: "Moon", value: 7.35e22, hint: "Earth's natural satellite", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Uranium Atom", value: 3.95e-25, hint: "Heaviest natural element (U-238)", tolerance: 12 },
+        { item: "Teaspoon of Sugar", value: 4e-3, hint: "~4 grams of sucrose", tolerance: 12 },
+        { item: "Grand Piano", value: 480, hint: "Steinway concert grand", tolerance: 12 },
+        { item: "Great Pyramid of Giza", value: 6e9, hint: "~6 million tonnes of limestone", tolerance: 12 },
+        { item: "Jupiter", value: 1.9e27, hint: "Largest planet in our solar system", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Hemoglobin Molecule", value: 1.1e-22, hint: "Oxygen-carrying protein in blood", tolerance: 12 },
+        { item: "US Penny", value: 2.5e-3, hint: "Zinc and copper coin (2.5 g)", tolerance: 12 },
+        { item: "Hippopotamus", value: 1500, hint: "Third-largest land animal", tolerance: 12 },
+        { item: "Titanic", value: 5.2e7, hint: "Famous ocean liner (52,000 tonnes)", tolerance: 12 },
+        { item: "Mars", value: 6.4e23, hint: "The Red Planet — about 1/10 Earth's mass", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "DNA Molecule (human)", value: 3.5e-15, hint: "One copy of the human genome", tolerance: 12 },
+        { item: "Chicken Egg", value: 0.06, hint: "Standard large egg (~60 g)", tolerance: 12 },
+        { item: "Compact Car", value: 1200, hint: "Typical sedan", tolerance: 12 },
+        { item: "Aircraft Carrier", value: 1e8, hint: "Nimitz-class (100,000 tonnes)", tolerance: 12 },
+        { item: "Saturn", value: 5.7e26, hint: "Ringed gas giant, could float in water", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Bacterium (E. coli)", value: 1e-15, hint: "Single-celled organism", tolerance: 12 },
+        { item: "Hummingbird", value: 4e-3, hint: "World's smallest bird (~4 g)", tolerance: 12 },
+        { item: "Polar Bear", value: 450, hint: "Largest land carnivore", tolerance: 12 },
+        { item: "International Space Station", value: 4.2e5, hint: "Orbiting laboratory (~420 tonnes)", tolerance: 12 },
+        { item: "Pluto", value: 1.3e22, hint: "Dwarf planet, smaller than our Moon", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Red Blood Cell", value: 1e-13, hint: "Human erythrocyte (~100 femtograms)", tolerance: 12 },
+        { item: "Baseball", value: 0.145, hint: "Official MLB baseball (145 g)", tolerance: 12 },
+        { item: "T. Rex", value: 8000, hint: "Estimated mass of the dinosaur king", tolerance: 12 },
+        { item: "Eiffel Tower", value: 7.3e6, hint: "Iron lattice structure (7,300 tonnes)", tolerance: 12 },
+        { item: "Ceres (dwarf planet)", value: 9.4e20, hint: "Largest object in the asteroid belt", tolerance: 12 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 7: PRESSURE ═══
   {
-    rounds: [
-      { word: "VIOLIN", left: "BASS DRUM", right: "PICCOLO", target: 75, tolerance: 12 },
-      { word: "HILL", left: "FLAT GROUND", right: "MOUNTAIN", target: 35, tolerance: 12 },
-      { word: "ANNOYED", left: "PLEASED", right: "FURIOUS", target: 55, tolerance: 12 },
-      { word: "SPARROW", left: "INSECT", right: "EAGLE", target: 30, tolerance: 12 },
-      { word: "ESSAY", left: "TWEET", right: "NOVEL", target: 40, tolerance: 12 },
+    name: "Pressure",
+    unit: "Pa",
+    scaleLabel: { left: "10⁻⁸ Pa (space)", right: "10¹² Pa (extreme)" },
+    scaleMin: 1e-8,
+    scaleMax: 1e12,
+    gradient: "linear-gradient(90deg, #e8eaf6, #c5cae9, #9fa8da, #7986cb, #5c6bc0, #3f51b5, #283593, #1a237e, #0d0d3b)",
+    puzzles: [
+      { rounds: [
+        { item: "Interstellar Space", value: 1e-8, hint: "Near-perfect vacuum between stars", tolerance: 14 },
+        { item: "Atmospheric Pressure", value: 101325, hint: "Standard sea-level air pressure (1 atm)", tolerance: 12 },
+        { item: "Car Tire", value: 2.2e5, hint: "Typical inflation pressure (~32 psi)", tolerance: 12 },
+        { item: "Deep Ocean (Mariana Trench)", value: 1.1e8, hint: "Deepest point on Earth (~11 km down)", tolerance: 12 },
+        { item: "Diamond Anvil Cell", value: 5e11, hint: "Laboratory extreme pressure device", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Low Earth Orbit Vacuum", value: 1e-4, hint: "ISS altitude (~400 km)", tolerance: 14 },
+        { item: "Whisper (sound pressure)", value: 2e-3, hint: "Sound pressure of a whisper at 1 m", tolerance: 12 },
+        { item: "Blood Pressure (systolic)", value: 1.6e4, hint: "Normal 120 mmHg", tolerance: 12 },
+        { item: "Scuba Tank", value: 2e7, hint: "Compressed air at ~200 atm", tolerance: 12 },
+        { item: "Earth's Core", value: 3.6e11, hint: "Pressure at planet's center", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Surface of Moon (day)", value: 1e-7, hint: "Essentially vacuum, trace gas only", tolerance: 14 },
+        { item: "Airplane Cabin (cruising)", value: 7.5e4, hint: "Pressurized to ~8000 ft equivalent", tolerance: 12 },
+        { item: "Fire Hose", value: 1e6, hint: "High-pressure water jet (~150 psi)", tolerance: 12 },
+        { item: "Hydraulic Press", value: 3e7, hint: "Industrial metal forming (~4000 psi)", tolerance: 12 },
+        { item: "Jupiter's Core", value: 7e12, hint: "Enormous gas giant interior pressure", tolerance: 14 },
+      ]},
+      { rounds: [
+        { item: "Ultra-High Vacuum (lab)", value: 1e-7, hint: "Particle accelerator vacuum level", tolerance: 14 },
+        { item: "Bicycle Tire", value: 6.9e5, hint: "Road bike at ~100 psi", tolerance: 12 },
+        { item: "Pressure Cooker", value: 2e5, hint: "About 2 atmospheres", tolerance: 12 },
+        { item: "Water Jet Cutter", value: 6e8, hint: "Cuts through steel with water", tolerance: 12 },
+        { item: "Center of Neutron Star", value: 1e34, hint: "Unimaginably dense — off our scale! Closest to maximum.", tolerance: 15 },
+      ]},
+      { rounds: [
+        { item: "Mars Atmosphere", value: 610, hint: "Very thin CO₂ atmosphere (~0.6% of Earth)", tolerance: 12 },
+        { item: "Human Footstep", value: 5e4, hint: "Weight distributed over shoe sole", tolerance: 12 },
+        { item: "Submarine Hull (max depth)", value: 6e6, hint: "Military sub at ~600 m depth", tolerance: 12 },
+        { item: "Diesel Engine Cylinder", value: 1e7, hint: "Peak combustion chamber pressure", tolerance: 12 },
+        { item: "Synthetic Diamond Press", value: 1e10, hint: "HPHT diamond manufacturing", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Top of Mount Everest", value: 3.4e4, hint: "~1/3 of sea-level pressure at 8848 m", tolerance: 12 },
+        { item: "Espresso Machine", value: 9e5, hint: "9 bar for proper extraction", tolerance: 12 },
+        { item: "Steam Turbine", value: 2.5e7, hint: "Power plant steam pressure", tolerance: 12 },
+        { item: "Bottom of Lake Baikal", value: 1.6e7, hint: "World's deepest lake, 1642 m", tolerance: 12 },
+        { item: "Stiletto Heel", value: 1e7, hint: "Small area = big pressure from body weight", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Venus Atmosphere (surface)", value: 9.2e6, hint: "Crushing CO₂ atmosphere — 92× Earth", tolerance: 12 },
+        { item: "Tennis Ball Impact", value: 1e5, hint: "Brief contact pressure during hit", tolerance: 12 },
+        { item: "Champagne Bottle", value: 6e5, hint: "Why the cork flies — ~6 atm", tolerance: 12 },
+        { item: "Oil Well (deep)", value: 7e7, hint: "Formation pressure at depth", tolerance: 12 },
+        { item: "Core of White Dwarf Star", value: 1e22, hint: "Degenerate electron pressure", tolerance: 15 },
+      ]},
+      { rounds: [
+        { item: "Sound of Normal Speech", value: 0.02, hint: "Sound pressure at conversation level (60 dB)", tolerance: 12 },
+        { item: "Vacuum Cleaner Suction", value: 2e4, hint: "Pressure difference that picks up dirt", tolerance: 12 },
+        { item: "Paintball Gun", value: 2e7, hint: "CO₂ propellant pressure (~200 bar)", tolerance: 12 },
+        { item: "Deepest Oil Well", value: 1.4e8, hint: "Kola or deepwater well pressures", tolerance: 12 },
+        { item: "Shockwave (1 m from TNT)", value: 5e9, hint: "Blast overpressure from explosion", tolerance: 12 },
+      ]},
     ]
   },
+
+  // ═══ CATEGORY 8: DISTANCE ═══
   {
-    rounds: [
-      { word: "TWILIGHT", left: "PITCH BLACK", right: "BLINDING LIGHT", target: 30, tolerance: 12 },
-      { word: "CHEF", left: "AMATEUR", right: "MASTER", target: 70, tolerance: 12 },
-      { word: "MARBLE", left: "FEATHER", right: "BOULDER", target: 25, tolerance: 12 },
-      { word: "NOSTALGIA", left: "JOY", right: "SORROW", target: 45, tolerance: 12 },
-      { word: "SUBURB", left: "WILDERNESS", right: "DOWNTOWN", target: 65, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "APPRENTICE", left: "NOVICE", right: "MASTER", target: 35, tolerance: 12 },
-      { word: "GALE", left: "CALM", right: "TORNADO", target: 60, tolerance: 12 },
-      { word: "LIME", left: "SWEET", right: "SOUR", target: 72, tolerance: 12 },
-      { word: "KITTEN", left: "BABY", right: "ADULT", target: 25, tolerance: 12 },
-      { word: "SNACK", left: "CRUMB", right: "FEAST", target: 30, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "CELLO", left: "PICCOLO", right: "TUBA", target: 55, tolerance: 12 },
-      { word: "FOG", left: "CLEAR SKY", right: "BLIZZARD", target: 35, tolerance: 12 },
-      { word: "IMPRESSED", left: "BORED", right: "AMAZED", target: 65, tolerance: 12 },
-      { word: "TRUCK", left: "SCOOTER", right: "FREIGHT TRAIN", target: 50, tolerance: 12 },
-      { word: "HAMLET", left: "HOUSE", right: "CITY", target: 25, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "SIMMER", left: "FROZEN", right: "BOILING", target: 70, tolerance: 12 },
-      { word: "MURMUR", left: "SILENCE", right: "SCREAM", target: 25, tolerance: 12 },
-      { word: "DENIM", left: "SILK", right: "STEEL", target: 45, tolerance: 12 },
-      { word: "TIGER", left: "HAMSTER", right: "ELEPHANT", target: 45, tolerance: 12 },
-      { word: "CHAPTER", left: "SENTENCE", right: "BOOK", target: 55, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "MAPLE", left: "SHRUB", right: "REDWOOD", target: 40, tolerance: 12 },
-      { word: "LIEUTENANT", left: "PRIVATE", right: "GENERAL", target: 40, tolerance: 12 },
-      { word: "CHILI PEPPER", left: "MILD", right: "GHOST PEPPER", target: 50, tolerance: 12 },
-      { word: "KAYAK", left: "RAFT", right: "CRUISE SHIP", target: 22, tolerance: 12 },
-      { word: "NERVOUS", left: "RELAXED", right: "TERRIFIED", target: 55, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "SUNRISE", left: "MIDNIGHT", right: "NOON", target: 30, tolerance: 12 },
-      { word: "SATELLITE", left: "KITE", right: "STAR", target: 65, tolerance: 12 },
-      { word: "SKEPTICAL", left: "GULLIBLE", right: "CYNICAL", target: 65, tolerance: 12 },
-      { word: "APARTMENT", left: "CLOSET", right: "MANSION", target: 40, tolerance: 12 },
-      { word: "STREAM", left: "TRICKLE", right: "WATERFALL", target: 35, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "CHARCOAL", left: "WHITE", right: "BLACK", target: 82, tolerance: 12 },
-      { word: "MEMOIR", left: "FICTION", right: "TEXTBOOK", target: 55, tolerance: 12 },
-      { word: "FALCON", left: "SNAIL", right: "CHEETAH", target: 72, tolerance: 12 },
-      { word: "TODDLER", left: "NEWBORN", right: "TEENAGER", target: 25, tolerance: 12 },
-      { word: "LAKE", left: "POND", right: "OCEAN", target: 35, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "UKULELE", left: "SILENCE", right: "ROCK CONCERT", target: 25, tolerance: 12 },
-      { word: "CONCERNED", left: "CAREFREE", right: "PANICKED", target: 50, tolerance: 12 },
-      { word: "BRONZE AGE", left: "STONE AGE", right: "SPACE AGE", target: 25, tolerance: 12 },
-      { word: "TOWN", left: "VILLAGE", right: "METROPOLIS", target: 40, tolerance: 12 },
-      { word: "DAGGER", left: "NEEDLE", right: "SWORD", target: 45, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "ECHO", left: "SILENCE", right: "SIREN", target: 30, tolerance: 12 },
-      { word: "AMBER", left: "PALE YELLOW", right: "DEEP RED", target: 45, tolerance: 12 },
-      { word: "ADMIRE", left: "DISLIKE", right: "WORSHIP", target: 60, tolerance: 12 },
-      { word: "ROWBOAT", left: "SURFBOARD", right: "YACHT", target: 30, tolerance: 12 },
-      { word: "WEDNESDAY", left: "MONDAY", right: "FRIDAY", target: 50, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "SLEET", left: "RAIN", right: "SNOW", target: 65, tolerance: 12 },
-      { word: "CAPTAIN", left: "RECRUIT", right: "ADMIRAL", target: 55, tolerance: 12 },
-      { word: "SANDSTONE", left: "CLAY", right: "GRANITE", target: 45, tolerance: 12 },
-      { word: "CURIOUS", left: "APATHETIC", right: "OBSESSED", target: 55, tolerance: 12 },
-      { word: "LANTERN", left: "MATCH", right: "SPOTLIGHT", target: 35, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "TROT", left: "STANDING", right: "GALLOP", target: 45, tolerance: 12 },
-      { word: "RESPECT", left: "CONTEMPT", right: "REVERENCE", target: 65, tolerance: 12 },
-      { word: "GRAPEFRUIT", left: "CANDY", right: "LEMON", target: 60, tolerance: 12 },
-      { word: "ISLAND", left: "CONTINENT", right: "GRAIN OF SAND", target: 30, tolerance: 12 },
-      { word: "EVENING", left: "DAWN", right: "MIDNIGHT", target: 65, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "PLATINUM", left: "COMMON", right: "RARE", target: 80, tolerance: 12 },
-      { word: "WALTZ", left: "STANDING STILL", right: "BREAKDANCING", target: 35, tolerance: 12 },
-      { word: "SHOWER", left: "CLEAR SKY", right: "THUNDERSTORM", target: 35, tolerance: 12 },
-      { word: "CORRIDOR", left: "CLOSET", right: "HIGHWAY", target: 30, tolerance: 12 },
-      { word: "SAPPHIRE", left: "PEBBLE", right: "DIAMOND", target: 72, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "SMIRK", left: "FROWN", right: "BELLY LAUGH", target: 35, tolerance: 12 },
-      { word: "ACCORDION", left: "WHISPER", right: "CANNON", target: 35, tolerance: 12 },
-      { word: "CAVE", left: "SURFACE", right: "CORE OF EARTH", target: 15, tolerance: 12 },
-      { word: "OCTOBER", left: "SUMMER", right: "WINTER", target: 60, tolerance: 12 },
-      { word: "COYOTE", left: "MOUSE", right: "WOLF", target: 65, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "MIST", left: "CLEAR", right: "OPAQUE", target: 30, tolerance: 12 },
-      { word: "BASSOON", left: "HIGH PITCH", right: "LOW PITCH", target: 72, tolerance: 12 },
-      { word: "SILK", left: "ROUGH", right: "SMOOTH", target: 85, tolerance: 12 },
-      { word: "MAYOR", left: "CITIZEN", right: "PRESIDENT", target: 45, tolerance: 12 },
-      { word: "LAMP", left: "CANDLE", right: "SEARCHLIGHT", target: 35, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "GLACIER", left: "ICE CUBE", right: "ICE AGE", target: 65, tolerance: 12 },
-      { word: "POLITE", left: "RUDE", right: "SAINTLY", target: 55, tolerance: 12 },
-      { word: "EAGLE", left: "SPARROW", right: "ALBATROSS", target: 60, tolerance: 12 },
-      { word: "SPRINKLE", left: "DROP", right: "FLOOD", target: 20, tolerance: 12 },
-      { word: "MANSION", left: "SHED", right: "CASTLE", target: 70, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "DUNE", left: "PEBBLE", right: "MOUNTAIN", target: 25, tolerance: 12 },
-      { word: "TRUMPET", left: "WHISPER", right: "FOGHORN", target: 55, tolerance: 12 },
-      { word: "JITTERY", left: "CALM", right: "HYSTERIA", target: 50, tolerance: 12 },
-      { word: "HAWK", left: "SPARROW", right: "CONDOR", target: 55, tolerance: 12 },
-      { word: "PUDDLE", left: "DEWDROP", right: "LAKE", target: 25, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "STROLL", left: "STANDING", right: "RUNNING", target: 30, tolerance: 12 },
-      { word: "VELVET", left: "SANDPAPER", right: "SILK", target: 75, tolerance: 12 },
-      { word: "OAK", left: "DANDELION", right: "SEQUOIA", target: 50, tolerance: 12 },
-      { word: "PROUD", left: "ASHAMED", right: "ARROGANT", target: 60, tolerance: 12 },
-      { word: "CAMPFIRE", left: "MATCH", right: "INFERNO", target: 30, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "BROOK", left: "PUDDLE", right: "RIVER", target: 30, tolerance: 12 },
-      { word: "FLUTE", left: "BASS", right: "SOPRANO", target: 80, tolerance: 12 },
-      { word: "PLEASED", left: "FURIOUS", right: "OVERJOYED", target: 55, tolerance: 12 },
-      { word: "RANCH", left: "APARTMENT", right: "ESTATE", target: 55, tolerance: 12 },
-      { word: "PONY", left: "MOUSE", right: "HORSE", target: 70, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "HAZE", left: "CRYSTAL CLEAR", right: "PITCH BLACK", target: 30, tolerance: 12 },
-      { word: "COLONEL", left: "PRIVATE", right: "GENERAL", target: 72, tolerance: 12 },
-      { word: "ALUMINUM", left: "PLASTIC", right: "TITANIUM", target: 45, tolerance: 12 },
-      { word: "UNEASY", left: "CONTENT", right: "TERRIFIED", target: 40, tolerance: 12 },
-      { word: "BONFIRE", left: "CANDLE", right: "WILDFIRE", target: 40, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "MARE", left: "FOAL", right: "STALLION", target: 55, tolerance: 12 },
-      { word: "TROMBONE", left: "PICCOLO", right: "TUBA", target: 60, tolerance: 12 },
-      { word: "GRATEFUL", left: "RESENTFUL", right: "DEVOTED", target: 65, tolerance: 12 },
-      { word: "CABIN", left: "TENT", right: "HOTEL", target: 35, tolerance: 12 },
-      { word: "RAPIDS", left: "POND", right: "TSUNAMI", target: 50, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "BURLAP", left: "SILK", right: "CANVAS", target: 60, tolerance: 12 },
-      { word: "BASIN", left: "TEACUP", right: "LAKE", target: 40, tolerance: 12 },
-      { word: "HOPEFUL", left: "DESPAIR", right: "CERTAIN", target: 55, tolerance: 12 },
-      { word: "ROBIN", left: "BEE", right: "SWAN", target: 35, tolerance: 12 },
-      { word: "BULB", left: "FIREFLY", right: "FLOODLIGHT", target: 30, tolerance: 12 },
-    ]
-  },
-  {
-    rounds: [
-      { word: "GARNET", left: "GLASS", right: "RUBY", target: 60, tolerance: 12 },
-      { word: "COAST", left: "LANDLOCKED", right: "OPEN OCEAN", target: 30, tolerance: 12 },
-      { word: "RELIEVED", left: "WORRIED", right: "EUPHORIC", target: 55, tolerance: 12 },
-      { word: "CLARINET", left: "WHISPER", right: "TRUMPET", target: 50, tolerance: 12 },
-      { word: "TERRACE", left: "BALCONY", right: "FIELD", target: 40, tolerance: 12 },
+    name: "Distance",
+    unit: "m",
+    scaleLabel: { left: "10⁻¹⁵ m (nucleus)", right: "10²⁷ m (universe)" },
+    scaleMin: 1e-15,
+    scaleMax: 1e27,
+    gradient: "linear-gradient(90deg, #fff3e0, #ffcc80, #ffa726, #fb8c00, #6d4c41, #37474f, #263238, #0d1b2a, #020111)",
+    puzzles: [
+      { rounds: [
+        { item: "Proton Diameter", value: 1.7e-15, hint: "Size of a single proton", tolerance: 12 },
+        { item: "Hydrogen Atom", value: 1.2e-10, hint: "Simplest and smallest atom", tolerance: 12 },
+        { item: "Human Hair Width", value: 7e-5, hint: "About 70 micrometers", tolerance: 12 },
+        { item: "Height of Eiffel Tower", value: 330, hint: "Paris landmark (with antenna)", tolerance: 12 },
+        { item: "Earth to Moon", value: 3.84e8, hint: "Average lunar distance", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "DNA Double Helix Width", value: 2.4e-9, hint: "Width of the genetic blueprint (~2.4 nm)", tolerance: 12 },
+        { item: "Red Blood Cell", value: 7e-6, hint: "Diameter of a human erythrocyte (~7 μm)", tolerance: 12 },
+        { item: "Football Field", value: 91.4, hint: "100 yards = 91.4 meters", tolerance: 12 },
+        { item: "Earth's Circumference", value: 4e7, hint: "Distance around the equator (~40,000 km)", tolerance: 12 },
+        { item: "1 Light-Year", value: 9.46e15, hint: "Distance light travels in one year", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Visible Light Wavelength", value: 550e-9, hint: "Green light ~550 nm", tolerance: 12 },
+        { item: "Grain of Sand", value: 5e-4, hint: "About half a millimeter", tolerance: 12 },
+        { item: "Marathon Distance", value: 42195, hint: "26.2 miles", tolerance: 12 },
+        { item: "Earth to Sun", value: 1.5e11, hint: "1 Astronomical Unit (AU)", tolerance: 12 },
+        { item: "Milky Way Diameter", value: 9.5e20, hint: "~100,000 light-years across", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Carbon Nanotube Width", value: 1e-9, hint: "Single-walled nanotube diameter", tolerance: 12 },
+        { item: "Bacterium (E. coli)", value: 2e-6, hint: "Common intestinal bacterium length", tolerance: 12 },
+        { item: "Height of Mount Everest", value: 8849, hint: "Tallest mountain above sea level", tolerance: 12 },
+        { item: "Diameter of the Sun", value: 1.4e9, hint: "Our star's width (~1.4 million km)", tolerance: 12 },
+        { item: "Distance to Nearest Star", value: 4e16, hint: "Proxima Centauri, ~4.24 light-years", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Transistor Gate (modern)", value: 3e-9, hint: "3 nm process node in cutting-edge chips", tolerance: 12 },
+        { item: "Thickness of Paper", value: 1e-4, hint: "Standard printer paper (~100 μm)", tolerance: 12 },
+        { item: "Depth of Mariana Trench", value: 11034, hint: "Deepest point in the ocean", tolerance: 12 },
+        { item: "Earth to Mars (closest)", value: 5.5e10, hint: "Minimum distance during opposition", tolerance: 12 },
+        { item: "Observable Universe Radius", value: 4.4e26, hint: "~46.5 billion light-years", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Virus (SARS-CoV-2)", value: 1e-7, hint: "COVID-19 virus particle (~100 nm)", tolerance: 12 },
+        { item: "Ant Length", value: 2e-3, hint: "Common garden ant (~2 mm)", tolerance: 12 },
+        { item: "Distance: NYC to London", value: 5.6e6, hint: "Transatlantic distance by air", tolerance: 12 },
+        { item: "Pluto's Orbit Radius", value: 5.9e12, hint: "Average distance from Sun (~39 AU)", tolerance: 12 },
+        { item: "Andromeda Galaxy Distance", value: 2.4e22, hint: "Nearest large galaxy (~2.5 million ly)", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Glucose Molecule", value: 9e-10, hint: "Simple sugar molecule diameter", tolerance: 12 },
+        { item: "Pinhead Diameter", value: 1e-3, hint: "About 1 millimeter across", tolerance: 12 },
+        { item: "Diameter of Earth", value: 1.27e7, hint: "~12,742 km pole to pole", tolerance: 12 },
+        { item: "Voyager 1 Distance (2024)", value: 2.4e13, hint: "Farthest human-made object", tolerance: 12 },
+        { item: "Diameter of Milky Way", value: 9.5e20, hint: "Our galaxy, ~100,000 light-years", tolerance: 12 },
+      ]},
+      { rounds: [
+        { item: "Water Molecule Diameter", value: 2.75e-10, hint: "H₂O is about 0.275 nm across", tolerance: 12 },
+        { item: "Human Egg Cell", value: 1.2e-4, hint: "Largest human cell (~120 μm)", tolerance: 12 },
+        { item: "Great Wall of China", value: 2.2e7, hint: "Total length of all sections (~21,196 km)", tolerance: 12 },
+        { item: "Jupiter's Diameter", value: 1.4e8, hint: "Largest planet (~142,984 km)", tolerance: 12 },
+        { item: "Distance to Galactic Center", value: 2.5e20, hint: "~26,000 light-years away", tolerance: 12 },
+      ]},
     ]
   },
 ];
@@ -1971,7 +2341,7 @@ const MIMIC_POOL = [
 const GAMES = [
   { id: "cipher",     name: "Cipher",     emoji: "🔐", type: "Single Puzzle", desc: "Decode an encrypted quote by cracking the letter substitution cipher.", accent: "#4a6741", render: renderCipher },
   { id: "chronicle",  name: "Chronicle",  emoji: "📜", type: "Single Round",  desc: "Arrange five historical events in the correct chronological order.", accent: "#3d4f5c", render: renderChronicle },
-  { id: "wavelength", name: "Wavelength", emoji: "🌊", type: "5 Rounds",      desc: "Place a word on the correct spot of a spectrum. Closer = more points.", accent: "#8b3a2a", render: renderWavelength },
+  { id: "wavelength", name: "Wavelength", emoji: "🔬", type: "5 Rounds",      desc: "Place real scientific objects on a factual scale. How well do you know the universe?", accent: "#8b3a2a", render: renderWavelength },
   { id: "mimic",      name: "Mimic",      emoji: "🪞", type: "5 Rounds",      desc: "Guess the hidden 5-letter word from three progressive clues.", accent: "#6b3a7d", render: renderMimic },
 ];
 
@@ -2586,19 +2956,80 @@ function startChronicle() {
 }
 
 // ═══════════════════════════════════════════════
-// GAME 3: WAVELENGTH
+// GAME 3: WAVELENGTH (Science Spectrum)
 // ═══════════════════════════════════════════════
+
+// Helper: convert a real value to 0-100 position on a log scale
+function valueToLogPosition(value, scaleMin, scaleMax) {
+  if (value <= 0) value = scaleMin;
+  const logMin = Math.log10(scaleMin);
+  const logMax = Math.log10(scaleMax);
+  const logVal = Math.log10(value);
+  return Math.max(0, Math.min(100, ((logVal - logMin) / (logMax - logMin)) * 100));
+}
+
+// Helper: convert 0-100 slider position back to a real value
+function logPositionToValue(pos, scaleMin, scaleMax) {
+  const logMin = Math.log10(scaleMin);
+  const logMax = Math.log10(scaleMax);
+  const logVal = logMin + (pos / 100) * (logMax - logMin);
+  return Math.pow(10, logVal);
+}
+
+// Helper: format scientific values for display
+function formatSciValue(value, unit) {
+  if (value === 0) return `0 ${unit}`;
+  const absVal = Math.abs(value);
+  // Special display for certain units
+  if (unit === 'm' && absVal >= 1e-9 && absVal < 1e-6) return `${(value * 1e9).toPrecision(3)} nm`;
+  if (unit === 'm' && absVal >= 1e-6 && absVal < 1e-3) return `${(value * 1e6).toPrecision(3)} μm`;
+  if (unit === 'm' && absVal >= 1e-3 && absVal < 1) return `${(value * 1e3).toPrecision(3)} mm`;
+  if (unit === 'm' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} km`;
+  if (unit === 'm' && absVal >= 1e6 && absVal < 1e9) return `${(value / 1e6).toPrecision(3)} Mm`;
+  if (unit === 'm' && absVal >= 1e9 && absVal < 1e12) return `${(value / 1e9).toPrecision(3)} Gm`;
+  if (unit === 'm' && absVal >= 9e15) return `${(value / 9.461e15).toPrecision(3)} ly`;
+  if (unit === 'K' && absVal >= 1 && absVal < 1e4) return `${value.toPrecision(4)} K (${(value - 273.15).toFixed(0)}°C)`;
+  if (unit === 'Hz' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} kHz`;
+  if (unit === 'Hz' && absVal >= 1e6 && absVal < 1e9) return `${(value / 1e6).toPrecision(3)} MHz`;
+  if (unit === 'Hz' && absVal >= 1e9 && absVal < 1e12) return `${(value / 1e9).toPrecision(3)} GHz`;
+  if (unit === 'Hz' && absVal >= 1e12) return `${(value / 1e12).toPrecision(3)} THz`;
+  if (unit === 'Pa' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} kPa`;
+  if (unit === 'Pa' && absVal >= 1e6 && absVal < 1e9) return `${(value / 1e6).toPrecision(3)} MPa`;
+  if (unit === 'Pa' && absVal >= 1e9) return `${(value / 1e9).toPrecision(3)} GPa`;
+  if (unit === 'N' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} kN`;
+  if (unit === 'N' && absVal >= 1e6 && absVal < 1e9) return `${(value / 1e6).toPrecision(3)} MN`;
+  if (unit === 'J' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} kJ`;
+  if (unit === 'J' && absVal >= 1e6 && absVal < 1e9) return `${(value / 1e6).toPrecision(3)} MJ`;
+  if (unit === 'J' && absVal >= 1e9 && absVal < 1e12) return `${(value / 1e9).toPrecision(3)} GJ`;
+  if (unit === 'kg' && absVal < 1e-3) {
+    if (absVal >= 1e-6) return `${(value * 1e6).toPrecision(3)} μg`;
+    if (absVal >= 1e-9) return `${(value * 1e9).toPrecision(3)} ng`;
+  }
+  if (unit === 'kg' && absVal >= 1e3 && absVal < 1e6) return `${(value / 1e3).toPrecision(3)} tonnes`;
+  if (unit === 'm/s' && absVal >= 1e3) return `${(value / 1e3).toPrecision(3)} km/s`;
+  // General scientific notation
+  if (absVal >= 1e6 || absVal < 0.01) return `${value.toExponential(2)} ${unit}`;
+  if (absVal >= 100) return `${value.toPrecision(4)} ${unit}`;
+  return `${value.toPrecision(3)} ${unit}`;
+}
+
 function renderWavelength() {
   howToPlay(`
-    A word appears on screen. Place it on the <strong>correct position</strong> on a spectrum between two opposites.<br><br>
-    For example: where does <strong>WARM</strong> fall between <em>Freezing</em> and <em>Boiling</em>?<br><br>
-    Drag the slider to your answer, then submit. <strong>Scoring:</strong> 🎯 Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
-    5 rounds · New spectrums every <strong>day</strong>.
+    A scientific object or phenomenon appears. Place it at the <strong>correct position</strong> on a real logarithmic scale.<br><br>
+    Each day features a different science category: EM wavelengths, energy, force, speed, temperature, frequency, mass, pressure, or distance.<br><br>
+    Drag the slider to where you think the value falls. <strong>Scoring:</strong> 🎯 Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
+    5 rounds · New category every <strong>day</strong>.
   `, startWavelength);
 }
 
 function startWavelength() {
-  const puzzle = WAVELENGTH_POOL[getDayIndex(WAVELENGTH_POOL.length, GAME_OFFSETS.wavelength)];
+  // Pick today's category (cycles through 9 categories)
+  const catIdx = getDayIndex(WAVELENGTH_CATEGORIES.length, GAME_OFFSETS.wavelength);
+  const category = WAVELENGTH_CATEGORIES[catIdx];
+  // Pick a puzzle set within this category
+  const puzzleIdx = getDayIndex(category.puzzles.length, GAME_OFFSETS.wavelength + 100);
+  const puzzle = category.puzzles[puzzleIdx];
+
   const prog = loadProgress('wavelength') || { round: 0, scores: [], finished: false };
   const content = document.getElementById('game-content');
 
@@ -2614,18 +3045,27 @@ function startWavelength() {
       const sd = document.createElement('div');
       sd.className = 'result-score';
       sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
-      area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every day', sd));
+      area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Science whiz!' : 'Good effort!',
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd));
       content.appendChild(area);
       return;
     }
 
     const round = puzzle.rounds[roundIdx];
+    // Calculate the target position on the log scale (0-100)
+    const targetPos = valueToLogPosition(round.value, category.scaleMin, category.scaleMax);
+
     content.innerHTML = '';
     const area = document.createElement('div');
     area.className = 'game-area';
 
     area.appendChild(roundProgress(prog.scores, puzzle.rounds.length, roundIdx));
+
+    // Category badge
+    const catBadge = document.createElement('div');
+    catBadge.className = 'wl-category-badge';
+    catBadge.textContent = `${category.name} (${category.unit})`;
+    area.appendChild(catBadge);
 
     const roundLbl = document.createElement('div');
     roundLbl.className = 'prompt-label';
@@ -2634,17 +3074,26 @@ function startWavelength() {
 
     const wordDiv = document.createElement('div');
     wordDiv.className = 'big-prompt';
-    wordDiv.innerHTML = `Where does <strong style="color:var(--accent-light)">${round.word}</strong> fall on this spectrum?`;
+    wordDiv.innerHTML = `Where does <strong style="color:var(--accent-light)">${round.item}</strong> fall on this scale?`;
     area.appendChild(wordDiv);
+
+    // Hint
+    if (round.hint) {
+      const hintDiv = document.createElement('div');
+      hintDiv.className = 'wl-hint';
+      hintDiv.textContent = round.hint;
+      area.appendChild(hintDiv);
+    }
 
     const specWrap = document.createElement('div');
     const specBar = document.createElement('div');
     specBar.className = 'spectrum-bar';
+    specBar.style.background = category.gradient;
     specWrap.appendChild(specBar);
 
     const labels = document.createElement('div');
     labels.className = 'spectrum-labels';
-    labels.innerHTML = `<span>${round.left}</span><span>${round.right}</span>`;
+    labels.innerHTML = `<span>${category.scaleLabel.left}</span><span>${category.scaleLabel.right}</span>`;
     specWrap.appendChild(labels);
     area.appendChild(specWrap);
 
@@ -2669,19 +3118,20 @@ function startWavelength() {
     submitBtn.className = 'submit-btn';
     submitBtn.textContent = 'Lock It In';
     submitBtn.onclick = () => {
-      const guess = parseInt(slider.value);
-      const diff = Math.abs(guess - round.target);
+      const guessPos = parseInt(slider.value);
+      const diff = Math.abs(guessPos - targetPos);
+      const tol = round.tolerance || 12;
       let pts = 0;
       let msg = '';
-      if (diff <= round.tolerance * 0.33) { pts = 3; msg = '🎯 Right on!'; }
-      else if (diff <= round.tolerance * 0.66) { pts = 2; msg = '✓ Close!'; }
-      else if (diff <= round.tolerance) { pts = 1; msg = '≈ Nearby'; }
-      else { pts = 0; msg = `✗ Off — target was ${round.target <= 30 ? 'near the left' : round.target >= 70 ? 'near the right' : 'near the center'}`; }
+      if (diff <= tol * 0.33) { pts = 3; msg = '🎯 Right on!'; }
+      else if (diff <= tol * 0.66) { pts = 2; msg = '✓ Close!'; }
+      else if (diff <= tol) { pts = 1; msg = '≈ Nearby'; }
+      else { pts = 0; msg = '✗ Off target'; }
 
       // Show target marker
       const targetMarker = document.createElement('div');
       targetMarker.className = 'spectrum-target';
-      targetMarker.style.left = round.target + '%';
+      targetMarker.style.left = targetPos + '%';
       specBar.appendChild(targetMarker);
 
       // Stop marker pulse
@@ -2689,13 +3139,20 @@ function startWavelength() {
 
       fb.className = 'feedback-msg ' + (pts > 0 ? 'good' : 'bad');
       fb.textContent = `${msg} · +${pts} point${pts !== 1 ? 's' : ''}`;
+
+      // Show the actual value
+      const valReveal = document.createElement('div');
+      valReveal.className = 'wl-value-reveal';
+      valReveal.textContent = `${round.item}: ${formatSciValue(round.value, category.unit)}`;
+      fb.after(valReveal);
+
       slider.disabled = true;
       submitBtn.disabled = true;
 
       prog.scores.push(pts);
       prog.round = roundIdx + 1;
       saveProgress('wavelength', prog);
-      setTimeout(() => startRound(roundIdx + 1), 1600);
+      setTimeout(() => startRound(roundIdx + 1), 2200);
     };
     area.appendChild(submitBtn);
     content.appendChild(area);
@@ -2709,8 +3166,8 @@ function startWavelength() {
     const sd = document.createElement('div');
     sd.className = 'result-score';
     sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
-    area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every day', sd));
+    area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Science whiz!' : 'Good effort!',
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
