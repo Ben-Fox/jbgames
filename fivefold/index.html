@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks</title>
-<meta name="description" content="Play Daily Puzzles — four free weekly puzzle games: ciphers, history ordering, spectrum guessing, and word clues. No download needed.">
+<title>Daily Puzzles — Four Daily Puzzle Games | BrainSmacks</title>
+<meta name="description" content="Play Daily Puzzles — four free daily puzzle games: ciphers, history ordering, spectrum guessing, and word clues. No download needed.">
 <link rel="canonical" href="https://brainsmacks.com/fivefold/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks">
-<meta property="og:description" content="Four games, one week, infinite curiosity. Free browser puzzle games — play instantly.">
+<meta property="og:title" content="Daily Puzzles — Four Daily Puzzle Games | BrainSmacks">
+<meta property="og:description" content="Four games, fresh daily. Free browser puzzle games — play instantly.">
 <meta property="og:url" content="https://brainsmacks.com/fivefold/">
 <meta property="og:image" content="https://brainsmacks.com/fivefold/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -16,8 +16,8 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:site_name" content="BrainSmacks">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Daily Puzzles — Four Weekly Puzzle Games | BrainSmacks">
-<meta name="twitter:description" content="Four games, one week, infinite curiosity. Free browser puzzle games.">
+<meta name="twitter:title" content="Daily Puzzles — Four Daily Puzzle Games | BrainSmacks">
+<meta name="twitter:description" content="Four games, fresh daily. Free browser puzzle games.">
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300;1,600&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
@@ -933,7 +933,7 @@ body {
 <div id="hub">
   <div class="hub-masthead">
     <div class="hub-logo">Daily <span>Puzzles</span></div>
-    <div class="hub-tagline">Four games · One week · Infinite curiosity</div>
+    <div class="hub-tagline">Four games · Fresh daily · Infinite curiosity</div>
     <div class="week-badge" id="week-badge"></div>
   </div>
   <div class="game-grid" id="game-grid"></div>
@@ -951,37 +951,37 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════
-// WEEK CALCULATION
+// DAY CALCULATION
 // ═══════════════════════════════════════════════
-function getWeekIndex(poolSize) {
+function getDayIndex(poolSize, gameOffset) {
   const epoch = new Date("2024-01-01");
   const now = new Date();
-  const msPerWeek = 1000 * 60 * 60 * 24 * 7;
-  const weeks = Math.floor((now - epoch) / msPerWeek);
-  return weeks % poolSize;
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const days = Math.floor((now - epoch) / msPerDay);
+  // Each game gets a different offset so they don't cycle in lockstep
+  return (days + (gameOffset || 0)) % poolSize;
 }
 
-function getWeekLabel() {
+// Per-game offsets so the 4 games pick different puzzles each day
+const GAME_OFFSETS = { cipher: 0, chronicle: 7, wavelength: 13, mimic: 23 };
+
+function getDayLabel() {
   const now = new Date();
-  const start = new Date(now);
-  start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday-based
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `Week of ${fmt(start)} – ${fmt(end)}`;
+  return now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function weekKey() {
-  return getWeekIndex(10000);
+function dayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 }
 
 function saveProgress(gameId, data) {
-  const key = `fivefold_${gameId}_week${weekKey()}`;
+  const key = `fivefold_${gameId}_day_${dayKey()}`;
   localStorage.setItem(key, JSON.stringify(data));
 }
 
 function loadProgress(gameId) {
-  const key = `fivefold_${gameId}_week${weekKey()}`;
+  const key = `fivefold_${gameId}_day_${dayKey()}`;
   try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; }
 }
 
@@ -995,10 +995,37 @@ const CIPHER_POOL = [
   { plain: "IT DOES NOT MATTER HOW SLOWLY YOU GO AS LONG AS YOU DO NOT STOP", author: "Confucius" },
   { plain: "YOU MISS ONE HUNDRED PERCENT OF THE SHOTS YOU DO NOT TAKE", author: "Wayne Gretzky" },
   { plain: "LIFE IS WHAT HAPPENS WHEN YOU ARE BUSY MAKING OTHER PLANS", author: "John Lennon" },
+  { plain: "TO BE OR NOT TO BE THAT IS THE QUESTION", author: "William Shakespeare" },
+  { plain: "I THINK THEREFORE I AM", author: "Rene Descartes" },
+  { plain: "THE UNEXAMINED LIFE IS NOT WORTH LIVING", author: "Socrates" },
+  { plain: "THAT WHICH DOES NOT KILL US MAKES US STRONGER", author: "Friedrich Nietzsche" },
+  { plain: "BE THE CHANGE YOU WISH TO SEE IN THE WORLD", author: "Mahatma Gandhi" },
+  { plain: "TWO THINGS ARE INFINITE THE UNIVERSE AND HUMAN STUPIDITY", author: "Albert Einstein" },
+  { plain: "IMAGINATION IS MORE IMPORTANT THAN KNOWLEDGE", author: "Albert Einstein" },
+  { plain: "TO ERR IS HUMAN TO FORGIVE DIVINE", author: "Alexander Pope" },
+  { plain: "KNOWLEDGE IS POWER", author: "Francis Bacon" },
+  { plain: "THE ONLY THING WE HAVE TO FEAR IS FEAR ITSELF", author: "Franklin D. Roosevelt" },
+  { plain: "I HAVE A DREAM THAT ONE DAY THIS NATION WILL RISE UP", author: "Martin Luther King Jr." },
+  { plain: "GIVE ME LIBERTY OR GIVE ME DEATH", author: "Patrick Henry" },
+  { plain: "NOT ALL THOSE WHO WANDER ARE LOST", author: "J.R.R. Tolkien" },
+  { plain: "ALL THAT GLITTERS IS NOT GOLD", author: "William Shakespeare" },
+  { plain: "INJUSTICE ANYWHERE IS A THREAT TO JUSTICE EVERYWHERE", author: "Martin Luther King Jr." },
+  { plain: "THE PEN IS MIGHTIER THAN THE SWORD", author: "Edward Bulwer-Lytton" },
+  { plain: "AN EYE FOR AN EYE ONLY ENDS UP MAKING THE WHOLE WORLD BLIND", author: "Mahatma Gandhi" },
+  { plain: "IN THREE WORDS I CAN SUM UP EVERYTHING I LEARNED ABOUT LIFE IT GOES ON", author: "Robert Frost" },
+  { plain: "STAY HUNGRY STAY FOOLISH", author: "Steve Jobs" },
+  { plain: "WE ARE WHAT WE REPEATEDLY DO EXCELLENCE THEN IS NOT AN ACT BUT A HABIT", author: "Will Durant" },
+  { plain: "THE GREATEST GLORY IN LIVING LIES NOT IN NEVER FALLING BUT IN RISING EVERY TIME WE FALL", author: "Nelson Mandela" },
+  { plain: "DO NOT GO GENTLE INTO THAT GOOD NIGHT", author: "Dylan Thomas" },
+  { plain: "I CAME I SAW I CONQUERED", author: "Julius Caesar" },
+  { plain: "THE ONLY TRUE WISDOM IS IN KNOWING YOU KNOW NOTHING", author: "Socrates" },
+  { plain: "IF YOU JUDGE PEOPLE YOU HAVE NO TIME TO LOVE THEM", author: "Mother Teresa" },
+  { plain: "A ROOM WITHOUT BOOKS IS LIKE A BODY WITHOUT A SOUL", author: "Marcus Tullius Cicero" },
+  { plain: "WHOEVER FIGHTS MONSTERS SHOULD SEE TO IT THAT HE DOES NOT BECOME A MONSTER", author: "Friedrich Nietzsche" },
 ];
 
 function makeCipher(plain) {
-  const week = getWeekIndex(997);
+  const week = getDayIndex(997, GAME_OFFSETS.cipher);
   const shuffle = (arr, seed) => {
     const a = [...arr];
     let s = seed;
@@ -1021,47 +1048,272 @@ function makeCipher(plain) {
 const CHRONICLE_POOL = [
   {
     events: [
-      { text: "The Wright Brothers achieve the first powered flight at Kitty Hawk", year: 1903 },
-      { text: "Alexander Fleming discovers penicillin in his London lab", year: 1928 },
-      { text: "Edmund Hillary and Tenzing Norgay summit Mount Everest", year: 1953 },
-      { text: "The first human heart transplant is performed by Christiaan Barnard", year: 1967 },
-      { text: "The World Wide Web is invented by Tim Berners-Lee at CERN", year: 1989 },
+      { text: "The Wright Brothers achieve the first powered flight at Kitty Hawk.", year: 1903 },
+      { text: "Alexander Fleming discovers penicillin in his London lab.", year: 1928 },
+      { text: "Edmund Hillary and Tenzing Norgay summit Mount Everest.", year: 1953 },
+      { text: "The first human heart transplant is performed by Christiaan Barnard.", year: 1967 },
+      { text: "The World Wide Web is invented by Tim Berners-Lee at CERN.", year: 1989 },
     ]
   },
   {
     events: [
-      { text: "The Titanic sinks on its maiden voyage in the North Atlantic", year: 1912 },
-      { text: "Charles Lindbergh completes the first solo transatlantic flight", year: 1927 },
-      { text: "Alan Turing proposes his famous test for artificial intelligence", year: 1950 },
-      { text: "Four students are killed during a protest at Kent State University", year: 1970 },
-      { text: "The Human Genome Project is declared complete", year: 2003 },
+      { text: "The Titanic sinks on its maiden voyage in the North Atlantic.", year: 1912 },
+      { text: "Charles Lindbergh completes the first solo transatlantic flight.", year: 1927 },
+      { text: "Alan Turing publishes his famous paper proposing the Turing test.", year: 1950 },
+      { text: "Four students are killed during a protest at Kent State University.", year: 1970 },
+      { text: "The Human Genome Project is declared complete.", year: 2003 },
     ]
   },
   {
     events: [
-      { text: "Marie Curie becomes the first woman to win a Nobel Prize", year: 1903 },
-      { text: "The first television broadcast is demonstrated by John Logie Baird", year: 1926 },
-      { text: "DNA's double-helix structure is described by Watson and Crick", year: 1953 },
-      { text: "The first email is sent by Ray Tomlinson over the ARPANET", year: 1971 },
-      { text: "Dolly the sheep becomes the first mammal cloned from adult cells", year: 1996 },
+      { text: "Marie Curie becomes the first woman to win a Nobel Prize.", year: 1903 },
+      { text: "John Logie Baird demonstrates the first television broadcast.", year: 1926 },
+      { text: "Watson and Crick describe the double-helix structure of DNA.", year: 1953 },
+      { text: "Ray Tomlinson sends the first email over ARPANET.", year: 1971 },
+      { text: "Dolly the sheep becomes the first mammal cloned from adult cells.", year: 1996 },
     ]
   },
   {
     events: [
-      { text: "Mahatma Gandhi leads the Salt March in protest of British rule", year: 1930 },
-      { text: "The United Nations is officially established in San Francisco", year: 1945 },
-      { text: "Yuri Gagarin becomes the first human to travel to outer space", year: 1961 },
-      { text: "The first Apple Macintosh personal computer is introduced", year: 1984 },
-      { text: "Wikipedia is launched as a free online encyclopedia", year: 2001 },
+      { text: "Mahatma Gandhi leads the Salt March in protest of British rule.", year: 1930 },
+      { text: "The United Nations is officially established.", year: 1945 },
+      { text: "Yuri Gagarin becomes the first human to travel to outer space.", year: 1961 },
+      { text: "The first Apple Macintosh personal computer is introduced.", year: 1984 },
+      { text: "Wikipedia is launched as a free online encyclopedia.", year: 2001 },
     ]
   },
   {
     events: [
-      { text: "The Eiffel Tower is completed in Paris for the World's Fair", year: 1889 },
-      { text: "The Panama Canal opens, connecting the Atlantic and Pacific Oceans", year: 1914 },
-      { text: "The first antibiotic treatment, penicillin, is used on a human patient", year: 1942 },
-      { text: "The Berlin Wall falls, reuniting East and West Germany", year: 1989 },
-      { text: "The Mars Curiosity rover successfully lands on the red planet", year: 2012 },
+      { text: "The Eiffel Tower is completed in Paris for the World's Fair.", year: 1889 },
+      { text: "The Panama Canal opens, connecting the Atlantic and Pacific Oceans.", year: 1914 },
+      { text: "Penicillin is first used to treat a human patient.", year: 1941 },
+      { text: "The Berlin Wall falls, reuniting East and West Germany.", year: 1989 },
+      { text: "The Mars Curiosity rover successfully lands on the red planet.", year: 2012 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Declaration of Independence is signed in Philadelphia.", year: 1776 },
+      { text: "Napoleon Bonaparte is defeated at the Battle of Waterloo.", year: 1815 },
+      { text: "Charles Darwin publishes On the Origin of Species.", year: 1859 },
+      { text: "The first Nobel Prizes are awarded in Stockholm.", year: 1901 },
+      { text: "Rosa Parks refuses to give up her bus seat in Montgomery, Alabama.", year: 1955 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Magna Carta is sealed by King John of England.", year: 1215 },
+      { text: "Johannes Gutenberg prints the first Bible using movable type.", year: 1455 },
+      { text: "Christopher Columbus reaches the Americas.", year: 1492 },
+      { text: "William Shakespeare writes Hamlet.", year: 1600 },
+      { text: "Isaac Newton publishes the Principia Mathematica.", year: 1687 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Bastille is stormed, igniting the French Revolution.", year: 1789 },
+      { text: "The Rosetta Stone is discovered in Egypt.", year: 1799 },
+      { text: "The first photograph is taken by Joseph Nicephore Niepce.", year: 1826 },
+      { text: "The American Civil War begins at Fort Sumter.", year: 1861 },
+      { text: "Alexander Graham Bell patents the telephone.", year: 1876 },
+    ]
+  },
+  {
+    events: [
+      { text: "The first modern Olympic Games are held in Athens.", year: 1896 },
+      { text: "Albert Einstein publishes his theory of special relativity.", year: 1905 },
+      { text: "Women gain the right to vote in the United States.", year: 1920 },
+      { text: "The stock market crashes on Black Tuesday, starting the Great Depression.", year: 1929 },
+      { text: "Neil Armstrong walks on the moon.", year: 1969 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Great Fire of London destroys much of the city.", year: 1666 },
+      { text: "The Boston Tea Party protests British taxation.", year: 1773 },
+      { text: "Abraham Lincoln issues the Emancipation Proclamation.", year: 1863 },
+      { text: "The first transatlantic radio signal is sent by Marconi.", year: 1901 },
+      { text: "The Treaty of Versailles formally ends World War I.", year: 1919 },
+    ]
+  },
+  {
+    events: [
+      { text: "Galileo Galilei observes Jupiter's moons through his telescope.", year: 1610 },
+      { text: "The United States purchases Louisiana from France.", year: 1803 },
+      { text: "The Suez Canal opens, connecting the Mediterranean and Red Seas.", year: 1869 },
+      { text: "Archduke Franz Ferdinand is assassinated, sparking World War I.", year: 1914 },
+      { text: "India gains independence from British rule.", year: 1947 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Mayflower lands at Plymouth Rock.", year: 1620 },
+      { text: "Benjamin Franklin flies his famous kite in a thunderstorm.", year: 1752 },
+      { text: "The Transcontinental Railroad is completed in the United States.", year: 1869 },
+      { text: "The Wright Brothers achieve powered flight.", year: 1903 },
+      { text: "The first atomic bomb is detonated at the Trinity test site.", year: 1945 },
+    ]
+  },
+  {
+    events: [
+      { text: "Vasco da Gama reaches India by sea.", year: 1498 },
+      { text: "The Great Wall of China is completed under the Ming Dynasty.", year: 1644 },
+      { text: "Captain James Cook reaches Australia.", year: 1770 },
+      { text: "The Statue of Liberty is dedicated in New York Harbor.", year: 1886 },
+      { text: "The Soviet Union launches Sputnik, the first artificial satellite.", year: 1957 },
+    ]
+  },
+  {
+    events: [
+      { text: "Martin Luther posts his 95 Theses, sparking the Reformation.", year: 1517 },
+      { text: "The English Bill of Rights is enacted.", year: 1689 },
+      { text: "The first steam locomotive runs on rails in Wales.", year: 1804 },
+      { text: "The Communist Manifesto is published by Marx and Engels.", year: 1848 },
+      { text: "Mahatma Gandhi is assassinated in New Delhi.", year: 1948 },
+    ]
+  },
+  {
+    events: [
+      { text: "The first successful smallpox vaccine is developed by Edward Jenner.", year: 1796 },
+      { text: "Michael Faraday demonstrates electromagnetic induction.", year: 1831 },
+      { text: "Alfred Nobel invents dynamite.", year: 1867 },
+      { text: "The Hubble Space Telescope is launched into orbit.", year: 1990 },
+      { text: "The International Space Station receives its first crew.", year: 2000 },
+    ]
+  },
+  {
+    events: [
+      { text: "Marco Polo begins his journey to China.", year: 1271 },
+      { text: "Joan of Arc leads French forces to victory at Orleans.", year: 1429 },
+      { text: "The Spanish Armada is defeated by England.", year: 1588 },
+      { text: "The French and Indian War ends with the Treaty of Paris.", year: 1763 },
+      { text: "Napoleon crowns himself Emperor of France.", year: 1804 },
+    ]
+  },
+  {
+    events: [
+      { text: "Thomas Edison patents the phonograph.", year: 1878 },
+      { text: "The first powered submarine, the Holland VI, is commissioned.", year: 1900 },
+      { text: "Roald Amundsen reaches the South Pole.", year: 1911 },
+      { text: "Amelia Earhart flies solo across the Atlantic Ocean.", year: 1932 },
+      { text: "The Cuban Missile Crisis brings the world to the brink of nuclear war.", year: 1962 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Gutenberg Bible becomes the first major book printed with movable type.", year: 1455 },
+      { text: "Nicolaus Copernicus publishes his heliocentric model of the solar system.", year: 1543 },
+      { text: "The Great Plague of London kills tens of thousands.", year: 1665 },
+      { text: "Mozart composes his first symphony at the age of eight.", year: 1764 },
+      { text: "Louis Pasteur develops the first rabies vaccine.", year: 1885 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Bolshevik Revolution overthrows the Russian government.", year: 1917 },
+      { text: "Penicillin is discovered by Alexander Fleming.", year: 1928 },
+      { text: "D-Day: Allied forces land on the beaches of Normandy.", year: 1944 },
+      { text: "The Korean War begins.", year: 1950 },
+      { text: "Nelson Mandela is released from prison after 27 years.", year: 1990 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Mona Lisa is stolen from the Louvre in Paris.", year: 1911 },
+      { text: "The Nineteenth Amendment grants women the right to vote in the U.S.", year: 1920 },
+      { text: "The first issue of Time magazine is published.", year: 1923 },
+      { text: "The transistor is invented at Bell Labs.", year: 1947 },
+      { text: "The first heart pacemaker is implanted in a patient.", year: 1958 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Aztec Empire falls to Hernan Cortes.", year: 1521 },
+      { text: "The Pilgrims celebrate the first Thanksgiving.", year: 1621 },
+      { text: "The Salem witch trials take place in Massachusetts.", year: 1692 },
+      { text: "The Lewis and Clark expedition reaches the Pacific Ocean.", year: 1805 },
+      { text: "The Gold Rush begins in California.", year: 1848 },
+    ]
+  },
+  {
+    events: [
+      { text: "Leonardo da Vinci begins painting the Mona Lisa.", year: 1503 },
+      { text: "Galileo faces the Roman Inquisition for supporting heliocentrism.", year: 1633 },
+      { text: "Isaac Newton discovers the law of gravity.", year: 1687 },
+      { text: "The first vaccination is given by Edward Jenner.", year: 1796 },
+      { text: "Charles Dickens publishes A Tale of Two Cities.", year: 1859 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Hindenburg airship disaster occurs in New Jersey.", year: 1937 },
+      { text: "Japan attacks Pearl Harbor, drawing the U.S. into World War II.", year: 1941 },
+      { text: "The Marshall Plan is enacted to rebuild postwar Europe.", year: 1948 },
+      { text: "The first commercial jet airline service begins.", year: 1952 },
+      { text: "The Chernobyl nuclear disaster occurs in Ukraine.", year: 1986 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Panama Canal Zone is established under U.S. control.", year: 1903 },
+      { text: "The Great Depression reaches its worst point.", year: 1933 },
+      { text: "Jackie Robinson breaks baseball's color barrier.", year: 1947 },
+      { text: "The Vietnam War escalates with the Gulf of Tonkin Resolution.", year: 1964 },
+      { text: "The Euro currency is introduced in Europe.", year: 1999 },
+    ]
+  },
+  {
+    events: [
+      { text: "The ancient city of Pompeii is destroyed by Mount Vesuvius.", year: 79 },
+      { text: "The Black Death ravages Europe.", year: 1347 },
+      { text: "The printing press revolutionizes communication.", year: 1440 },
+      { text: "The Industrial Revolution begins in Britain.", year: 1760 },
+      { text: "The first email is sent over ARPANET.", year: 1971 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Sistine Chapel ceiling is completed by Michelangelo.", year: 1512 },
+      { text: "The Taj Mahal is completed in India.", year: 1653 },
+      { text: "The first daily newspaper is published in London.", year: 1702 },
+      { text: "The first photograph of a person is taken in Paris.", year: 1838 },
+      { text: "The first modern skyscraper is built in Chicago.", year: 1885 },
+    ]
+  },
+  {
+    events: [
+      { text: "Ferdinand Magellan's expedition begins circumnavigating the globe.", year: 1519 },
+      { text: "The Thirty Years' War devastates Central Europe.", year: 1618 },
+      { text: "The American Constitution is ratified.", year: 1788 },
+      { text: "The first transatlantic telegraph cable is completed.", year: 1858 },
+      { text: "The first commercial radio broadcast airs in Pittsburgh.", year: 1920 },
+    ]
+  },
+  {
+    events: [
+      { text: "The Emancipation Proclamation frees enslaved people in Confederate states.", year: 1863 },
+      { text: "Thomas Edison lights up lower Manhattan with electric power.", year: 1882 },
+      { text: "Henry Ford introduces the Model T automobile.", year: 1908 },
+      { text: "The United Nations adopts the Universal Declaration of Human Rights.", year: 1948 },
+      { text: "The World Wide Web becomes publicly available.", year: 1991 },
+    ]
+  },
+  {
+    events: [
+      { text: "The construction of the Great Pyramid of Giza is completed.", year: -2560 },
+      { text: "The Roman Republic is established.", year: -509 },
+      { text: "Julius Caesar is assassinated on the Ides of March.", year: -44 },
+      { text: "The fall of the Western Roman Empire.", year: 476 },
+      { text: "Charlemagne is crowned Emperor of the Romans.", year: 800 },
+    ]
+  },
+  {
+    events: [
+      { text: "The first personal computer, the Altair 8800, is released.", year: 1975 },
+      { text: "The Space Shuttle Columbia makes its maiden flight.", year: 1981 },
+      { text: "The World Wide Web is invented at CERN.", year: 1989 },
+      { text: "Google is founded by Larry Page and Sergey Brin.", year: 1998 },
+      { text: "The iPhone is released, revolutionizing smartphones.", year: 2007 },
     ]
   },
 ];
@@ -1112,52 +1364,502 @@ const WAVELENGTH_POOL = [
       { word: "JOURNALIST", left: "LIES", right: "PURE TRUTH", target: 65, tolerance: 12 },
     ]
   },
+  {
+    rounds: [
+      { word: "GUITAR", left: "WHISPER QUIET", right: "DEAFENING", target: 45, tolerance: 12 },
+      { word: "POND", left: "PUDDLE", right: "OCEAN", target: 25, tolerance: 12 },
+      { word: "PROFESSOR", left: "STUDENT", right: "GENIUS", target: 68, tolerance: 12 },
+      { word: "COPPER", left: "WORTHLESS", right: "PRICELESS", target: 30, tolerance: 12 },
+      { word: "NOVEL", left: "HAIKU", right: "ENCYCLOPEDIA", target: 55, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "WARM", left: "FREEZING", right: "BOILING", target: 42, tolerance: 12 },
+      { word: "CREEK", left: "PUDDLE", right: "RIVER", target: 40, tolerance: 12 },
+      { word: "ANXIOUS", left: "CALM", right: "PANICKED", target: 65, tolerance: 12 },
+      { word: "BRUNCH", left: "BREAKFAST", right: "DINNER", target: 35, tolerance: 12 },
+      { word: "SEDAN", left: "BICYCLE", right: "TANK", target: 40, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "VIOLIN", left: "BASS DRUM", right: "PICCOLO", target: 75, tolerance: 12 },
+      { word: "HILL", left: "FLAT GROUND", right: "MOUNTAIN", target: 35, tolerance: 12 },
+      { word: "ANNOYED", left: "PLEASED", right: "FURIOUS", target: 55, tolerance: 12 },
+      { word: "SPARROW", left: "INSECT", right: "EAGLE", target: 30, tolerance: 12 },
+      { word: "ESSAY", left: "TWEET", right: "NOVEL", target: 40, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "TWILIGHT", left: "PITCH BLACK", right: "BLINDING LIGHT", target: 30, tolerance: 12 },
+      { word: "CHEF", left: "AMATEUR", right: "MASTER", target: 70, tolerance: 12 },
+      { word: "MARBLE", left: "FEATHER", right: "BOULDER", target: 25, tolerance: 12 },
+      { word: "NOSTALGIA", left: "JOY", right: "SORROW", target: 45, tolerance: 12 },
+      { word: "SUBURB", left: "WILDERNESS", right: "DOWNTOWN", target: 65, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "APPRENTICE", left: "NOVICE", right: "MASTER", target: 35, tolerance: 12 },
+      { word: "GALE", left: "CALM", right: "TORNADO", target: 60, tolerance: 12 },
+      { word: "LIME", left: "SWEET", right: "SOUR", target: 72, tolerance: 12 },
+      { word: "KITTEN", left: "BABY", right: "ADULT", target: 25, tolerance: 12 },
+      { word: "SNACK", left: "CRUMB", right: "FEAST", target: 30, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CELLO", left: "PICCOLO", right: "TUBA", target: 55, tolerance: 12 },
+      { word: "FOG", left: "CLEAR SKY", right: "BLIZZARD", target: 35, tolerance: 12 },
+      { word: "IMPRESSED", left: "BORED", right: "AMAZED", target: 65, tolerance: 12 },
+      { word: "TRUCK", left: "SCOOTER", right: "FREIGHT TRAIN", target: 50, tolerance: 12 },
+      { word: "HAMLET", left: "HOUSE", right: "CITY", target: 25, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "SIMMER", left: "FROZEN", right: "BOILING", target: 70, tolerance: 12 },
+      { word: "MURMUR", left: "SILENCE", right: "SCREAM", target: 25, tolerance: 12 },
+      { word: "DENIM", left: "SILK", right: "STEEL", target: 45, tolerance: 12 },
+      { word: "TIGER", left: "HAMSTER", right: "ELEPHANT", target: 45, tolerance: 12 },
+      { word: "CHAPTER", left: "SENTENCE", right: "BOOK", target: 55, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "MAPLE", left: "SHRUB", right: "REDWOOD", target: 40, tolerance: 12 },
+      { word: "LIEUTENANT", left: "PRIVATE", right: "GENERAL", target: 40, tolerance: 12 },
+      { word: "CHILI PEPPER", left: "MILD", right: "GHOST PEPPER", target: 50, tolerance: 12 },
+      { word: "KAYAK", left: "RAFT", right: "CRUISE SHIP", target: 22, tolerance: 12 },
+      { word: "NERVOUS", left: "RELAXED", right: "TERRIFIED", target: 55, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "SUNRISE", left: "MIDNIGHT", right: "NOON", target: 30, tolerance: 12 },
+      { word: "SATELLITE", left: "KITE", right: "STAR", target: 65, tolerance: 12 },
+      { word: "SKEPTICAL", left: "GULLIBLE", right: "CYNICAL", target: 65, tolerance: 12 },
+      { word: "APARTMENT", left: "CLOSET", right: "MANSION", target: 40, tolerance: 12 },
+      { word: "STREAM", left: "TRICKLE", right: "WATERFALL", target: 35, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CHARCOAL", left: "WHITE", right: "BLACK", target: 82, tolerance: 12 },
+      { word: "MEMOIR", left: "FICTION", right: "TEXTBOOK", target: 55, tolerance: 12 },
+      { word: "FALCON", left: "SNAIL", right: "CHEETAH", target: 72, tolerance: 12 },
+      { word: "TODDLER", left: "NEWBORN", right: "TEENAGER", target: 25, tolerance: 12 },
+      { word: "LAKE", left: "POND", right: "OCEAN", target: 35, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "UKULELE", left: "SILENCE", right: "ROCK CONCERT", target: 25, tolerance: 12 },
+      { word: "CONCERNED", left: "CAREFREE", right: "PANICKED", target: 50, tolerance: 12 },
+      { word: "BRONZE AGE", left: "STONE AGE", right: "SPACE AGE", target: 25, tolerance: 12 },
+      { word: "TOWN", left: "VILLAGE", right: "METROPOLIS", target: 40, tolerance: 12 },
+      { word: "DAGGER", left: "NEEDLE", right: "SWORD", target: 45, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "ECHO", left: "SILENCE", right: "SIREN", target: 30, tolerance: 12 },
+      { word: "AMBER", left: "PALE YELLOW", right: "DEEP RED", target: 45, tolerance: 12 },
+      { word: "ADMIRE", left: "DISLIKE", right: "WORSHIP", target: 60, tolerance: 12 },
+      { word: "ROWBOAT", left: "SURFBOARD", right: "YACHT", target: 30, tolerance: 12 },
+      { word: "WEDNESDAY", left: "MONDAY", right: "FRIDAY", target: 50, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "SLEET", left: "RAIN", right: "SNOW", target: 65, tolerance: 12 },
+      { word: "CAPTAIN", left: "RECRUIT", right: "ADMIRAL", target: 55, tolerance: 12 },
+      { word: "SANDSTONE", left: "CLAY", right: "GRANITE", target: 45, tolerance: 12 },
+      { word: "CURIOUS", left: "APATHETIC", right: "OBSESSED", target: 55, tolerance: 12 },
+      { word: "LANTERN", left: "MATCH", right: "SPOTLIGHT", target: 35, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "TROT", left: "STANDING", right: "GALLOP", target: 45, tolerance: 12 },
+      { word: "RESPECT", left: "CONTEMPT", right: "REVERENCE", target: 65, tolerance: 12 },
+      { word: "GRAPEFRUIT", left: "CANDY", right: "LEMON", target: 60, tolerance: 12 },
+      { word: "ISLAND", left: "CONTINENT", right: "GRAIN OF SAND", target: 30, tolerance: 12 },
+      { word: "EVENING", left: "DAWN", right: "MIDNIGHT", target: 65, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "PLATINUM", left: "COMMON", right: "RARE", target: 80, tolerance: 12 },
+      { word: "WALTZ", left: "STANDING STILL", right: "BREAKDANCING", target: 35, tolerance: 12 },
+      { word: "SHOWER", left: "CLEAR SKY", right: "THUNDERSTORM", target: 35, tolerance: 12 },
+      { word: "CORRIDOR", left: "CLOSET", right: "HIGHWAY", target: 30, tolerance: 12 },
+      { word: "SAPPHIRE", left: "PEBBLE", right: "DIAMOND", target: 72, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "SMIRK", left: "FROWN", right: "BELLY LAUGH", target: 35, tolerance: 12 },
+      { word: "ACCORDION", left: "WHISPER", right: "CANNON", target: 35, tolerance: 12 },
+      { word: "CAVE", left: "SURFACE", right: "CORE OF EARTH", target: 15, tolerance: 12 },
+      { word: "OCTOBER", left: "SUMMER", right: "WINTER", target: 60, tolerance: 12 },
+      { word: "COYOTE", left: "MOUSE", right: "WOLF", target: 65, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "MIST", left: "CLEAR", right: "OPAQUE", target: 30, tolerance: 12 },
+      { word: "BASSOON", left: "HIGH PITCH", right: "LOW PITCH", target: 72, tolerance: 12 },
+      { word: "SILK", left: "ROUGH", right: "SMOOTH", target: 85, tolerance: 12 },
+      { word: "MAYOR", left: "CITIZEN", right: "PRESIDENT", target: 45, tolerance: 12 },
+      { word: "LAMP", left: "CANDLE", right: "SEARCHLIGHT", target: 35, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GLACIER", left: "ICE CUBE", right: "ICE AGE", target: 65, tolerance: 12 },
+      { word: "POLITE", left: "RUDE", right: "SAINTLY", target: 55, tolerance: 12 },
+      { word: "EAGLE", left: "SPARROW", right: "ALBATROSS", target: 60, tolerance: 12 },
+      { word: "SPRINKLE", left: "DROP", right: "FLOOD", target: 20, tolerance: 12 },
+      { word: "MANSION", left: "SHED", right: "CASTLE", target: 70, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "DUNE", left: "PEBBLE", right: "MOUNTAIN", target: 25, tolerance: 12 },
+      { word: "TRUMPET", left: "WHISPER", right: "FOGHORN", target: 55, tolerance: 12 },
+      { word: "JITTERY", left: "CALM", right: "HYSTERIA", target: 50, tolerance: 12 },
+      { word: "HAWK", left: "SPARROW", right: "CONDOR", target: 55, tolerance: 12 },
+      { word: "PUDDLE", left: "DEWDROP", right: "LAKE", target: 25, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "STROLL", left: "STANDING", right: "RUNNING", target: 30, tolerance: 12 },
+      { word: "VELVET", left: "SANDPAPER", right: "SILK", target: 75, tolerance: 12 },
+      { word: "OAK", left: "DANDELION", right: "SEQUOIA", target: 50, tolerance: 12 },
+      { word: "PROUD", left: "ASHAMED", right: "ARROGANT", target: 60, tolerance: 12 },
+      { word: "CAMPFIRE", left: "MATCH", right: "INFERNO", target: 30, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BROOK", left: "PUDDLE", right: "RIVER", target: 30, tolerance: 12 },
+      { word: "FLUTE", left: "BASS", right: "SOPRANO", target: 80, tolerance: 12 },
+      { word: "PLEASED", left: "FURIOUS", right: "OVERJOYED", target: 55, tolerance: 12 },
+      { word: "RANCH", left: "APARTMENT", right: "ESTATE", target: 55, tolerance: 12 },
+      { word: "PONY", left: "MOUSE", right: "HORSE", target: 70, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "HAZE", left: "CRYSTAL CLEAR", right: "PITCH BLACK", target: 30, tolerance: 12 },
+      { word: "COLONEL", left: "PRIVATE", right: "GENERAL", target: 72, tolerance: 12 },
+      { word: "ALUMINUM", left: "PLASTIC", right: "TITANIUM", target: 45, tolerance: 12 },
+      { word: "UNEASY", left: "CONTENT", right: "TERRIFIED", target: 40, tolerance: 12 },
+      { word: "BONFIRE", left: "CANDLE", right: "WILDFIRE", target: 40, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "MARE", left: "FOAL", right: "STALLION", target: 55, tolerance: 12 },
+      { word: "TROMBONE", left: "PICCOLO", right: "TUBA", target: 60, tolerance: 12 },
+      { word: "GRATEFUL", left: "RESENTFUL", right: "DEVOTED", target: 65, tolerance: 12 },
+      { word: "CABIN", left: "TENT", right: "HOTEL", target: 35, tolerance: 12 },
+      { word: "RAPIDS", left: "POND", right: "TSUNAMI", target: 50, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BURLAP", left: "SILK", right: "CANVAS", target: 60, tolerance: 12 },
+      { word: "BASIN", left: "TEACUP", right: "LAKE", target: 40, tolerance: 12 },
+      { word: "HOPEFUL", left: "DESPAIR", right: "CERTAIN", target: 55, tolerance: 12 },
+      { word: "ROBIN", left: "BEE", right: "SWAN", target: 35, tolerance: 12 },
+      { word: "BULB", left: "FIREFLY", right: "FLOODLIGHT", target: 30, tolerance: 12 },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GARNET", left: "GLASS", right: "RUBY", target: 60, tolerance: 12 },
+      { word: "COAST", left: "LANDLOCKED", right: "OPEN OCEAN", target: 30, tolerance: 12 },
+      { word: "RELIEVED", left: "WORRIED", right: "EUPHORIC", target: 55, tolerance: 12 },
+      { word: "CLARINET", left: "WHISPER", right: "TRUMPET", target: 50, tolerance: 12 },
+      { word: "TERRACE", left: "BALCONY", right: "FIELD", target: 40, tolerance: 12 },
+    ]
+  },
 ];
 
 const MIMIC_POOL = [
   {
     rounds: [
-      { word: "CRANE", clues: ["Easy: A large bird with a long neck", "Medium: Also a machine used on construction sites", "Hard: This word can describe rotating your neck to see better"] },
-      { word: "BLAZE", clues: ["Easy: A very bright, intense fire", "Medium: Also means to mark a trail through wilderness", "Hard: This word appears in the names of several sports teams"] },
-      { word: "PRISM", clues: ["Easy: A transparent shape that bends light into a rainbow", "Medium: Also a metaphor for different perspectives on one thing", "Hard: Pink Floyd used one on a famous album cover"] },
-      { word: "GROVE", clues: ["Easy: A small group of trees", "Medium: A famous classical composer's first name is also this", "Hard: There is a city in California with this name that was once famous for citrus"] },
-      { word: "FLINT", clues: ["Easy: A hard rock used to make fire by striking", "Medium: A city in Michigan known for a water crisis", "Hard: Also a first name — one cowboy character uses it"] },
+      { word: "CRANE", clues: ["Easy: A large bird with a long neck.", "Medium: Also a machine used on construction sites.", "Hard: This word can describe rotating your neck to see better."] },
+      { word: "BLAZE", clues: ["Easy: A very bright, intense fire.", "Medium: Also means to mark a trail through wilderness.", "Hard: This word appears in the names of several sports teams."] },
+      { word: "PRISM", clues: ["Easy: A transparent shape that bends light into a rainbow.", "Medium: Also a metaphor for different perspectives on one thing.", "Hard: Pink Floyd used one on a famous album cover."] },
+      { word: "GROVE", clues: ["Easy: A small group of trees.", "Medium: A common place name in many American cities.", "Hard: Often paired with citrus or olive in farming contexts."] },
+      { word: "FLINT", clues: ["Easy: A hard rock used to make fire by striking.", "Medium: A city in Michigan known for a water crisis.", "Hard: Also a common surname and first name in fiction."] },
     ]
   },
   {
     rounds: [
-      { word: "FROST", clues: ["Easy: Ice crystals that form on cold surfaces", "Medium: A famous American poet shares this name", "Hard: Can describe a cold, unfriendly personality"] },
-      { word: "LATCH", clues: ["Easy: A small catch that fastens a door or gate", "Medium: To 'latch onto' something means to cling to it", "Hard: Babies do this when beginning to breastfeed"] },
-      { word: "QUIRK", clues: ["Easy: An unusual habit or feature of someone", "Medium: A small, unexpected twist in a design or system", "Hard: Rhymes with 'work' and 'smirk'"] },
-      { word: "SHAWL", clues: ["Easy: A piece of fabric wrapped around the shoulders", "Medium: Often associated with grandmothers and cold evenings", "Hard: One letter different from a place to fish"] },
-      { word: "KNEEL", clues: ["Easy: To go down on one or both knees", "Medium: Athletes do this as a form of protest or respect", "Hard: A knight does this before a king"] },
+      { word: "FROST", clues: ["Easy: Ice crystals that form on cold surfaces.", "Medium: A famous American poet shares this name.", "Hard: Can describe a cold, unfriendly personality."] },
+      { word: "LATCH", clues: ["Easy: A small catch that fastens a door or gate.", "Medium: To 'latch onto' something means to cling to it.", "Hard: Babies do this when beginning to breastfeed."] },
+      { word: "QUIRK", clues: ["Easy: An unusual habit or feature of someone.", "Medium: A small, unexpected twist in a design or system.", "Hard: Rhymes with 'work' and 'smirk'."] },
+      { word: "SHAWL", clues: ["Easy: A piece of fabric wrapped around the shoulders.", "Medium: Often associated with grandmothers and cold evenings.", "Hard: One letter different from a word meaning 'shallow'."] },
+      { word: "KNEEL", clues: ["Easy: To go down on one or both knees.", "Medium: Athletes do this as a form of protest or respect.", "Hard: A knight does this before a monarch."] },
     ]
   },
   {
     rounds: [
-      { word: "DWARF", clues: ["Easy: A mythical small being, often a miner in fairy tales", "Medium: What astronomers call a small type of star", "Hard: Snow White's companions are seven of these"] },
-      { word: "PLUCK", clues: ["Easy: To pull something off or out sharply", "Medium: Also means courage and determination", "Hard: A musician does this to a guitar string"] },
-      { word: "GRAZE", clues: ["Easy: When animals eat grass directly from a field", "Medium: Also means to lightly scrape skin", "Hard: Cows, sheep, and horses all do this daily"] },
-      { word: "SHARD", clues: ["Easy: A sharp, broken piece of glass or pottery", "Medium: A famous London skyscraper shares this name", "Hard: Archaeologists spend hours sorting these from dig sites"] },
-      { word: "TROVE", clues: ["Easy: A collection of valuable things", "Medium: Usually paired with the word 'treasure'", "Hard: From Old French, related to the verb 'to find'"] },
+      { word: "DWARF", clues: ["Easy: A mythical small being, often a miner in fairy tales.", "Medium: What astronomers call a small type of star.", "Hard: Snow White's companions are seven of these."] },
+      { word: "PLUCK", clues: ["Easy: To pull something off or out sharply.", "Medium: Also means courage and determination.", "Hard: A musician does this to a guitar string."] },
+      { word: "GRAZE", clues: ["Easy: When animals eat grass directly from a field.", "Medium: Also means to lightly scrape skin.", "Hard: Cows, sheep, and horses all do this daily."] },
+      { word: "SHARD", clues: ["Easy: A sharp, broken piece of glass or pottery.", "Medium: A famous London skyscraper shares this name.", "Hard: Archaeologists spend hours sorting these from dig sites."] },
+      { word: "TROVE", clues: ["Easy: A collection of valuable things.", "Medium: Usually paired with the word 'treasure'.", "Hard: From Old French, related to the verb 'to find'."] },
     ]
   },
   {
     rounds: [
-      { word: "BRINE", clues: ["Easy: Very salty water, like the ocean", "Medium: Used to preserve food like pickles and olives", "Hard: Rhymes with 'wine' and 'mine'"] },
-      { word: "CLEFT", clues: ["Easy: A narrow opening or split in rock or a surface", "Medium: A medical condition affecting the lip or palate", "Hard: Also describes a dimple-like feature on a chin"] },
-      { word: "SMELT", clues: ["Easy: Past tense of 'smell' (informal)", "Medium: Also a small silver fish found in cold waters", "Hard: The process of extracting metal from ore"] },
-      { word: "GLYPH", clues: ["Easy: A carved or written symbol, like ancient Egyptian writing", "Medium: In design, any visual character or icon", "Hard: Emojis are sometimes called this in typography"] },
-      { word: "NOTCH", clues: ["Easy: A small V-shaped cut in a surface", "Medium: A level or degree — 'up a notch' means better", "Hard: The gap between mountains in a ridge is this"] },
+      { word: "BRINE", clues: ["Easy: Very salty water, like the ocean.", "Medium: Used to preserve food like pickles and olives.", "Hard: Rhymes with 'wine' and 'mine'."] },
+      { word: "CLEFT", clues: ["Easy: A narrow opening or split in rock or a surface.", "Medium: A medical condition affecting the lip or palate.", "Hard: Also describes a dimple-like feature on a chin."] },
+      { word: "SMELT", clues: ["Easy: A small silver fish found in cold waters.", "Medium: Also the process of extracting metal from ore.", "Hard: Can be the past tense of a common sensory verb."] },
+      { word: "GLYPH", clues: ["Easy: A carved or written symbol, like ancient Egyptian writing.", "Medium: In design, any visual character or icon.", "Hard: Emojis are sometimes called this in typography."] },
+      { word: "NOTCH", clues: ["Easy: A small V-shaped cut in a surface.", "Medium: A level or degree — 'up a notch' means better.", "Hard: A gap between mountains in a ridge is called this."] },
     ]
   },
   {
     rounds: [
-      { word: "VIVID", clues: ["Easy: Very bright, clear, or lifelike", "Medium: Often used to describe a striking dream", "Hard: From Latin 'vivere', meaning to live"] },
-      { word: "SCALD", clues: ["Easy: To burn with hot liquid or steam", "Medium: A sharp, severe criticism is also called this", "Hard: You do this to milk before adding it to some recipes"] },
-      { word: "KNOLL", clues: ["Easy: A small round hill", "Medium: The Grassy ___ is famous from JFK conspiracy theories", "Hard: Rhymes with 'toll' and 'roll'"] },
-      { word: "BROTH", clues: ["Easy: A thin soup made from simmered meat or vegetables", "Medium: The base for many soups and risottos", "Hard: In Scotland, a traditional soup is called 'cock-a-leekie'—this is its liquid component"] },
-      { word: "WRATH", clues: ["Easy: Extreme anger or fury", "Medium: One of the seven deadly sins", "Hard: The Grapes of ___: a Steinbeck classic"] },
+      { word: "VIVID", clues: ["Easy: Very bright, clear, or lifelike.", "Medium: Often used to describe a striking dream.", "Hard: From Latin 'vivere', meaning to live."] },
+      { word: "SCALD", clues: ["Easy: To burn with hot liquid or steam.", "Medium: Cooks do this to tomatoes before peeling them.", "Hard: You do this to milk before adding it to some recipes."] },
+      { word: "KNOLL", clues: ["Easy: A small round hill.", "Medium: The Grassy ___ is famous from JFK conspiracy theories.", "Hard: Rhymes with 'toll' and 'roll'."] },
+      { word: "BROTH", clues: ["Easy: A thin soup made from simmered meat or vegetables.", "Medium: The base for many soups and risottos.", "Hard: Distinguished from stock by being made primarily from meat."] },
+      { word: "WRATH", clues: ["Easy: Extreme anger or fury.", "Medium: One of the seven deadly sins.", "Hard: The Grapes of ___: a Steinbeck classic."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GLEAM", clues: ["Easy: A faint or brief light.", "Medium: Often describes the shine of polished metal.", "Hard: Rhymes with 'dream' and 'stream'."] },
+      { word: "PERCH", clues: ["Easy: A place where a bird sits.", "Medium: Also a type of freshwater fish.", "Hard: Can mean to sit on something high or narrow."] },
+      { word: "VAULT", clues: ["Easy: A secure room for storing valuables.", "Medium: Also a gymnastic move over an obstacle.", "Hard: In architecture, an arched ceiling structure."] },
+      { word: "DRIFT", clues: ["Easy: To move slowly without direction.", "Medium: Snow piled up by wind forms one of these.", "Hard: Also the meaning shift of a word over time."] },
+      { word: "CLASP", clues: ["Easy: To grip something tightly.", "Medium: A fastener on jewelry or bags.", "Hard: Rhymes with 'grasp'."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "MARSH", clues: ["Easy: A type of wetland with grassy vegetation.", "Medium: Often found near rivers and coastlines.", "Hard: Also a common English surname."] },
+      { word: "VIGOR", clues: ["Easy: Physical strength and energy.", "Medium: A synonym for vitality or liveliness.", "Hard: The British spelling adds a 'u'."] },
+      { word: "BLUFF", clues: ["Easy: To pretend to have a stronger position than you do.", "Medium: Also a steep cliff or riverbank.", "Hard: A key strategy in poker."] },
+      { word: "SPORE", clues: ["Easy: How mushrooms and ferns reproduce.", "Medium: A tiny cell that can grow into a new organism.", "Hard: Can survive extreme heat and dryness."] },
+      { word: "GAVEL", clues: ["Easy: A small hammer used by a judge.", "Medium: Banged on a desk to call for order.", "Hard: Also used by auctioneers."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "FJORD", clues: ["Easy: A long, narrow inlet of sea between steep cliffs.", "Medium: Norway is famous for having many of these.", "Hard: Formed by glacial erosion over thousands of years."] },
+      { word: "CHALK", clues: ["Easy: Used to write on a blackboard.", "Medium: Made from soft limestone or calcium carbonate.", "Hard: Gymnasts and climbers rub this on their hands."] },
+      { word: "STUMP", clues: ["Easy: What remains after a tree is cut down.", "Medium: To baffle or confuse someone.", "Hard: In cricket, one of the three vertical posts."] },
+      { word: "REIGN", clues: ["Easy: The period a king or queen rules.", "Medium: Sounds exactly like a weather phenomenon.", "Hard: Queen Elizabeth II had the longest one in British history."] },
+      { word: "PULSE", clues: ["Easy: The rhythmic beating of your heart.", "Medium: Also refers to edible seeds like lentils and chickpeas.", "Hard: Doctors check this at your wrist or neck."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BRAVE", clues: ["Easy: Showing courage in the face of danger.", "Medium: A Disney/Pixar film about a Scottish princess.", "Hard: Also an older term for a Native American warrior."] },
+      { word: "LODGE", clues: ["Easy: A small house in a wilderness area.", "Medium: A local branch of an organization like the Freemasons.", "Hard: Also means to become stuck in a narrow space."] },
+      { word: "CRUST", clues: ["Easy: The outer layer of bread.", "Medium: Also the outermost layer of the Earth.", "Hard: Pizza lovers debate thin vs. thick versions of this."] },
+      { word: "STEEL", clues: ["Easy: An alloy of iron and carbon.", "Medium: Pittsburgh was once known as the city of this.", "Hard: Can also mean to mentally prepare yourself."] },
+      { word: "LYNCH", clues: ["Easy: A famous film director named David.", "Medium: Also a common Irish surname.", "Hard: Directed Twin Peaks and Mulholland Drive."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GRIME", clues: ["Easy: Dirt or filth built up on a surface.", "Medium: Also a genre of electronic music from London.", "Hard: Rhymes with 'time' and 'climb'."] },
+      { word: "SWORN", clues: ["Easy: Having made a solemn promise or oath.", "Medium: Past participle of 'swear'.", "Hard: Enemies who are this are considered permanent rivals."] },
+      { word: "PLUME", clues: ["Easy: A large, showy feather.", "Medium: A column of smoke rising into the air.", "Hard: Writers once dipped these in ink to write."] },
+      { word: "FLUKE", clues: ["Easy: A lucky accident or coincidence.", "Medium: Also the flat tail part of a whale.", "Hard: In biology, a type of parasitic flatworm."] },
+      { word: "SCOUT", clues: ["Easy: Someone sent ahead to gather information.", "Medium: A youth organization focused on outdoor skills.", "Hard: In baseball, someone who evaluates players' talent."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CACHE", clues: ["Easy: A hidden store of supplies or valuables.", "Medium: Your browser stores temporary data in one.", "Hard: Pronounced the same as 'cash'."] },
+      { word: "LEDGE", clues: ["Easy: A narrow horizontal surface jutting from a wall.", "Medium: Rock climbers rest on these during ascents.", "Hard: A window often has one of these."] },
+      { word: "SWAMP", clues: ["Easy: A wetland area with standing water and trees.", "Medium: Also means to overwhelm or flood.", "Hard: Shrek famously lives in one of these."] },
+      { word: "TALON", clues: ["Easy: The sharp claw of a bird of prey.", "Medium: Eagles and hawks use these to catch food.", "Hard: Also a common name for villains in fiction."] },
+      { word: "BRISK", clues: ["Easy: Quick and energetic.", "Medium: Often used to describe a cold, refreshing wind.", "Hard: A ___ walk is faster than a stroll."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "MANOR", clues: ["Easy: A large country house with grounds.", "Medium: The main house on a feudal estate.", "Hard: Batman lives in Wayne ___."] },
+      { word: "CRAFT", clues: ["Easy: An activity involving skill in making things by hand.", "Medium: Also a word for a boat or aircraft.", "Hard: Witchcraft ends with this word."] },
+      { word: "BLOOM", clues: ["Easy: When a flower opens its petals.", "Medium: A sudden growth or flourishing of something.", "Hard: The protagonist of James Joyce's Ulysses."] },
+      { word: "RIDGE", clues: ["Easy: A long narrow hilltop or mountain crest.", "Medium: The raised line where two roof surfaces meet.", "Hard: Potato chips with grooves are called this."] },
+      { word: "SPIRE", clues: ["Easy: A tall pointed structure on top of a church.", "Medium: The tallest part of many Gothic cathedrals.", "Hard: Rhymes with 'fire' and 'hire'."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CRUDE", clues: ["Easy: In a rough or unrefined state.", "Medium: Oil in its natural form is called this.", "Hard: Can also mean offensive or vulgar."] },
+      { word: "HASTE", clues: ["Easy: Excessive speed or urgency.", "Medium: 'Make ___, not waste' is a common saying.", "Hard: A famous proverb says this 'makes waste'."] },
+      { word: "PYLON", clues: ["Easy: A tall structure supporting electrical power lines.", "Medium: Cone-shaped markers used on roads and sports fields.", "Hard: Also a gateway structure in ancient Egyptian temples."] },
+      { word: "SHRUB", clues: ["Easy: A small woody plant, smaller than a tree.", "Medium: Found in gardens and hedgerows.", "Hard: Also a type of vinegar-based drinking syrup."] },
+      { word: "TROUT", clues: ["Easy: A freshwater fish popular with anglers.", "Medium: Often found in cold mountain streams.", "Hard: Rainbow and brown are two common varieties."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CIDER", clues: ["Easy: A drink made from pressed apples.", "Medium: Can be alcoholic or non-alcoholic.", "Hard: Particularly popular in England and Normandy."] },
+      { word: "DROIT", clues: ["Easy: A French word meaning 'right' or 'law'.", "Medium: Used in English legal terminology.", "Hard: Five letters, starts with D, ends with T."] },
+      { word: "OLIVE", clues: ["Easy: A small oval fruit used to make oil.", "Medium: A dull yellowish-green color.", "Hard: Popeye's girlfriend is named this."] },
+      { word: "THYME", clues: ["Easy: A fragrant herb used in cooking.", "Medium: Sounds exactly like a word for clock measurement.", "Hard: A key ingredient in bouquet garni."] },
+      { word: "IVORY", clues: ["Easy: The hard white material of elephant tusks.", "Medium: Also a shade of white.", "Hard: Piano keys were historically made from this."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "EMBER", clues: ["Easy: A glowing piece of coal or wood in a dying fire.", "Medium: Often seen after a campfire burns down.", "Hard: The month of September, November, and December all contain this word."] },
+      { word: "LLAMA", clues: ["Easy: A South American animal related to the camel.", "Medium: Known for spitting when annoyed.", "Hard: Used as pack animals in the Andes mountains."] },
+      { word: "QUOTA", clues: ["Easy: A limited quantity of something that is allowed.", "Medium: Sales teams are often given one to meet.", "Hard: Immigration policies sometimes set these."] },
+      { word: "PIXEL", clues: ["Easy: The smallest unit of a digital image.", "Medium: More of these means higher resolution.", "Hard: Short for 'picture element'."] },
+      { word: "YACHT", clues: ["Easy: A large, luxurious sailing boat.", "Medium: Associated with wealthy people and racing.", "Hard: The word comes from Dutch."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "WALTZ", clues: ["Easy: A ballroom dance in three-quarter time.", "Medium: Originated in Vienna in the 18th century.", "Hard: Strauss composed many famous ones."] },
+      { word: "MOOSE", clues: ["Easy: The largest member of the deer family.", "Medium: Has large, flat antlers and lives in northern forests.", "Hard: The plural is the same as the singular."] },
+      { word: "BADGE", clues: ["Easy: A small piece of metal or cloth showing identity.", "Medium: Police officers and scouts both wear these.", "Hard: Also used figuratively as a mark of achievement."] },
+      { word: "NERVE", clues: ["Easy: A fiber that transmits signals in the body.", "Medium: Having a lot of this means being bold or audacious.", "Hard: Can also mean to cause someone anxiety."] },
+      { word: "TORCH", clues: ["Easy: A portable light source, often with a flame.", "Medium: The British word for what Americans call a flashlight.", "Hard: The Olympic flame is carried on one of these."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BLISS", clues: ["Easy: Supreme happiness or joy.", "Medium: Ignorance is sometimes said to be this.", "Hard: Rhymes with 'kiss' and 'miss'."] },
+      { word: "FORGE", clues: ["Easy: A workshop where metal is heated and shaped.", "Medium: Also means to create something with effort.", "Hard: Can mean to produce a fraudulent copy."] },
+      { word: "CAULK", clues: ["Easy: A waterproof filler used to seal joints.", "Medium: Commonly used around bathtubs and windows.", "Hard: The 'l' in this word is silent."] },
+      { word: "HEIST", clues: ["Easy: A robbery, especially of a bank or museum.", "Medium: The plot of many action movies.", "Hard: Ocean's Eleven is a famous ___ film."] },
+      { word: "WRUNG", clues: ["Easy: Past tense of 'wring', meaning to squeeze and twist.", "Medium: What you do to a wet towel.", "Hard: Sounds the same as a step on a ladder."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "NYMPH", clues: ["Easy: A mythological spirit of nature.", "Medium: In Greek myths, they inhabit forests and streams.", "Hard: Also the immature form of certain insects."] },
+      { word: "PLAZA", clues: ["Easy: A public square or open space in a city.", "Medium: Often a shopping center in American English.", "Hard: From Spanish, meaning a broad open area."] },
+      { word: "TIARA", clues: ["Easy: A jeweled crown worn by royalty or pageant winners.", "Medium: Smaller and more delicate than a full crown.", "Hard: Brides sometimes wear these at weddings."] },
+      { word: "ROGUE", clues: ["Easy: A dishonest or unprincipled person.", "Medium: Also means operating outside normal boundaries.", "Hard: A Star Wars film used this as its subtitle."] },
+      { word: "USHER", clues: ["Easy: A person who shows people to their seats.", "Medium: Also a famous R&B singer.", "Hard: Can mean to guide or escort someone somewhere."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "AGILE", clues: ["Easy: Able to move quickly and easily.", "Medium: A popular software development methodology.", "Hard: Cats and gymnasts are often described as this."] },
+      { word: "CLOAK", clues: ["Easy: A loose outer garment, like a cape.", "Medium: Often associated with mystery and invisibility.", "Hard: '___ and dagger' means secretive or covert."] },
+      { word: "FRANK", clues: ["Easy: Direct and honest in speech.", "Medium: Also a common first name.", "Hard: Another word for a hot dog."] },
+      { word: "KNACK", clues: ["Easy: A skill or talent for doing something.", "Medium: An intuitive ability that seems natural.", "Hard: Rhymes with 'snack' and 'track'."] },
+      { word: "STALE", clues: ["Easy: No longer fresh, especially bread.", "Medium: Can also describe a joke that is overused.", "Hard: In chess, this word precedes 'mate' for a draw."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BIRCH", clues: ["Easy: A tree with distinctive white bark.", "Medium: Its wood is used for furniture and plywood.", "Hard: Was historically used to make canoes."] },
+      { word: "DWELL", clues: ["Easy: To live or reside in a place.", "Medium: To think or talk about something at length.", "Hard: Past tense can be 'dwelt' or 'dwelled'."] },
+      { word: "GUISE", clues: ["Easy: An outward appearance, often deceptive.", "Medium: A disguise drops the first two letters of this word.", "Hard: Rhymes with 'wise' and 'size'."] },
+      { word: "MIRTH", clues: ["Easy: Laughter and fun.", "Medium: A synonym for amusement or merriment.", "Hard: Often paired with 'joy' in holiday greetings."] },
+      { word: "PLANK", clues: ["Easy: A long flat piece of wood.", "Medium: Walking one was a pirate punishment.", "Hard: Also a core-strengthening exercise."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "OASIS", clues: ["Easy: A fertile spot in a desert with water.", "Medium: Also a famous British rock band.", "Hard: Metaphorically, a calm place in a hectic environment."] },
+      { word: "MULCH", clues: ["Easy: Material spread around plants to retain moisture.", "Medium: Often made from bark, leaves, or straw.", "Hard: Gardeners apply this to suppress weeds."] },
+      { word: "HERON", clues: ["Easy: A tall wading bird often seen near water.", "Medium: Stands motionless while fishing.", "Hard: Great blue and grey are common species."] },
+      { word: "STORK", clues: ["Easy: A large wading bird with long legs.", "Medium: In folklore, this bird delivers babies.", "Hard: Migrates thousands of miles between Europe and Africa."] },
+      { word: "QUILT", clues: ["Easy: A warm bed covering made of padded fabric.", "Medium: Made by sewing together layers of material.", "Hard: A traditional craft often done in communal 'bees'."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "WHELK", clues: ["Easy: A type of sea snail with a spiral shell.", "Medium: Commonly found on rocky shores.", "Hard: Eaten as a delicacy in parts of Europe."] },
+      { word: "AZURE", clues: ["Easy: A bright blue color like a clear sky.", "Medium: Microsoft's cloud computing platform is named this.", "Hard: From the Arabic word for lapis lazuli."] },
+      { word: "CREPE", clues: ["Easy: A thin French pancake.", "Medium: Also a type of thin, crinkled fabric.", "Hard: Often filled with Nutella and strawberries."] },
+      { word: "KNAVE", clues: ["Easy: An old word for a dishonest man.", "Medium: Another name for the Jack in a deck of cards.", "Hard: The Knave of Hearts appears in Alice in Wonderland."] },
+      { word: "TUNIC", clues: ["Easy: A loose-fitting garment reaching to the knees.", "Medium: Worn in ancient Rome and Greece.", "Hard: Still part of some military dress uniforms."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GRIMY", clues: ["Easy: Covered with dirt or soot.", "Medium: A word describing something that needs a good scrub.", "Hard: London during the Industrial Revolution was often described this way."] },
+      { word: "PIVOT", clues: ["Easy: A central point on which something turns.", "Medium: In basketball, keeping one foot planted while turning.", "Hard: In business, a fundamental change in strategy."] },
+      { word: "SERUM", clues: ["Easy: The clear part of blood after clotting.", "Medium: A concentrated skincare product.", "Hard: Truth ___ is a fictional drug used in spy movies."] },
+      { word: "FLASK", clues: ["Easy: A container for carrying drinks.", "Medium: Scientists use these in laboratories.", "Hard: A hip version is often associated with secret drinking."] },
+      { word: "GIDDY", clues: ["Easy: Feeling lightheaded or dizzy.", "Medium: Can also mean excitedly happy.", "Hard: Heights can make some people feel this way."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BISON", clues: ["Easy: A large, shaggy North American mammal.", "Medium: Once roamed the Great Plains in millions.", "Hard: Often mistakenly called buffalo."] },
+      { word: "DOUGH", clues: ["Easy: A thick mixture of flour and water used to make bread.", "Medium: Slang for money.", "Hard: Must be kneaded before baking."] },
+      { word: "MANGO", clues: ["Easy: A sweet tropical fruit with orange flesh.", "Medium: Originally from South Asia.", "Hard: India produces the most of these in the world."] },
+      { word: "RAVEN", clues: ["Easy: A large black bird, bigger than a crow.", "Medium: Featured in a famous poem by Edgar Allan Poe.", "Hard: Known for their intelligence and problem-solving."] },
+      { word: "TEMPO", clues: ["Easy: The speed of a piece of music.", "Medium: Measured in beats per minute.", "Hard: Allegro and adagio describe different types of this."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "CEDAR", clues: ["Easy: A type of evergreen tree with fragrant wood.", "Medium: Often used to line closets and chests.", "Hard: The flag of Lebanon features one of these."] },
+      { word: "GHOST", clues: ["Easy: The spirit of a dead person.", "Medium: To suddenly stop communicating with someone.", "Hard: A famous Hamlet scene features one."] },
+      { word: "LUNAR", clues: ["Easy: Relating to the moon.", "Medium: A ___ eclipse happens when Earth blocks sunlight to the moon.", "Hard: The Chinese calendar is based on ___ cycles."] },
+      { word: "PESTO", clues: ["Easy: A green Italian sauce made with basil.", "Medium: Also contains pine nuts, garlic, and Parmesan.", "Hard: The name comes from the Italian word for 'crushed'."] },
+      { word: "VERGE", clues: ["Easy: The edge or border of something.", "Medium: 'On the ___ of' means about to happen.", "Hard: Also the grassy strip beside a British road."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "ABODE", clues: ["Easy: A place of residence or home.", "Medium: A somewhat formal or literary word for where you live.", "Hard: Adobe without the second letter."] },
+      { word: "CHORD", clues: ["Easy: Three or more musical notes played together.", "Medium: 'Strike a ___' means to evoke a feeling.", "Hard: Not to be confused with 'cord', which is a rope."] },
+      { word: "EASEL", clues: ["Easy: A stand used to hold a painting canvas.", "Medium: Found in art studios and classrooms.", "Hard: Comes from the Dutch word for 'donkey'."] },
+      { word: "LEMON", clues: ["Easy: A sour yellow citrus fruit.", "Medium: Slang for a defective product, especially a car.", "Hard: A key ingredient in both lemonade and meringue pie."] },
+      { word: "EPOCH", clues: ["Easy: A significant period of time in history.", "Medium: Marks the beginning of a new era.", "Hard: In computing, Unix time starts from one in 1970."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "ATLAS", clues: ["Easy: A book of maps.", "Medium: Named after a Titan from Greek mythology.", "Hard: Also the first cervical vertebra in the spine."] },
+      { word: "DELTA", clues: ["Easy: The fourth letter of the Greek alphabet.", "Medium: A triangular area where a river meets the sea.", "Hard: Also the name of a major U.S. airline."] },
+      { word: "SAUNA", clues: ["Easy: A small room used for steam baths.", "Medium: Originated in Finland.", "Hard: Temperatures inside can reach 80 to 100 degrees Celsius."] },
+      { word: "SALSA", clues: ["Easy: A spicy tomato-based sauce from Mexico.", "Medium: Also a lively Latin dance style.", "Hard: Means 'sauce' in both Spanish and Italian."] },
+      { word: "WHEAT", clues: ["Easy: A cereal grain used to make flour and bread.", "Medium: One of the world's most important crops.", "Hard: Separating this from chaff means finding what's valuable."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "GOURD", clues: ["Easy: A hard-shelled fruit related to pumpkins.", "Medium: Often dried and used as containers or decorations.", "Hard: Maracas are traditionally made from these."] },
+      { word: "HAVEN", clues: ["Easy: A safe place or refuge.", "Medium: Often preceded by 'safe' for emphasis.", "Hard: Also the name of several coastal towns."] },
+      { word: "MIDST", clues: ["Easy: The middle part of something.", "Medium: 'In the ___ of' means surrounded by.", "Hard: An old-fashioned or literary word for 'middle'."] },
+      { word: "RADAR", clues: ["Easy: A system for detecting objects using radio waves.", "Medium: A palindrome — reads the same forwards and backwards.", "Hard: Stands for Radio Detection And Ranging."] },
+      { word: "THIEF", clues: ["Easy: A person who steals.", "Medium: A famous saying claims there is honor among these.", "Hard: Time is sometimes called the greatest one."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "ANNEX", clues: ["Easy: An addition to a building.", "Medium: Also means to add territory to a country.", "Hard: Contains a double letter in the middle."] },
+      { word: "DEPOT", clues: ["Easy: A place for storing goods or vehicles.", "Medium: Also a bus or train station.", "Hard: Home ___ is a well-known hardware store chain."] },
+      { word: "KAYAK", clues: ["Easy: A small, narrow watercraft propelled by a paddle.", "Medium: A palindrome — spelled the same forwards and backwards.", "Hard: Originally used by the Inuit people."] },
+      { word: "SIREN", clues: ["Easy: A device that makes a loud warning sound.", "Medium: In Greek mythology, creatures who lured sailors with song.", "Hard: Emergency vehicles use these to clear traffic."] },
+      { word: "TRUCE", clues: ["Easy: An agreement to stop fighting temporarily.", "Medium: Often called during wars to exchange prisoners.", "Hard: A white flag is the universal symbol for this."] },
+    ]
+  },
+  {
+    rounds: [
+      { word: "BASIL", clues: ["Easy: A fragrant herb commonly used in Italian cooking.", "Medium: The main ingredient in pesto sauce.", "Hard: Also a name — Basil Rathbone played Sherlock Holmes."] },
+      { word: "COBRA", clues: ["Easy: A venomous snake known for its hood.", "Medium: Found mainly in Africa and Asia.", "Hard: King ___ is the world's longest venomous snake."] },
+      { word: "HAIKU", clues: ["Easy: A Japanese poem with three lines.", "Medium: Has a 5-7-5 syllable structure.", "Hard: Often focuses on nature and the seasons."] },
+      { word: "MAPLE", clues: ["Easy: A tree known for its colorful autumn leaves.", "Medium: Its leaf is the symbol on the Canadian flag.", "Hard: The sap of this tree is boiled to make syrup."] },
+      { word: "ORBIT", clues: ["Easy: The path one object takes around another in space.", "Medium: Earth completes one around the Sun each year.", "Hard: Also means the eye socket in anatomy."] },
     ]
   },
 ];
@@ -1176,7 +1878,7 @@ const GAMES = [
 // HUB
 // ═══════════════════════════════════════════════
 function buildHub() {
-  document.getElementById('week-badge').textContent = getWeekLabel();
+  document.getElementById('week-badge').textContent = getDayLabel();
   const grid = document.getElementById('game-grid');
   grid.innerHTML = '';
   GAMES.forEach((g, idx) => {
@@ -1306,12 +2008,12 @@ function renderCipher() {
     A famous quote has been <strong>encrypted</strong> with a substitution cipher — each letter has been swapped with a different letter throughout.<br><br>
     <strong>How to play:</strong> Click a coded letter in the quote (or mapping table), then click the letter you think it decodes to on the keyboard. All instances update instantly.<br><br>
     <strong>Tips:</strong> Use <strong>letter frequency</strong> — E, T, A, O, I, N are the most common. Short words like "THE", "IS", "TO" are good starting points.<br><br>
-    You get <strong>3 free hints</strong>. Correct letters <span style="color:var(--sage)">lock in green</span>. Click a mapped letter again to <strong>undo</strong>. New cipher every <strong>Monday</strong>.
+    You get <strong>3 free hints</strong>. Correct letters <span style="color:var(--sage)">lock in green</span>. Click a mapped letter again to <strong>undo</strong>. New cipher every <strong>day</strong>.
   `, startCipher);
 }
 
 function startCipher() {
-  const raw = CIPHER_POOL[getWeekIndex(CIPHER_POOL.length)];
+  const raw = CIPHER_POOL[getDayIndex(CIPHER_POOL.length, GAME_OFFSETS.cipher)];
   const { plain, author } = raw;
   const cipherData = makeCipher(plain);
 
@@ -1363,7 +2065,7 @@ function startCipher() {
     if (prog.finished || isComplete()) {
       prog.finished = true;
       saveProgress('cipher', prog);
-      area.appendChild(resultBanner(true, 'Decoded!', `"${plain}"`, `— ${author} · New cipher every Monday`));
+      area.appendChild(resultBanner(true, 'Decoded!', `"${plain}"`, `— ${author} · New cipher every day`));
       content.appendChild(area);
       return;
     }
@@ -1588,12 +2290,12 @@ function renderChronicle() {
     <strong>Drag and drop</strong> to reorder, or use the <strong>↑↓ arrows</strong>.<br><br>
     Hit <strong>Submit Order</strong> when ready. You get <strong>3 attempts</strong>. After each wrong attempt, correctly-placed events are <span style="color:var(--sage)">highlighted in green</span> and locked in place.<br><br>
     <strong>Scoring:</strong> 1st try = 3 pts, 2nd try = 2 pts, 3rd try = 1 pt.<br><br>
-    A new set of events every <strong>Monday</strong>.
+    A new set of events every <strong>day</strong>.
   `, startChronicle);
 }
 
 function startChronicle() {
-  const puzzle = CHRONICLE_POOL[getWeekIndex(CHRONICLE_POOL.length)];
+  const puzzle = CHRONICLE_POOL[getDayIndex(CHRONICLE_POOL.length, GAME_OFFSETS.chronicle)];
   const prog = loadProgress('chronicle') || { attempts: 0, score: 0, finished: false };
   const content = document.getElementById('game-content');
 
@@ -1605,7 +2307,7 @@ function startChronicle() {
     scoreDiv.className = 'result-score';
     scoreDiv.textContent = `${prog.score} / 3 points`;
     area.appendChild(resultBanner(prog.score > 0, prog.score >= 2 ? 'Historian!' : 'Keep studying!',
-      `${prog.score} out of 3 points`, 'New events every Monday', scoreDiv));
+      `${prog.score} out of 3 points`, 'New events every day', scoreDiv));
     content.appendChild(area);
     return;
   }
@@ -1614,7 +2316,7 @@ function startChronicle() {
   const correctOrder = [...puzzle.events].sort((a, b) => a.year - b.year);
 
   // Shuffle for display
-  const seed = getWeekIndex(9999) + 7;
+  const seed = getDayIndex(9999, GAME_OFFSETS.chronicle) + 7;
   const shuffled = [...correctOrder];
   let s = seed;
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -1752,7 +2454,7 @@ function startChronicle() {
         const sd = document.createElement('div');
         sd.className = 'result-score';
         sd.textContent = `${pts} / 3 points`;
-        a2.appendChild(resultBanner(true, 'Historian!', `Solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}`, 'New events every Monday', sd));
+        a2.appendChild(resultBanner(true, 'Historian!', `Solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}`, 'New events every day', sd));
         content.appendChild(a2);
       }, 1200);
     } else if (attempts >= maxAttempts) {
@@ -1788,12 +2490,12 @@ function renderWavelength() {
     A word appears on screen. Place it on the <strong>correct position</strong> on a spectrum between two opposites.<br><br>
     For example: where does <strong>WARM</strong> fall between <em>Freezing</em> and <em>Boiling</em>?<br><br>
     Drag the slider to your answer, then submit. <strong>Scoring:</strong> 🎯 Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
-    5 rounds · New spectrums every <strong>Monday</strong>.
+    5 rounds · New spectrums every <strong>day</strong>.
   `, startWavelength);
 }
 
 function startWavelength() {
-  const puzzle = WAVELENGTH_POOL[getWeekIndex(WAVELENGTH_POOL.length)];
+  const puzzle = WAVELENGTH_POOL[getDayIndex(WAVELENGTH_POOL.length, GAME_OFFSETS.wavelength)];
   const prog = loadProgress('wavelength') || { round: 0, scores: [], finished: false };
   const content = document.getElementById('game-content');
 
@@ -1810,7 +2512,7 @@ function startWavelength() {
       sd.className = 'result-score';
       sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday', sd));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every day', sd));
       content.appendChild(area);
       return;
     }
@@ -1905,7 +2607,7 @@ function startWavelength() {
     sd.className = 'result-score';
     sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Sharp mind!' : 'Good effort!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every Monday', sd));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New spectrums every day', sd));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
@@ -1921,12 +2623,12 @@ function renderMimic() {
     You may guess after any clue. The fewer clues you use, the more points:<br>
     → After clue 1: <strong>3 points</strong> · After clue 2: <strong>2 points</strong> · After clue 3: <strong>1 point</strong><br><br>
     You get <strong>2 guesses per clue level</strong>. Letters turn <span style="color:var(--sage)">green</span> (correct), <span style="color:var(--gold)">gold</span> (wrong position), or grey (absent).<br><br>
-    5 rounds · New words every <strong>Monday</strong>.
+    5 rounds · New words every <strong>day</strong>.
   `, startMimic);
 }
 
 function startMimic() {
-  const puzzle = MIMIC_POOL[getWeekIndex(MIMIC_POOL.length)];
+  const puzzle = MIMIC_POOL[getDayIndex(MIMIC_POOL.length, GAME_OFFSETS.mimic)];
   const prog = loadProgress('mimic') || { round: 0, scores: [], finished: false };
   const content = document.getElementById('game-content');
 
@@ -1943,7 +2645,7 @@ function startMimic() {
       sd.className = 'result-score';
       sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday', sd));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd));
       content.appendChild(area);
       return;
     }
@@ -2122,7 +2824,7 @@ function startMimic() {
     sd.className = 'result-score';
     sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every Monday', sd));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
