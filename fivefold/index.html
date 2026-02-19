@@ -2402,12 +2402,16 @@ function launchGame(g) {
   document.getElementById('shell-title').textContent = g.emoji + ' ' + g.name;
   document.getElementById('shell-round').textContent = g.type;
   document.getElementById('game-content').innerHTML = '';
+  if (window.location.hash.replace('#','').toLowerCase() !== g.id) {
+    history.replaceState(null, '', '#' + g.id);
+  }
   g.render();
 }
 
 function showHub() {
   document.getElementById('hub').style.display = 'block';
   document.getElementById('game-shell').style.display = 'none';
+  if (window.location.hash) history.replaceState(null, '', window.location.pathname);
   buildHub();
 }
 
@@ -3434,6 +3438,25 @@ function startMimic() {
 // INIT
 // ═══════════════════════════════════════════════
 buildHub();
+
+// Auto-launch game from hash (e.g., #cipher, #wavelength)
+(function() {
+  const hash = window.location.hash.replace('#', '').toLowerCase();
+  if (hash) {
+    const game = GAMES.find(g => g.id === hash);
+    if (game) {
+      // Small delay to let the page render first
+      requestAnimationFrame(() => { requestAnimationFrame(() => { launchGame(game); }); });
+    }
+  }
+  // Update hash when navigating
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash.replace('#', '').toLowerCase();
+    if (!h) { showHub(); return; }
+    const g = GAMES.find(g => g.id === h);
+    if (g) launchGame(g);
+  });
+})();
 </script>
 <script src="../shared/recommendations.js"></script>
 </body>
