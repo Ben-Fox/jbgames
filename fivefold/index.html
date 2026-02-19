@@ -38,27 +38,34 @@
   --border: rgba(255,255,255,0.08);
   --shadow: 0 2px 20px rgba(0,0,0,0.4);
 
-  /* Light theme targets */
-  --ink-light: #2d2a3e;
-  --bg-light: #faf8f5;
-  --paper-light: #faf8f5;
-  --paper2-light: #ffffff;
-  --paper3-light: #f0ece6;
-  --muted-light: #8a8494;
-  --border-light: rgba(0,0,0,0.08);
-  --shadow-light: 0 2px 20px rgba(0,0,0,0.08);
+  /* Light theme targets — smoky newsprint */
+  --ink-light: #2c2825;
+  --bg-light: #f0ebe4;
+  --paper-light: #f0ebe4;
+  --paper2-light: #f7f3ed;
+  --paper3-light: #e6e0d6;
+  --muted-light: #7a746c;
+  --border-light: rgba(60,50,40,0.12);
+  --shadow-light: 0 2px 16px rgba(40,30,20,0.08);
 }
 
-/* Light theme applied after transition */
+/* Light theme applied after transition — smoky newspaper vibe */
 body.light-theme {
-  --ink: #2d2a3e;
-  --bg: #faf8f5;
-  --paper: #faf8f5;
-  --paper2: #ffffff;
-  --paper3: #f0ece6;
-  --muted: #8a8494;
-  --border: rgba(0,0,0,0.08);
-  --shadow: 0 2px 20px rgba(0,0,0,0.08);
+  --ink: #2c2825;
+  --bg: #f0ebe4;
+  --paper: #f0ebe4;
+  --paper2: #f7f3ed;
+  --paper3: #e6e0d6;
+  --gold: #a07828;
+  --gold-light: #c49a3c;
+  --rust: #b5433a;
+  --sage: #5a7a9a;
+  --slate: #5a7a9a;
+  --muted: #7a746c;
+  --accent: #6b52a3;
+  --accent-light: #5a4090;
+  --border: rgba(60,50,40,0.12);
+  --shadow: 0 2px 16px rgba(40,30,20,0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,8 +87,9 @@ body:not(.light-theme) {
 
 body.light-theme {
   background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(212,160,23,0.03) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(90,64,144,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(160,120,40,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(60,50,40,0.02) 0%, transparent 80%);
 }
 
 /* Transition all themed elements */
@@ -144,7 +152,7 @@ body *, body *::before, body *::after {
 }
 
 body.light-theme .hub-logo {
-  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 40%, #db2777 100%);
+  background: linear-gradient(135deg, #5a4090 0%, #6b52a3 40%, #a07828 100%);
   -webkit-background-clip: text; background-clip: text;
 }
 
@@ -343,7 +351,7 @@ body.light-theme .back-btn:hover { color: var(--accent); background: rgba(124,58
   line-height: 1.8;
   color: #ccc;
 }
-body.light-theme .htp-text { color: #555; }
+body.light-theme .htp-text { color: #5a5550; }
 
 .htp-text strong { color: var(--accent-light); }
 body.light-theme .htp-text strong { color: var(--accent); }
@@ -979,6 +987,24 @@ body.light-theme .letter-box.absent { border-color: rgba(0,0,0,.08); }
   .letter-box { width: 36px; height: 44px; font-size: 16px; }
   .chronicle-event { font-size: 12px; padding: 12px 12px; gap: 8px; }
 }
+
+/* ── Light theme: replace green with ink-blue for newspaper feel ── */
+body.light-theme .card-cta.done-label { color: var(--sage); background: rgba(90,122,154,.1); }
+body.light-theme .feedback-msg.good { border-color: var(--sage); color: var(--sage); background: rgba(90,122,154,0.06); }
+body.light-theme .guess-mark.correct { color: var(--sage); }
+body.light-theme .round-dot.won { background: var(--sage); border-color: var(--sage); box-shadow: 0 0 6px rgba(90,122,154,.3); }
+body.light-theme .result-banner.won { border-top: 3px solid var(--sage); }
+body.light-theme .result-banner.won::before { background: radial-gradient(circle at 50% 0%, var(--sage), transparent 60%); }
+body.light-theme .cipher-cell.locked .cipher-decoded { border-color: var(--sage); background: rgba(90,122,154,0.08); color: var(--sage); }
+body.light-theme .cipher-cell.locked .cipher-encoded { color: var(--sage); }
+body.light-theme .cipher-key.locked { background: rgba(90,122,154,0.1); color: var(--sage); border-color: rgba(90,122,154,.3); }
+body.light-theme .cipher-map-cell.locked { border-color: rgba(90,122,154,.3); background: rgba(90,122,154,0.06); }
+body.light-theme .cipher-map-dec { color: var(--sage); }
+body.light-theme .chronicle-event.correct-pos { border-color: var(--sage); background: rgba(90,122,154,0.06); }
+body.light-theme .chronicle-event.correct-pos .event-num { border-color: var(--sage); color: var(--sage); }
+body.light-theme .letter-box.correct { border-color: var(--sage); background: rgba(90,122,154,0.1); color: var(--sage); }
+body.light-theme .mimic-difficulty.easy { color: var(--sage); background: rgba(90,122,154,.08); }
+body.light-theme .score-pip.won { background: rgba(90,122,154,.15); color: var(--sage); border-color: rgba(90,122,154,.3); }
 </style>
 </head>
 <body>
@@ -2044,7 +2070,9 @@ function scoreBar(scores) {
 }
 
 function makeConfetti(container) {
-  const colors = ['#7c3aed','#a78bfa','#6fcf6f','#d4a017','#ff69b4','#7eb8d8'];
+  const colors = document.body.classList.contains('light-theme')
+    ? ['#6b52a3','#5a7a9a','#a07828','#b5433a','#7a746c','#c49a3c']
+    : ['#7c3aed','#a78bfa','#6fcf6f','#d4a017','#ff69b4','#7eb8d8'];
   const wrap = document.createElement('div');
   wrap.className = 'confetti-container';
   for (let i = 0; i < 20; i++) {
@@ -2083,7 +2111,7 @@ function renderCipher() {
     A famous quote has been <strong>encrypted</strong> with a substitution cipher — each letter has been swapped with a different letter throughout.<br><br>
     <strong>How to play:</strong> Click a coded letter in the quote (or mapping table), then click the letter you think it decodes to on the keyboard. All instances update instantly.<br><br>
     <strong>Tips:</strong> Use <strong>letter frequency</strong> — E, T, A, O, I, N are the most common. Short words like "THE", "IS", "TO" are good starting points.<br><br>
-    You get <strong>3 free hints</strong>. Correct letters <span style="color:var(--sage)">lock in green</span>. Click a mapped letter again to <strong>undo</strong>. New cipher every <strong>day</strong>.
+    You get <strong>3 free hints</strong>. Correct letters <span style="color:var(--sage)">lock in place</span>. Click a mapped letter again to <strong>undo</strong>. New cipher every <strong>day</strong>.
   `, startCipher);
 }
 
@@ -2363,7 +2391,7 @@ function renderChronicle() {
   howToPlay(`
     <strong>Five historical events</strong> are shuffled below. Arrange them in <strong>chronological order</strong> — earliest at top, most recent at bottom.<br><br>
     <strong>Drag and drop</strong> to reorder, or use the <strong>↑↓ arrows</strong>.<br><br>
-    Hit <strong>Submit Order</strong> when ready. You get <strong>3 attempts</strong>. After each wrong attempt, correctly-placed events are <span style="color:var(--sage)">highlighted in green</span> and locked in place.<br><br>
+    Hit <strong>Submit Order</strong> when ready. You get <strong>3 attempts</strong>. After each wrong attempt, correctly-placed events are <span style="color:var(--sage)">highlighted</span> and locked in place.<br><br>
     <strong>Scoring:</strong> 1st try = 3 pts, 2nd try = 2 pts, 3rd try = 1 pt.<br><br>
     A new set of events every <strong>day</strong>.
   `, startChronicle);
