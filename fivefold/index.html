@@ -1155,24 +1155,17 @@ body.light-theme .score-pip.won { background: rgba(90,122,154,.15); color: var(-
 </head>
 <body>
 
-<a href="../" id="home-btn" style="position:fixed;top:10px;left:10px;z-index:9999;backdrop-filter:blur(8px);text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:0.7;transition:opacity 0.2s, background-color 0.8s, color 0.8s, border-color 0.8s;background:rgba(14,14,18,0.8);color:#fff;border:1px solid rgba(255,255,255,.08)" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+<!-- Home button moved into game header -->
 
-<!-- HUB -->
-<div id="hub">
-  <div class="hub-masthead">
-    <div class="hub-logo">Daily <span>Puzzles</span></div>
-    <div class="hub-tagline">Four games · Fresh daily · Infinite curiosity</div>
-    <div class="week-badge" id="week-badge"></div>
-  </div>
-  <div class="game-grid" id="game-grid"></div>
-</div>
-
-<!-- GAME SHELL -->
+<!-- GAME SHELL (no hub — games launch directly) -->
 <div id="game-shell">
   <div class="game-header">
-    <button class="back-btn" onclick="showHub()">← Back</button>
+    <a href="../" class="back-btn" id="home-nav">🏠 Home</a>
     <div class="game-title-bar" id="shell-title"></div>
-    <div class="round-indicator" id="shell-round"></div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <div class="round-indicator" id="shell-round"></div>
+      <button class="back-btn" id="next-game-btn" style="display:none;">Next Game →</button>
+    </div>
   </div>
   <div id="game-content"></div>
 </div>
@@ -1187,11 +1180,12 @@ body.light-theme .score-pip.won { background: rgba(90,122,154,.15); color: var(-
     requestAnimationFrame(() => {
       document.body.classList.add('light-theme');
       // Update home button for light theme
-      const homeBtn = document.getElementById('home-btn');
-      if (homeBtn) {
-        homeBtn.style.background = 'rgba(255,255,255,0.9)';
-        homeBtn.style.color = '#2d2a3e';
-        homeBtn.style.borderColor = 'rgba(0,0,0,.1)';
+      // Light theme applied — update nav styles
+      const homeNav = document.getElementById('home-nav');
+      if (homeNav) {
+        homeNav.style.background = 'rgba(240,235,228,0.9)';
+        homeNav.style.color = '#2c2825';
+        homeNav.style.borderColor = 'rgba(60,50,40,.12)';
       }
     });
   });
@@ -2467,51 +2461,81 @@ const GAMES = [
 ];
 
 // ═══════════════════════════════════════════════
-// HUB
+// NAVIGATION (no hub — direct game launch)
 // ═══════════════════════════════════════════════
-function buildHub() {
-  document.getElementById('week-badge').textContent = getDayLabel();
-  const grid = document.getElementById('game-grid');
-  grid.innerHTML = '';
-  GAMES.forEach((g, idx) => {
-    const prog = loadProgress(g.id);
-    const done = prog && prog.finished;
-    const card = document.createElement('div');
-    card.className = 'game-card' + (done ? ' done' : '');
-    card.style.setProperty('--card-accent', g.accent);
-    card.innerHTML = `
-      <span class="card-emoji">${g.emoji}</span>
-      <div class="card-name">${g.name}</div>
-      <div class="card-type">${g.type}</div>
-      <div class="card-desc">${g.desc}</div>
-      <div class="card-cta ${done ? 'done-label' : ''}">${done ? '✓ Completed' : '▶ Play'}</div>
-    `;
-    card.onclick = () => launchGame(g);
-    grid.appendChild(card);
-  });
+let currentGameIdx = 0;
+
+function getNextGame(currentId) {
+  const idx = GAMES.findIndex(g => g.id === currentId);
+  return GAMES[(idx + 1) % GAMES.length];
 }
 
 function launchGame(g) {
-  document.getElementById('hub').style.display = 'none';
+  currentGameIdx = GAMES.findIndex(gm => gm.id === g.id);
   const shell = document.getElementById('game-shell');
   shell.style.display = 'block';
   shell.style.animation = 'none';
-  shell.offsetHeight; // reflow
+  shell.offsetHeight;
   shell.style.animation = 'fadeIn 0.3s ease';
   document.getElementById('shell-title').textContent = g.emoji + ' ' + g.name;
   document.getElementById('shell-round').textContent = g.type;
   document.getElementById('game-content').innerHTML = '';
+
+  // Next game button
+  const nextBtn = document.getElementById('next-game-btn');
+  const next = getNextGame(g.id);
+  nextBtn.textContent = next.emoji + ' Next: ' + next.name + ' →';
+  nextBtn.style.display = 'inline-block';
+  nextBtn.onclick = () => launchGame(next);
+
   if (window.location.hash.replace('#','').toLowerCase() !== g.id) {
     history.replaceState(null, '', '#' + g.id);
   }
   g.render();
 }
 
-function showHub() {
-  document.getElementById('hub').style.display = 'block';
-  document.getElementById('game-shell').style.display = 'none';
-  if (window.location.hash) history.replaceState(null, '', window.location.pathname);
-  buildHub();
+// Build "other games" cards shown after completing a game
+function otherGamesCards(currentId) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:24px;';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'prompt-label';
+  lbl.textContent = 'More daily puzzles';
+  lbl.style.marginBottom = '12px';
+  wrap.appendChild(lbl);
+
+  const grid = document.createElement('div');
+  grid.className = 'game-grid';
+  grid.style.cssText = 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;';
+
+  GAMES.filter(g => g.id !== currentId).forEach((g, idx) => {
+    const prog = loadProgress(g.id);
+    const done = prog && prog.finished;
+    const card = document.createElement('div');
+    card.className = 'game-card' + (done ? ' done' : '');
+    card.style.setProperty('--card-accent', g.accent);
+    card.style.animationDelay = (idx * 0.08) + 's';
+    card.innerHTML = `
+      <span class="card-emoji" style="font-size:24px">${g.emoji}</span>
+      <div class="card-name" style="font-size:20px">${g.name}</div>
+      <div class="card-type">${g.type}</div>
+      <div class="card-cta ${done ? 'done-label' : ''}">${done ? '✓ Completed' : '▶ Play'}</div>
+    `;
+    card.onclick = () => launchGame(g);
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+
+  // Home button
+  const homeBtn = document.createElement('a');
+  homeBtn.href = '../';
+  homeBtn.className = 'back-btn';
+  homeBtn.style.cssText = 'display:inline-block;margin-top:16px;text-decoration:none;';
+  homeBtn.textContent = '🏠 Back to BrainSmacks';
+  wrap.appendChild(homeBtn);
+
+  return wrap;
 }
 
 // ═══════════════════════════════════════════════
@@ -2583,7 +2607,8 @@ function makeConfetti(container) {
   container.appendChild(wrap);
 }
 
-function resultBanner(won, title, answer, sub, scoreEl) {
+function resultBanner(won, title, answer, sub, scoreEl, gameId) {
+  const wrap = document.createElement('div');
   const div = document.createElement('div');
   div.className = 'result-banner ' + (won ? 'won' : 'lost');
   if (won) makeConfetti(div);
@@ -2595,7 +2620,10 @@ function resultBanner(won, title, answer, sub, scoreEl) {
   sub2.className = 'result-sub';
   sub2.textContent = sub;
   div.appendChild(sub2);
-  return div;
+  wrap.appendChild(div);
+  // Show other daily games after completion
+  if (gameId) wrap.appendChild(otherGamesCards(gameId));
+  return wrap;
 }
 
 // ═══════════════════════════════════════════════
@@ -2663,7 +2691,7 @@ function startCipher() {
     if (prog.finished || isComplete()) {
       prog.finished = true;
       saveProgress('cipher', prog);
-      area.appendChild(resultBanner(true, 'Decoded!', `"${plain}"`, `— ${author} · New cipher every day`));
+      area.appendChild(resultBanner(true, 'Decoded!', `"${plain}"`, `— ${author} · New cipher every day`, null, 'cipher'));
       content.appendChild(area);
       return;
     }
@@ -2905,7 +2933,7 @@ function startChronicle() {
     scoreDiv.className = 'result-score';
     scoreDiv.textContent = `${prog.score} / 3 points`;
     area.appendChild(resultBanner(prog.score > 0, prog.score >= 2 ? 'Historian!' : 'Keep studying!',
-      `${prog.score} out of 3 points`, 'New events every day', scoreDiv));
+      `${prog.score} out of 3 points`, 'New events every day', scoreDiv, 'chronicle'));
     content.appendChild(area);
     return;
   }
@@ -3052,7 +3080,7 @@ function startChronicle() {
         const sd = document.createElement('div');
         sd.className = 'result-score';
         sd.textContent = `${pts} / 3 points`;
-        a2.appendChild(resultBanner(true, 'Historian!', `Solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}`, 'New events every day', sd));
+        a2.appendChild(resultBanner(true, 'Historian!', `Solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}`, 'New events every day', sd, 'chronicle'));
         content.appendChild(a2);
       }, 1200);
     } else if (attempts >= maxAttempts) {
@@ -3171,7 +3199,7 @@ function startWavelength() {
       sd.className = 'result-score';
       sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Science whiz!' : 'Good effort!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd, 'wavelength'));
       content.appendChild(area);
       return;
     }
@@ -3309,7 +3337,7 @@ function startWavelength() {
     sd.className = 'result-score';
     sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 10, total >= 10 ? 'Science whiz!' : 'Good effort!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New category every day', sd, 'wavelength'));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
@@ -3347,7 +3375,7 @@ function startMimic() {
       sd.className = 'result-score';
       sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
       area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd));
+        `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd, 'mimic'));
       content.appendChild(area);
       return;
     }
@@ -3526,7 +3554,7 @@ function startMimic() {
     sd.className = 'result-score';
     sd.textContent = `${total} / ${puzzle.rounds.length * 3} points`;
     area.appendChild(resultBanner(total >= 12, total >= 12 ? 'Word master!' : 'Well played!',
-      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd));
+      `${total} out of ${puzzle.rounds.length * 3} points`, 'New words every day', sd, 'mimic'));
     document.getElementById('game-content').appendChild(area);
   } else {
     startRound(prog.round);
@@ -3534,26 +3562,17 @@ function startMimic() {
 }
 
 // ═══════════════════════════════════════════════
-// INIT
+// INIT — launch directly into a game (no hub)
 // ═══════════════════════════════════════════════
-buildHub();
-
-// Auto-launch game from hash (e.g., #cipher, #wavelength)
 (function() {
   const hash = window.location.hash.replace('#', '').toLowerCase();
-  if (hash) {
-    const game = GAMES.find(g => g.id === hash);
-    if (game) {
-      // Small delay to let the page render first
-      requestAnimationFrame(() => { requestAnimationFrame(() => { launchGame(game); }); });
-    }
-  }
-  // Update hash when navigating
+  const game = GAMES.find(g => g.id === hash) || GAMES[0];
+  requestAnimationFrame(() => { requestAnimationFrame(() => { launchGame(game); }); });
+
   window.addEventListener('hashchange', () => {
     const h = window.location.hash.replace('#', '').toLowerCase();
-    if (!h) { showHub(); return; }
-    const g = GAMES.find(g => g.id === h);
-    if (g) launchGame(g);
+    const g = GAMES.find(g => g.id === h) || GAMES[0];
+    launchGame(g);
   });
 })();
 </script>
