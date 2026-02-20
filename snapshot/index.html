@@ -82,20 +82,22 @@ a { color: inherit; text-decoration: none; }
 .progress-bar { height: 100%; background: var(--accent); transition: width 0.3s ease; border-radius: 0 2px 0 0; }
 
 /* Targets */
-.target { position: absolute; border-radius: 50%; cursor: pointer; transform: scale(0); animation: targetPop 0.15s ease forwards; z-index: 10; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: rgba(0,0,0,0.5); }
+.target { position: absolute; border-radius: 50%; cursor: pointer; transform: scale(0); animation: targetPop 0.15s ease forwards; z-index: 10; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: rgba(0,0,0,0.5); will-change: transform; }
 .target.good { background: radial-gradient(circle at 35% 35%, #6ee7a0, var(--green)); box-shadow: 0 0 20px rgba(74,222,128,0.3); }
 .target.decoy { background: radial-gradient(circle at 35% 35%, #f87171, var(--red)); box-shadow: 0 0 20px rgba(239,68,68,0.3); }
 .target.ghost { opacity: 0; }
 .target.ghost-hint { box-shadow: 0 0 30px rgba(124,58,237,0.4); border: 2px dashed rgba(124,58,237,0.3); background: transparent; }
 .target.shrinking { animation: targetPop 0.15s ease forwards; }
-@keyframes targetPop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes targetPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.target.moving { animation: targetPopMoving 0.15s ease forwards; }
+@keyframes targetPopMoving { 0% { opacity: 0; } 100% { opacity: 1; } }
 
 /* Hit effect */
 .hit-burst { position: absolute; border-radius: 50%; pointer-events: none; z-index: 20; animation: burst 0.4s ease forwards; border: 3px solid var(--green); }
 @keyframes burst { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
 
 /* Particles */
-.particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 20; }
+.particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 20; will-change: transform, opacity; }
 
 /* Miss X */
 .miss-x { position: absolute; font-size: 32px; font-weight: 700; color: var(--red); pointer-events: none; z-index: 20; animation: missAnim 0.6s ease forwards; }
@@ -377,9 +379,11 @@ const Game = {
     // Moving
     if (lv.moving && !isDecoy) {
       vx = (Math.random() - 0.5) * 2; vy = (Math.random() - 0.5) * 2;
+      el.classList.add('moving');
     }
     if (lv.boss && Math.random() < 0.4) {
       vx = (Math.random() - 0.5) * 2.5; vy = (Math.random() - 0.5) * 2.5;
+      el.classList.add('moving');
     }
 
     // Ghost
@@ -430,14 +434,23 @@ const Game = {
 
   startMovement(tgt, area) {
     const rect = area.getBoundingClientRect();
-    function move() {
+    const baseX = tgt.x, baseY = tgt.y;
+    let lastTime = performance.now();
+    // Set initial position via left/top, then move via transform for GPU acceleration
+    tgt.el.style.left = baseX + 'px';
+    tgt.el.style.top = baseY + 'px';
+    let offX = 0, offY = 0;
+    function move(now) {
       if (!tgt.el.parentNode) return;
-      tgt.x += tgt.vx; tgt.y += tgt.vy;
-      if (tgt.x < 0 || tgt.x > rect.width - tgt.size) tgt.vx *= -1;
-      if (tgt.y < 0 || tgt.y > rect.height - tgt.size - 4) tgt.vy *= -1;
-      tgt.x = Math.max(0, Math.min(rect.width - tgt.size, tgt.x));
-      tgt.y = Math.max(0, Math.min(rect.height - tgt.size - 4, tgt.y));
-      tgt.el.style.left = tgt.x + 'px'; tgt.el.style.top = tgt.y + 'px';
+      const dt = Math.min(now - lastTime, 32) / 16; // normalize to ~60fps, cap to avoid jumps
+      lastTime = now;
+      offX += tgt.vx * dt; offY += tgt.vy * dt;
+      const curX = baseX + offX, curY = baseY + offY;
+      if (curX < 0 || curX > rect.width - tgt.size) { tgt.vx *= -1; offX += tgt.vx * dt * 2; }
+      if (curY < 0 || curY > rect.height - tgt.size - 4) { tgt.vy *= -1; offY += tgt.vy * dt * 2; }
+      tgt.el.style.transform = 'translate(' + offX.toFixed(1) + 'px,' + offY.toFixed(1) + 'px)';
+      // Update tgt.x/y for hit detection
+      tgt.x = baseX + offX; tgt.y = baseY + offY;
       requestAnimationFrame(move);
     }
     requestAnimationFrame(move);
