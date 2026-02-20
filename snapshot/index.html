@@ -2,418 +2,807 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SnapShot — Reaction Game | BrainSmacks</title>
-<meta name="description" content="Test your reflexes in SnapShot — 10 levels of precision clicking. Moving targets, decoys, ghost targets and more. Free browser game, no download needed.">
-<link rel="canonical" href="https://brainsmacks.com/snapshot/">
-<meta property="og:type" content="website">
-<meta property="og:title" content="SnapShot — Reaction Game | BrainSmacks">
-<meta property="og:description" content="Test your reflexes in 10 levels of precision clicking. Moving targets, decoys, ghost targets and more.">
-<meta property="og:url" content="https://brainsmacks.com/snapshot/">
-<meta property="og:site_name" content="BrainSmacks">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SnapShot — Reaction Game | BrainSmacks">
-<meta name="twitter:description" content="Test your reflexes in 10 levels of precision clicking. Free browser game.">
+<meta name="description" content="Test your reflexes in SnapShot — a 10-level reaction clicking game. How fast can you hit?">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#0e0e12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0e0e12;
-  --surface: #1a1a24;
-  --surface2: #242436;
-  --text: #f0f0f0;
-  --muted: #888;
-  --green: #4ade80;
-  --green-glow: rgba(74, 222, 128, 0.4);
-  --red: #ef4444;
-  --red-glow: rgba(239, 68, 68, 0.4);
-  --purple: #7c3aed;
-  --purple-light: #a78bfa;
-  --purple-glow: rgba(124, 58, 237, 0.3);
-  --gold: #fbbf24;
-  --font: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --game-max: 800px;
-  --radius: 12px;
+  --bg: #0e0e12; --bg2: #1a1a24; --bg3: #22222e;
+  --ink: #f0f0f0; --muted: #888; --border: rgba(255,255,255,0.08);
+  --accent: #7c3aed; --accent-light: #a78bfa;
+  --green: #4ade80; --red: #ef4444; --gold: #ffd700;
+  --yellow: #facc15;
 }
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; overflow: hidden; }
-body {
-  font-family: var(--font); background: var(--bg); color: var(--text);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent; user-select: none;
-}
-.home-btn {
-  position: fixed; top: 10px; left: 10px; z-index: 9999;
-  background: rgba(0,0,0,0.5); color: #fff; text-decoration: none;
-  padding: 6px 12px; border-radius: 20px; font-size: 14px;
-  font-family: var(--font); opacity: 0.7; transition: opacity 0.2s;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+
+/* Home button */
+.home-btn { position: fixed; top: 10px; left: 10px; z-index: 9999; padding: 6px 12px; border-radius: 20px; font-size: 14px; background: rgba(14,14,18,0.8); backdrop-filter: blur(8px); border: 1px solid var(--border); opacity: 0.7; transition: opacity 0.2s; }
 .home-btn:hover { opacity: 1; }
-.home-btn svg { vertical-align: -2px; }
-#game-container {
-  width: 100%; max-width: var(--game-max);
-  height: 100vh; max-height: 700px;
-  display: flex; flex-direction: column;
-  padding: 10px; position: relative;
-}
-#hud {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 16px; gap: 8px;
-  background: var(--surface); border: 1px solid rgba(124,58,237,0.2);
-  border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
-  flex-shrink: 0; min-height: 48px;
-  opacity: 0; transition: opacity 0.3s;
-}
-#hud.visible { opacity: 1; }
-.hud-left { display: flex; align-items: center; gap: 12px; }
-.hud-right { display: flex; align-items: center; gap: 12px; }
-#hud-level { color: var(--purple-light); }
-#hud-score { color: var(--gold); }
-#hud-accuracy { color: var(--green); }
-#health-bar-container {
-  width: 100%; height: 22px; background: var(--surface2);
-  border-radius: 11px; margin-top: 4px; overflow: hidden;
-  position: relative; flex-shrink: 0;
-  opacity: 0; transition: opacity 0.3s;
-  border: 1px solid rgba(124,58,237,0.15);
-}
-#health-bar-container.visible { opacity: 1; }
-#health-bar {
-  height: 100%; width: 100%; background: var(--green);
-  border-radius: 11px;
-  transition: width 0.5s ease, background-color 0.5s ease;
-}
-#health-text {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; font-weight: 700; color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  pointer-events: none; letter-spacing: 0.5px;
-}
-#progress-bar-container {
-  width: 100%; height: 4px; background: var(--surface);
-  border-radius: 2px; flex-shrink: 0; margin-top: 4px;
-  overflow: hidden; opacity: 0; transition: opacity 0.3s;
-}
-#progress-bar-container.visible { opacity: 1; }
-#progress-bar {
-  height: 100%; width: 0; border-radius: 2px;
-  background: linear-gradient(90deg, var(--purple), var(--purple-light));
-  transition: width 0.3s ease;
-}
-#game-area {
-  flex: 1; position: relative; margin-top: 8px;
-  border: 2px solid rgba(124,58,237,0.25);
-  border-radius: var(--radius); background: var(--surface);
-  overflow: hidden; cursor: crosshair;
-}
-#game-area.miss-flash { animation: missFlash 0.3s ease; }
-@keyframes missFlash {
-  0%, 100% { background: var(--surface); }
-  50% { background: rgba(239, 68, 68, 0.08); }
-}
-#game-area.screen-shake { animation: screenShake 0.35s ease; }
-@keyframes screenShake {
-  0%, 100% { transform: translate(0,0); }
-  15% { transform: translate(-6px,4px); }
-  30% { transform: translate(5px,-5px); }
-  45% { transform: translate(-4px,2px); }
-  60% { transform: translate(4px,-3px); }
-  75% { transform: translate(-2px,4px); }
-}
-#combo-display {
-  position: absolute; top: 12px; right: 14px;
-  font-size: 2.2rem; font-weight: 700; color: var(--muted);
-  z-index: 50; pointer-events: none;
-  opacity: 0; transition: opacity 0.3s, color 0.3s, text-shadow 0.3s;
-  line-height: 1;
-}
-#combo-display.visible { opacity: 1; }
-#combo-display.active {
-  color: #ffd700; text-shadow: 0 0 18px rgba(255,215,0,0.5);
-  animation: comboPulse 1s ease-in-out infinite;
-}
-@keyframes comboPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
-}
-.target {
-  position: absolute; border-radius: 50%; transform: scale(0);
-  animation: popIn 0.15s ease forwards;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px;
-  pointer-events: all; z-index: 10; transition: opacity 0.1s;
-}
-.target.good {
-  background: radial-gradient(circle at 35% 35%, #6ee7a0, var(--green));
-  box-shadow: 0 0 20px var(--green-glow), inset 0 -2px 4px rgba(0,0,0,0.2);
-}
-.target.decoy {
-  background: radial-gradient(circle at 35% 35%, #f87171, var(--red));
-  box-shadow: 0 0 20px var(--red-glow), inset 0 -2px 4px rgba(0,0,0,0.2);
-}
-.target.ghost {
-  background: radial-gradient(circle at 35% 35%, rgba(110,231,160,0.9), rgba(74,222,128,0.9));
-  box-shadow: 0 0 20px var(--green-glow);
-}
-.target.ghost.invisible { opacity: 0 !important; pointer-events: all; }
-.target.ghost-ring {
-  background: transparent; border: 2px dashed rgba(74,222,128,0.25);
-  box-shadow: none; pointer-events: none; z-index: 5;
-}
-.target .chain-num {
-  color: var(--bg); font-size: 16px; font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3); pointer-events: none;
-}
-@keyframes popIn {
-  0% { transform: scale(0); }
-  70% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-.hit-effect {
-  position: absolute; border-radius: 50%; pointer-events: none; z-index: 20;
-  animation: hitBurst 0.4s ease forwards;
-}
-@keyframes hitBurst {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(2.5); opacity: 0; }
-}
-.hit-particle {
-  position: absolute; width: 6px; height: 6px;
-  border-radius: 50%; background: var(--green);
-}
-.hit-particle.red { background: var(--red); }
-.miss-x {
-  position: absolute; pointer-events: none; z-index: 20;
-  color: var(--red); font-size: 28px; font-weight: 700;
-  animation: missXAnim 0.6s ease forwards;
-  text-shadow: 0 0 10px var(--red-glow);
-}
-@keyframes missXAnim {
-  0% { transform: scale(0.5) translateY(0); opacity: 1; }
-  100% { transform: scale(1.2) translateY(-30px); opacity: 0; }
-}
-.tier-popup {
-  position: absolute; pointer-events: none; z-index: 25;
-  font-size: 18px; font-weight: 700; text-align: center;
-  white-space: nowrap; animation: tierFloat 1s ease forwards;
-}
-.tier-popup .tier-pts { font-size: 14px; opacity: 0.85; }
-@keyframes tierFloat {
-  0% { transform: translateY(0) scale(0.6); opacity: 1; }
-  15% { transform: translateY(-8px) scale(1.15); opacity: 1; }
-  100% { transform: translateY(-65px) scale(1); opacity: 0; }
-}
-.combo-broken-text {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%,-50%) scale(0.5);
-  color: var(--red); font-size: 1.4rem; font-weight: 700;
-  text-shadow: 0 0 15px var(--red-glow);
-  pointer-events: none; z-index: 30; white-space: nowrap;
-  animation: comboBreakAnim 0.9s ease forwards;
-}
-@keyframes comboBreakAnim {
-  0% { transform: translate(-50%,-50%) scale(0.5); opacity: 1; }
-  20% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; }
-  100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
-}
-.overlay {
-  position: absolute; inset: 0; z-index: 100;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: rgba(14,14,18,0.92); backdrop-filter: blur(6px);
-  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-  padding: 20px; text-align: center;
-}
-.overlay.active { opacity: 1; pointer-events: all; }
-.overlay h1 {
-  font-size: 2.2rem; font-weight: 700;
-  background: linear-gradient(135deg, var(--purple-light), var(--green));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; margin-bottom: 8px;
-}
-.overlay h2 { font-size: 1.4rem; color: var(--purple-light); margin-bottom: 4px; }
-.overlay .subtitle {
-  color: var(--muted); font-size: 0.95rem;
-  margin-bottom: 20px; max-width: 350px; line-height: 1.5;
-}
-.overlay .mechanic {
-  color: var(--green); font-size: 0.85rem;
-  background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
-  padding: 8px 16px; border-radius: 8px;
-  margin-bottom: 20px; max-width: 320px;
-}
-.stats-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 8px; margin: 16px 0; width: 100%; max-width: 300px;
-}
-.stat-box {
-  background: var(--surface2); padding: 10px;
-  border-radius: 8px; text-align: center;
-}
-.stat-box .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--purple-light); }
-.stat-box .stat-label {
-  font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
-  letter-spacing: 1px; margin-top: 2px;
-}
-.stars { font-size: 2rem; margin: 8px 0 16px; letter-spacing: 4px; }
-.stars .earned { color: var(--gold); text-shadow: 0 0 12px rgba(251,191,36,0.5); }
-.stars .empty { color: var(--surface2); }
-.btn {
-  display: inline-block; padding: 12px 32px; border: none; border-radius: 8px;
-  font-family: var(--font); font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; text-decoration: none; color: #fff;
-}
-.btn-primary {
-  background: linear-gradient(135deg, var(--purple), #9333ea);
-  box-shadow: 0 4px 15px var(--purple-glow);
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--purple-glow); }
-.btn-primary:active { transform: translateY(0); }
-.btn-secondary { background: var(--surface2); border: 1px solid rgba(124,58,237,0.3); }
-.btn-secondary:hover { background: rgba(124,58,237,0.15); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-#title-screen .game-title {
-  font-size: 3rem; font-weight: 700;
-  background: linear-gradient(135deg, var(--green), var(--purple-light));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; margin-bottom: 4px;
-}
-#title-screen .game-tagline { color: var(--muted); font-size: 1rem; margin-bottom: 6px; }
-#title-screen .best-score { color: var(--gold); font-size: 0.85rem; margin-bottom: 24px; }
-.crosshair-icon { width: 80px; height: 80px; margin-bottom: 16px; position: relative; }
-.crosshair-icon::before, .crosshair-icon::after {
-  content: ''; position: absolute; background: var(--green); border-radius: 2px;
-}
-.crosshair-icon::before { width: 4px; height: 100%; left: 50%; transform: translateX(-50%); }
-.crosshair-icon::after { width: 100%; height: 4px; top: 50%; transform: translateY(-50%); }
-.crosshair-ring {
-  position: absolute; inset: 10px; border: 4px solid var(--green);
-  border-radius: 50%; box-shadow: 0 0 20px var(--green-glow);
-}
-#final-screen .final-rank-letter {
-  font-size: 8rem; font-weight: 700; line-height: 1; margin-bottom: 0;
-  animation: rankPulse 2s ease-in-out infinite alternate;
-}
-@keyframes rankPulse {
-  0% { transform: scale(1); filter: brightness(1); }
-  100% { transform: scale(1.06); filter: brightness(1.3); }
-}
-#final-screen .final-score-wrap { margin-bottom: 4px; }
-#final-screen .final-score-counter {
-  font-size: 2.6rem; font-weight: 700; color: var(--gold); line-height: 1.2;
-}
-#final-screen .final-score-label {
-  font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px;
-}
-#final-screen .final-new-record {
-  font-size: 1.1rem; font-weight: 700; color: #ffd700; margin-bottom: 8px;
-  animation: recordPulse 0.7s ease infinite alternate;
-}
-@keyframes recordPulse {
-  0% { transform: scale(1); opacity: 0.8; text-shadow: 0 0 8px rgba(255,215,0,0.3); }
-  100% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 20px rgba(255,215,0,0.6); }
-}
-#final-screen .final-subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; }
+
+/* Screens */
+.screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; }
+.screen.active { display: flex; }
+.title { font-size: clamp(36px, 8vw, 64px); font-weight: 700; background: linear-gradient(135deg, var(--accent-light), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.subtitle { color: var(--muted); font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; }
+
+/* Buttons */
+.btn { padding: 14px 36px; border: none; border-radius: 12px; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: transform 0.15s, filter 0.15s, box-shadow 0.2s; }
+.btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff; box-shadow: 0 4px 20px rgba(124,58,237,0.3); }
+.btn-secondary { background: var(--bg2); color: var(--ink); border: 1px solid var(--border); }
+.btn-danger { background: linear-gradient(135deg, #dc2626, var(--red)); color: #fff; }
+
+/* Personal best */
+.pb-display { margin-top: 16px; font-size: 13px; color: var(--muted); }
+.pb-display span { color: var(--gold); font-weight: 700; }
+
+/* Level intro */
+.level-num { font-size: 80px; font-weight: 700; color: var(--accent-light); opacity: 0.3; }
+.level-name { font-size: 32px; font-weight: 700; margin: 8px 0; }
+.level-desc { color: var(--muted); font-size: 14px; max-width: 400px; line-height: 1.6; margin-bottom: 24px; }
+.level-mechanic { display: inline-block; padding: 4px 14px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); border-radius: 20px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-light); margin-bottom: 16px; }
+
+/* HUD */
+.hud { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(14,14,18,0.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 8px 16px; }
+.hud-row { display: flex; justify-content: space-between; align-items: center; max-width: 840px; margin: 0 auto; gap: 12px; flex-wrap: wrap; }
+.hud-item { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.hud-item span { color: var(--ink); font-weight: 700; font-size: 14px; }
+.hud-score span { color: var(--accent-light); font-size: 18px; }
+
+/* Health bar */
+.health-wrap { max-width: 840px; margin: 6px auto 0; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; position: relative; }
+.health-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease, background-color 0.4s ease; background: var(--green); }
+.health-text { position: absolute; right: 8px; top: -1px; font-size: 9px; font-weight: 700; color: var(--ink); line-height: 10px; }
+
+/* Combo */
+.combo-display { position: fixed; top: 70px; right: 20px; z-index: 101; font-size: 28px; font-weight: 700; color: var(--accent-light); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.combo-display.active { opacity: 1; }
+.combo-display.pulse { animation: comboPulse 0.3s ease; }
+@keyframes comboPulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.combo-broken { position: fixed; top: 110px; right: 20px; z-index: 101; font-size: 12px; color: var(--red); letter-spacing: 2px; text-transform: uppercase; opacity: 0; pointer-events: none; }
+.combo-broken.show { animation: brokenFade 1s ease forwards; }
+@keyframes brokenFade { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-10px); } }
+
+/* Game area */
+.game-wrap { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 80px 16px 16px; }
+.game-area { position: relative; width: 100%; max-width: 800px; height: 500px; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; cursor: crosshair; overflow: hidden; user-select: none; -webkit-user-select: none; }
+
+/* Progress bar */
+.progress-wrap { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.05); }
+.progress-bar { height: 100%; background: var(--accent); transition: width 0.3s ease; border-radius: 0 2px 0 0; }
+
+/* Targets */
+.target { position: absolute; border-radius: 50%; cursor: pointer; transform: scale(0); animation: targetPop 0.15s ease forwards; z-index: 10; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: rgba(0,0,0,0.5); }
+.target.good { background: radial-gradient(circle at 35% 35%, #6ee7a0, var(--green)); box-shadow: 0 0 20px rgba(74,222,128,0.3); }
+.target.decoy { background: radial-gradient(circle at 35% 35%, #f87171, var(--red)); box-shadow: 0 0 20px rgba(239,68,68,0.3); }
+.target.ghost { opacity: 0; }
+.target.ghost-hint { box-shadow: 0 0 30px rgba(124,58,237,0.4); border: 2px dashed rgba(124,58,237,0.3); background: transparent; }
+.target.shrinking { animation: targetPop 0.15s ease forwards; }
+@keyframes targetPop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* Hit effect */
+.hit-burst { position: absolute; border-radius: 50%; pointer-events: none; z-index: 20; animation: burst 0.4s ease forwards; border: 3px solid var(--green); }
+@keyframes burst { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+
+/* Particles */
+.particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 20; }
+
+/* Miss X */
+.miss-x { position: absolute; font-size: 32px; font-weight: 700; color: var(--red); pointer-events: none; z-index: 20; animation: missAnim 0.6s ease forwards; }
+@keyframes missAnim { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+/* Score popup */
+.score-popup { position: absolute; pointer-events: none; z-index: 25; font-weight: 700; font-size: 16px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); animation: popupFloat 0.8s ease forwards; white-space: nowrap; }
+@keyframes popupFloat { 0% { transform: translateY(0) scale(0.8); opacity: 1; } 100% { transform: translateY(-50px) scale(1); opacity: 0; } }
+
+/* Screen flash */
+.flash { position: absolute; inset: 0; pointer-events: none; z-index: 30; border-radius: 16px; animation: flashAnim 0.2s ease; }
+.flash.red { background: rgba(239,68,68,0.15); }
+.flash.green { background: rgba(74,222,128,0.08); }
+@keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Screen shake */
+.shake { animation: shake 0.3s ease; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-4px); } 40%,80% { transform: translateX(4px); } }
+
+/* Level complete */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; text-align: left; }
+.stat-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+.stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.stat-value { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.stars { font-size: 32px; margin: 12px 0; }
+
+/* Rank */
+.rank-letter { font-size: 120px; font-weight: 700; line-height: 1; }
+.rank-s { color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5), 0 0 80px rgba(255,215,0,0.3); }
+.rank-a { color: var(--green); text-shadow: 0 0 40px rgba(74,222,128,0.4); }
+.rank-b { color: var(--accent-light); text-shadow: 0 0 40px rgba(167,139,250,0.4); }
+.rank-c { color: var(--yellow); text-shadow: 0 0 30px rgba(250,204,21,0.3); }
+.rank-d { color: var(--muted); }
+.rank-f { color: var(--red); text-shadow: 0 0 30px rgba(239,68,68,0.3); }
+.new-record { color: var(--gold); font-size: 18px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; animation: recordPulse 0.6s ease infinite alternate; margin: 8px 0; }
+@keyframes recordPulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.05); } }
+
+/* Animated counter */
+.final-score { font-size: 48px; font-weight: 700; color: var(--accent-light); margin: 8px 0; }
+
+/* Responsive */
 @media (max-width: 768px) {
-  #game-container { max-height: none; height: 100vh; padding: 6px; }
-  #hud { font-size: 0.75rem; padding: 6px 10px; gap: 4px; }
-  .hud-left, .hud-right { gap: 8px; }
-  #health-bar-container { height: 18px; }
-  #health-text { font-size: 0.65rem; }
-  #combo-display { font-size: 1.8rem; top: 10px; right: 10px; }
-  .tier-popup { font-size: 15px; }
-  .tier-popup .tier-pts { font-size: 12px; }
-  .overlay h1 { font-size: 1.6rem; }
-  #title-screen .game-title { font-size: 2.2rem; }
-  .crosshair-icon { width: 60px; height: 60px; }
-  .stats-grid { max-width: 260px; }
-  .stat-box .stat-val { font-size: 1.1rem; }
-  #final-screen .final-rank-letter { font-size: 6rem; }
-  #final-screen .final-score-counter { font-size: 2rem; }
+  .game-area { height: 400px; }
+  .hud-row { gap: 8px; }
+  .hud-item { font-size: 10px; }
+  .hud-item span { font-size: 12px; }
+  .combo-display { font-size: 22px; top: 65px; right: 12px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rank-letter { font-size: 80px; }
 }
 @media (max-width: 480px) {
-  #hud { font-size: 0.7rem; padding: 5px 8px; flex-wrap: wrap; min-height: 40px; }
-  #health-bar-container { height: 16px; border-radius: 8px; }
-  #health-bar { border-radius: 8px; }
-  #health-text { font-size: 0.6rem; }
-  #combo-display { font-size: 1.5rem; top: 8px; right: 8px; }
-  .tier-popup { font-size: 13px; }
-  .tier-popup .tier-pts { font-size: 11px; }
-  .combo-broken-text { font-size: 1.1rem; }
-  .overlay h1 { font-size: 1.3rem; }
-  #title-screen .game-title { font-size: 1.8rem; }
-  .btn { padding: 10px 24px; font-size: 0.9rem; }
-  .stats-grid { gap: 6px; }
-  #final-screen .final-rank-letter { font-size: 5rem; }
-  #final-screen .final-score-counter { font-size: 1.6rem; }
+  .game-area { height: 350px; border-radius: 10px; }
+  .title { font-size: 32px; }
+  .level-num { font-size: 50px; }
+  .level-name { font-size: 24px; }
+  .btn { padding: 12px 28px; font-size: 14px; }
+  .stat-value { font-size: 18px; }
+  .final-score { font-size: 36px; }
+  .hud { padding: 6px 10px; }
+  .health-wrap { height: 6px; }
+  .combo-display { font-size: 18px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .target { min-width: 44px; min-height: 44px; }
+  .btn { min-height: 48px; }
 }
 </style>
 </head>
 <body>
-<a href="../" class="home-btn">
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <polyline points="9 22 9 12 15 12 15 22"/>
-  </svg> Home
-</a>
-<div id="game-container">
-  <div id="hud">
-    <div class="hud-left">
-      <span id="hud-level">Level 1</span>
-      <span id="hud-score">0 pts</span>
+<a href="../" class="home-btn">🏠 Home</a>
+
+<!-- TITLE SCREEN -->
+<div class="screen active" id="title-screen">
+  <div class="title">SnapShot</div>
+  <div class="subtitle">Reaction Game · 10 Levels</div>
+  <div style="margin-top:32px">
+    <button class="btn btn-primary" onclick="Game.start()">🎯 START</button>
+  </div>
+  <div class="pb-display" id="pb-title">Personal Best: <span id="pb-value">—</span></div>
+</div>
+
+<!-- LEVEL INTRO SCREEN -->
+<div class="screen" id="intro-screen">
+  <div class="level-num" id="intro-num"></div>
+  <div class="level-mechanic" id="intro-mechanic"></div>
+  <div class="level-name" id="intro-name"></div>
+  <div class="level-desc" id="intro-desc"></div>
+  <button class="btn btn-primary" onclick="Game.startLevel()">READY</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="hud" id="hud">
+    <div class="hud-row">
+      <div class="hud-item" id="hud-level">Level: <span>1</span></div>
+      <div class="hud-item hud-score">Score: <span id="hud-score">0</span></div>
+      <div class="hud-item">Accuracy: <span id="hud-acc">100%</span></div>
     </div>
-    <div class="hud-right">
-      <span id="hud-accuracy">100%</span>
+    <div class="health-wrap">
+      <div class="health-bar" id="health-bar" style="width:100%"></div>
+      <div class="health-text" id="health-text">100%</div>
     </div>
   </div>
-  <div id="health-bar-container">
-    <div id="health-bar"></div>
-    <div id="health-text">100%</div>
-  </div>
-  <div id="progress-bar-container">
-    <div id="progress-bar"></div>
-  </div>
-  <div id="game-area">
-    <div id="combo-display">x1</div>
-    <div id="title-screen" class="overlay active">
-      <div class="crosshair-icon"><div class="crosshair-ring"></div></div>
-      <div class="game-title">SnapShot</div>
-      <div class="game-tagline">Reaction • Precision • Speed</div>
-      <div class="best-score" id="best-score-display"></div>
-      <button class="btn btn-primary" onclick="Game.start()">Play</button>
-    </div>
-    <div id="level-intro" class="overlay">
-      <h2 id="intro-level-num">Level 1</h2>
-      <h1 id="intro-level-name">Warm Up</h1>
-      <div class="subtitle" id="intro-desc"></div>
-      <div class="mechanic" id="intro-mechanic"></div>
-      <button class="btn btn-primary" onclick="Game.startLevel()">Ready?</button>
-    </div>
-    <div id="level-complete" class="overlay">
-      <h2>Level Complete!</h2>
-      <h1 id="complete-level-name"></h1>
-      <div class="stars" id="complete-stars"></div>
-      <div class="stats-grid" id="complete-stats"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="next-level-btn" onclick="Game.nextLevel()">Next Level</button>
-      </div>
-    </div>
-    <div id="final-screen" class="overlay">
-      <div class="final-rank-letter" id="final-rank-letter"></div>
-      <div class="final-score-wrap">
-        <div class="final-score-counter" id="final-score-counter">0</div>
-        <div class="final-score-label">Points</div>
-      </div>
-      <div class="final-new-record" id="final-new-record" style="display:none">🎉 NEW RECORD!</div>
-      <div class="final-subtitle" id="final-subtitle"></div>
-      <div class="stats-grid" id="final-stats"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="Game.start()">Play Again</button>
-        <button class="btn btn-secondary" onclick="Game.showTitle()">Home</button>
-      </div>
+  <div class="combo-display" id="combo-display">x1</div>
+  <div class="combo-broken" id="combo-broken">COMBO BROKEN</div>
+  <div class="game-wrap">
+    <div class="game-area" id="game-area">
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     </div>
   </div>
 </div>
+
+<!-- LEVEL COMPLETE SCREEN -->
+<div class="screen" id="complete-screen">
+  <div class="level-name" id="comp-title"></div>
+  <div class="stars" id="comp-stars"></div>
+  <div class="stats-grid" id="comp-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-primary" onclick="Game.nextLevel()">NEXT LEVEL →</button>
+  </div>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div class="screen" id="gameover-screen">
+  <div style="font-size:24px;font-weight:700;color:var(--red);margin-bottom:8px">GAME OVER</div>
+  <div class="rank-letter" id="go-rank"></div>
+  <div class="final-score" id="go-score"></div>
+  <div id="go-record" style="display:none" class="new-record">★ NEW RECORD! ★</div>
+  <div class="stats-grid" id="go-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-danger" onclick="Game.start()">RETRY</button>
+    <button class="btn btn-secondary" onclick="Game.showTitle()">HOME</button>
+  </div>
+</div>
+
+<!-- VICTORY SCREEN -->
+<div class="screen" id="victory-screen">
+  <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:4px">🏆 VICTORY 🏆</div>
+  <div class="rank-letter" id="vic-rank"></div>
+  <div class="final-score" id="vic-score"></div>
+  <div id="vic-record" style="display:none" class="new-record">★ NEW RECORD! ★</div>
+  <div class="stats-grid" id="vic-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-primary" onclick="Game.start()">PLAY AGAIN</button>
+    <button class="btn btn-secondary" onclick="Game.showTitle()">HOME</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// SNAPSHOT — REACTION GAME ENGINE
+// ═══════════════════════════════════════════════
+const LEVELS = [
+  { num:1, name:"Warm Up", mechanic:"Static Targets", desc:"Click the green targets before they disappear. Easy start!", targetCount:8, window:2000, size:60, moving:false, decoys:0, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:2, name:"Quick Draw", mechanic:"Faster Pace", desc:"Targets appear and vanish quicker. Stay alert!", targetCount:10, window:1500, size:50, moving:false, decoys:0, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:3, name:"Sharpshooter", mechanic:"Small Targets", desc:"Smaller targets test your precision. Aim carefully!", targetCount:12, window:1500, size:32, moving:false, decoys:0, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:4, name:"Moving Targets", mechanic:"Targets Move", desc:"Targets drift across the screen. Track and click!", targetCount:10, window:2000, size:46, moving:true, decoys:0, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:5, name:"Friend or Foe", mechanic:"Decoys Added", desc:"Green = click. RED = don't click! Decoys drain your health.", targetCount:12, window:1500, size:44, moving:false, decoys:6, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:6, name:"Shrinking", mechanic:"Shrinking Targets", desc:"Targets shrink from large to nothing. Click before they vanish!", targetCount:14, window:3000, size:70, moving:false, decoys:0, shrinking:true, ghost:false, chain:false, boss:false },
+  { num:7, name:"Chaos", mechanic:"Moving + Decoys", desc:"Moving targets AND decoys. Pure chaos. Stay focused!", targetCount:12, window:1200, size:42, moving:true, decoys:8, shrinking:false, ghost:false, chain:false, boss:false },
+  { num:8, name:"Ghost", mechanic:"Invisible Targets", desc:"Targets flash briefly then vanish. Click where they were!", targetCount:10, window:1800, size:50, moving:false, decoys:0, shrinking:false, ghost:true, chain:false, boss:false },
+  { num:9, name:"Chain Reaction", mechanic:"Click in Order", desc:"Numbered targets appear. Click 1→2→3→4→5 in order!", targetCount:15, window:8000, size:40, moving:false, decoys:0, shrinking:false, ghost:false, chain:true, boss:false },
+  { num:10, name:"Boss Round", mechanic:"Everything!", desc:"All mechanics combined. Survive the onslaught!", targetCount:20, window:1000, size:40, moving:true, decoys:10, shrinking:false, ghost:false, chain:false, boss:true },
+];
+
+const Game = {
+  screen: 'title', levelIdx: 0, score: 0, health: 100,
+  combo: 0, maxCombo: 0, totalHits: 0, totalMisses: 0, totalShots: 0,
+  reactionTimes: [], levelHits: 0, levelMisses: 0, levelCombo: 0,
+  targets: [], activeTargets: [], spawnIdx: 0, spawnTimer: null,
+  levelStartTime: 0, animFrame: null, isPlaying: false,
+
+  // ── Screen Management ──
+  showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const hud = document.getElementById('hud');
+    const combo = document.getElementById('combo-display');
+    if (id === 'game-screen') { hud.style.display = 'block'; combo.style.display = 'block'; }
+    else { hud.style.display = 'none'; combo.style.display = 'none'; }
+  },
+
+  showTitle() {
+    this.showScreen('title-screen');
+    const pb = localStorage.getItem('snapshot_pb');
+    document.getElementById('pb-value').textContent = pb ? pb.toLocaleString() : '—';
+  },
+
+  // ── Start Game ──
+  start() {
+    this.levelIdx = 0; this.score = 0; this.health = 100;
+    this.combo = 0; this.maxCombo = 0; this.totalHits = 0;
+    this.totalMisses = 0; this.totalShots = 0; this.reactionTimes = [];
+    this.showIntro();
+  },
+
+  // ── Level Intro ──
+  showIntro() {
+    const lv = LEVELS[this.levelIdx];
+    document.getElementById('intro-num').textContent = lv.num;
+    document.getElementById('intro-mechanic').textContent = '⚡ ' + lv.mechanic;
+    document.getElementById('intro-name').textContent = lv.name;
+    document.getElementById('intro-desc').textContent = lv.desc;
+    this.showScreen('intro-screen');
+  },
+
+  // ── Start Level ──
+  startLevel() {
+    const lv = LEVELS[this.levelIdx];
+    this.levelHits = 0; this.levelMisses = 0; this.levelCombo = 0;
+    this.spawnIdx = 0; this.activeTargets = []; this.isPlaying = true;
+    this.levelStartTime = Date.now();
+    this.showScreen('game-screen');
+    this.updateHUD();
+    this.updateHealth();
+    this.updateComboDisplay();
+
+    const area = document.getElementById('game-area');
+    // Clear old targets
+    area.querySelectorAll('.target,.hit-burst,.miss-x,.score-popup,.particle,.flash').forEach(e => e.remove());
+    document.getElementById('progress-bar').style.width = '0%';
+
+    // Misclick handler
+    area.onclick = (e) => {
+      if (!this.isPlaying) return;
+      if (e.target === area || e.target.classList.contains('progress-wrap') || e.target.classList.contains('progress-bar')) {
+        this.onMisclick();
+      }
+    };
+
+    if (lv.chain) { this.startChain(0); }
+    else { this.scheduleSpawn(); }
+  },
+
+  // ── Spawn Logic ──
+  scheduleSpawn() {
+    const lv = LEVELS[this.levelIdx];
+    const total = lv.targetCount + lv.decoys;
+    if (this.spawnIdx >= total) { this.checkLevelDone(); return; }
+    if (!this.isPlaying) return;
+
+    // Determine spawn delay
+    const delay = lv.boss ? 300 + Math.random() * 500 : 400 + Math.random() * 600;
+
+    this.spawnTimer = setTimeout(() => {
+      if (!this.isPlaying) return;
+      const isDecoy = lv.decoys > 0 && this.spawnIdx >= lv.targetCount;
+      this.spawnTarget(isDecoy, lv);
+      this.spawnIdx++;
+      this.updateProgress();
+      this.scheduleSpawn();
+    }, this.spawnIdx === 0 ? 500 : delay);
+  },
+
+  spawnTarget(isDecoy, lv) {
+    const area = document.getElementById('game-area');
+    const rect = area.getBoundingClientRect();
+    const size = isDecoy ? lv.size : (lv.boss ? lv.size + Math.random()*20-10 : lv.size);
+    const margin = 10;
+    const x = margin + Math.random() * (rect.width - size - margin*2);
+    const y = margin + Math.random() * (rect.height - size - margin*2 - 4);
+
+    const el = document.createElement('div');
+    el.className = 'target ' + (isDecoy ? 'decoy' : 'good');
+    el.style.width = size + 'px'; el.style.height = size + 'px';
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+
+    const spawnTime = Date.now();
+    let vx = 0, vy = 0;
+
+    // Moving
+    if (lv.moving && !isDecoy) {
+      vx = (Math.random() - 0.5) * 2; vy = (Math.random() - 0.5) * 2;
+    }
+    if (lv.boss && Math.random() < 0.4) {
+      vx = (Math.random() - 0.5) * 2.5; vy = (Math.random() - 0.5) * 2.5;
+    }
+
+    // Ghost
+    let isGhost = lv.ghost || (lv.boss && Math.random() < 0.2);
+    if (isDecoy) isGhost = false;
+
+    if (isGhost) {
+      el.style.opacity = '1'; el.style.transition = 'opacity 0.3s';
+      setTimeout(() => { if (el.parentNode) { el.style.opacity = '0'; el.classList.add('ghost'); } }, 500);
+      setTimeout(() => { if (el.parentNode) { el.classList.add('ghost-hint'); el.style.opacity = '1'; } }, 600);
+    }
+
+    // Shrinking
+    let isShrinking = lv.shrinking || (lv.boss && Math.random() < 0.3);
+    if (isDecoy) isShrinking = false;
+    if (isShrinking) {
+      el.style.transition = 'width ' + (lv.window/1000) + 's linear, height ' + (lv.window/1000) + 's linear, opacity 0.3s';
+      setTimeout(() => {
+        el.style.width = '0px'; el.style.height = '0px';
+        el.style.left = (x + size/2) + 'px'; el.style.top = (y + size/2) + 'px';
+      }, 200);
+    }
+
+    // Click handler
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if (!this.isPlaying) return;
+      if (isDecoy) { this.onDecoyClick(el); return; }
+      const rt = Date.now() - spawnTime;
+      this.onHit(el, rt, x + size/2, y + size/2);
+    };
+
+    area.appendChild(el);
+
+    // Timeout — miss
+    const timeout = setTimeout(() => {
+      if (el.parentNode && !isDecoy) { this.onMiss(el, x + size/2, y + size/2); }
+      else if (el.parentNode && isDecoy) { el.remove(); } // decoy timeout is fine
+    }, lv.window);
+
+    // Store for moving
+    const tgt = { el, vx, vy, x, y, size, timeout, isDecoy };
+    this.activeTargets.push(tgt);
+
+    // Start movement
+    if (vx || vy) this.startMovement(tgt, area);
+  },
+
+  startMovement(tgt, area) {
+    const rect = area.getBoundingClientRect();
+    function move() {
+      if (!tgt.el.parentNode) return;
+      tgt.x += tgt.vx; tgt.y += tgt.vy;
+      if (tgt.x < 0 || tgt.x > rect.width - tgt.size) tgt.vx *= -1;
+      if (tgt.y < 0 || tgt.y > rect.height - tgt.size - 4) tgt.vy *= -1;
+      tgt.x = Math.max(0, Math.min(rect.width - tgt.size, tgt.x));
+      tgt.y = Math.max(0, Math.min(rect.height - tgt.size - 4, tgt.y));
+      tgt.el.style.left = tgt.x + 'px'; tgt.el.style.top = tgt.y + 'px';
+      requestAnimationFrame(move);
+    }
+    requestAnimationFrame(move);
+  },
+
+  // ── Chain Level ──
+  startChain(chainNum) {
+    if (chainNum >= 3) { this.checkLevelDone(); return; }
+    if (!this.isPlaying) return;
+    const lv = LEVELS[this.levelIdx];
+    const area = document.getElementById('game-area');
+    area.querySelectorAll('.target').forEach(e => e.remove());
+    const rect = area.getBoundingClientRect();
+    let chainIdx = 0;
+    const targets = [];
+    const spawnTime = Date.now();
+
+    for (let i = 0; i < 5; i++) {
+      const size = lv.size;
+      const x = 20 + Math.random() * (rect.width - size - 40);
+      const y = 20 + Math.random() * (rect.height - size - 40);
+      const el = document.createElement('div');
+      el.className = 'target good';
+      el.style.width = size + 'px'; el.style.height = size + 'px';
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      el.textContent = (i+1);
+      el.style.animationDelay = (i * 0.08) + 's';
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (!this.isPlaying) return;
+        if (i === chainIdx) {
+          const rt = Date.now() - spawnTime;
+          this.onHit(el, rt, x + size/2, y + size/2);
+          chainIdx++;
+          if (chainIdx >= 5) {
+            this.spawnIdx += 5;
+            this.updateProgress();
+            setTimeout(() => this.startChain(chainNum + 1), 600);
+          }
+        } else {
+          this.onChainMiss(el, x + size/2, y + size/2);
+        }
+      };
+      area.appendChild(el);
+      targets.push(el);
+    }
+
+    // Chain timeout
+    setTimeout(() => {
+      if (!this.isPlaying) return;
+      targets.forEach(el => { if (el.parentNode) { this.totalMisses++; this.levelMisses++; el.remove(); } });
+      this.damageHealth(8);
+      this.spawnIdx += 5;
+      this.updateProgress();
+      this.startChain(chainNum + 1);
+    }, lv.window);
+  },
+
+  // ── Hit ──
+  onHit(el, reactionTime, cx, cy) {
+    clearTimeout(this.activeTargets.find(t => t.el === el)?.timeout);
+    el.remove();
+    this.totalHits++; this.levelHits++; this.totalShots++;
+    this.reactionTimes.push(reactionTime);
+    this.combo++; if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+    if (this.combo > this.levelCombo) this.levelCombo = this.combo;
+
+    // Precision scoring
+    let tier, base, color;
+    if (reactionTime < 200) { tier = 'PERFECT!'; base = 100; color = 'var(--gold)'; }
+    else if (reactionTime < 400) { tier = 'GREAT!'; base = 75; color = 'var(--accent-light)'; }
+    else if (reactionTime < 700) { tier = 'GOOD!'; base = 50; color = 'var(--green)'; }
+    else if (reactionTime < 1000) { tier = 'OK'; base = 25; color = 'var(--ink)'; }
+    else { tier = 'SLOW'; base = 10; color = 'var(--muted)'; }
+
+    const pts = base * Math.min(this.combo, 10);
+    this.score += pts;
+
+    // Effects
+    this.showBurst(cx, cy); this.showParticles(cx, cy, 'var(--green)');
+    this.showPopup(cx, cy, `${tier} +${pts}`, color);
+    this.showFlash('green');
+    this.updateComboDisplay();
+    this.updateHUD();
+  },
+
+  // ── Miss ──
+  onMiss(el, cx, cy) {
+    el.remove();
+    this.totalMisses++; this.levelMisses++; this.totalShots++;
+    this.breakCombo();
+    this.damageHealth(8);
+    this.showMissX(cx, cy); this.showFlash('red');
+    const lv = LEVELS[this.levelIdx];
+    if (lv.boss) document.getElementById('game-area').classList.add('shake');
+    setTimeout(() => document.getElementById('game-area').classList.remove('shake'), 300);
+    this.updateHUD();
+  },
+
+  onDecoyClick(el) {
+    el.remove();
+    this.totalMisses++; this.levelMisses++; this.totalShots++;
+    const rect = el.getBoundingClientRect();
+    const area = document.getElementById('game-area').getBoundingClientRect();
+    const cx = rect.left - area.left + rect.width/2;
+    const cy = rect.top - area.top + rect.height/2;
+    this.breakCombo();
+    this.damageHealth(15);
+    this.showParticles(cx, cy, 'var(--red)');
+    this.showPopup(cx, cy, '✗ DECOY! -15%', 'var(--red)');
+    this.showFlash('red');
+    if (LEVELS[this.levelIdx].boss) document.getElementById('game-area').classList.add('shake');
+    setTimeout(() => document.getElementById('game-area').classList.remove('shake'), 300);
+    this.updateHUD();
+  },
+
+  onMisclick() {
+    this.breakCombo();
+    this.damageHealth(5);
+    this.showFlash('red');
+    this.updateHUD();
+  },
+
+  onChainMiss(el, cx, cy) {
+    this.totalMisses++; this.levelMisses++;
+    this.breakCombo();
+    this.damageHealth(8);
+    this.showMissX(cx, cy); this.showFlash('red');
+    this.updateHUD();
+  },
+
+  // ── Health ──
+  damageHealth(amt) {
+    this.health = Math.max(0, this.health - amt);
+    this.updateHealth();
+    if (this.health <= 0) { this.gameOver(); }
+  },
+
+  updateHealth() {
+    const bar = document.getElementById('health-bar');
+    const text = document.getElementById('health-text');
+    bar.style.width = this.health + '%';
+    text.textContent = Math.round(this.health) + '%';
+    if (this.health > 60) bar.style.backgroundColor = 'var(--green)';
+    else if (this.health > 30) bar.style.backgroundColor = 'var(--yellow)';
+    else bar.style.backgroundColor = 'var(--red)';
+  },
+
+  // ── Combo ──
+  breakCombo() {
+    if (this.combo > 1) {
+      const cb = document.getElementById('combo-broken');
+      cb.classList.remove('show');
+      void cb.offsetWidth;
+      cb.classList.add('show');
+    }
+    this.combo = 0;
+    this.updateComboDisplay();
+  },
+
+  updateComboDisplay() {
+    const el = document.getElementById('combo-display');
+    const mult = Math.min(this.combo, 10);
+    if (mult > 1) {
+      el.textContent = 'x' + mult;
+      el.classList.add('active');
+      el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+      el.style.color = mult >= 8 ? 'var(--gold)' : mult >= 5 ? 'var(--green)' : 'var(--accent-light)';
+    } else {
+      el.classList.remove('active');
+    }
+  },
+
+  // ── HUD ──
+  updateHUD() {
+    document.getElementById('hud-level').innerHTML = 'Level: <span>' + LEVELS[this.levelIdx].num + '</span>';
+    document.getElementById('hud-score').textContent = this.score.toLocaleString();
+    const total = this.totalHits + this.totalMisses;
+    const acc = total > 0 ? Math.round(this.totalHits / total * 100) : 100;
+    document.getElementById('hud-acc').textContent = acc + '%';
+  },
+
+  updateProgress() {
+    const lv = LEVELS[this.levelIdx];
+    const total = lv.targetCount + lv.decoys;
+    const pct = Math.min(100, (this.spawnIdx / total) * 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+  },
+
+  // ── Effects ──
+  showBurst(cx, cy) {
+    const area = document.getElementById('game-area');
+    const b = document.createElement('div');
+    b.className = 'hit-burst';
+    b.style.left = (cx - 20) + 'px'; b.style.top = (cy - 20) + 'px';
+    b.style.width = '40px'; b.style.height = '40px';
+    area.appendChild(b);
+    setTimeout(() => b.remove(), 400);
+  },
+
+  showParticles(cx, cy, color) {
+    const area = document.getElementById('game-area');
+    for (let i = 0; i < 6; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = cx + 'px'; p.style.top = cy + 'px';
+      p.style.background = color;
+      const angle = (Math.PI * 2 / 6) * i;
+      const dist = 30 + Math.random() * 30;
+      const tx = Math.cos(angle) * dist;
+      const ty = Math.sin(angle) * dist;
+      p.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+      area.appendChild(p);
+      requestAnimationFrame(() => {
+        p.style.transform = `translate(${tx}px, ${ty}px)`;
+        p.style.opacity = '0';
+      });
+      setTimeout(() => p.remove(), 400);
+    }
+  },
+
+  showPopup(cx, cy, text, color) {
+    const area = document.getElementById('game-area');
+    const p = document.createElement('div');
+    p.className = 'score-popup';
+    p.textContent = text;
+    p.style.color = color;
+    p.style.left = cx + 'px'; p.style.top = (cy - 20) + 'px';
+    area.appendChild(p);
+    setTimeout(() => p.remove(), 800);
+  },
+
+  showMissX(cx, cy) {
+    const area = document.getElementById('game-area');
+    const x = document.createElement('div');
+    x.className = 'miss-x';
+    x.textContent = '✗';
+    x.style.left = (cx - 16) + 'px'; x.style.top = (cy - 16) + 'px';
+    area.appendChild(x);
+    setTimeout(() => x.remove(), 600);
+  },
+
+  showFlash(type) {
+    const area = document.getElementById('game-area');
+    const f = document.createElement('div');
+    f.className = 'flash ' + type;
+    area.appendChild(f);
+    setTimeout(() => f.remove(), 200);
+  },
+
+  // ── Level Done ──
+  checkLevelDone() {
+    if (!this.isPlaying) return;
+    // Wait for all active targets to resolve
+    setTimeout(() => {
+      if (!this.isPlaying) return;
+      this.isPlaying = false;
+      clearTimeout(this.spawnTimer);
+
+      // Regen health
+      this.health = Math.min(100, this.health + 10);
+      this.updateHealth();
+
+      // Stars
+      const total = this.levelHits + this.levelMisses;
+      const acc = total > 0 ? this.levelHits / total : 1;
+      let stars = '★';
+      if (acc >= 0.7) stars = '★★';
+      if (acc >= 0.9) stars = '★★★';
+
+      const elapsed = ((Date.now() - this.levelStartTime) / 1000).toFixed(1);
+
+      document.getElementById('comp-title').textContent = '✓ ' + LEVELS[this.levelIdx].name + ' Complete!';
+      document.getElementById('comp-stars').textContent = stars;
+      document.getElementById('comp-stats').innerHTML = `
+        <div class="stat-item"><div class="stat-label">Hits</div><div class="stat-value" style="color:var(--green)">${this.levelHits}</div></div>
+        <div class="stat-item"><div class="stat-label">Misses</div><div class="stat-value" style="color:var(--red)">${this.levelMisses}</div></div>
+        <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value">${Math.round(acc*100)}%</div></div>
+        <div class="stat-item"><div class="stat-label">Best Combo</div><div class="stat-value" style="color:var(--accent-light)">x${this.levelCombo}</div></div>
+        <div class="stat-item"><div class="stat-label">Time</div><div class="stat-value">${elapsed}s</div></div>
+        <div class="stat-item"><div class="stat-label">Health</div><div class="stat-value">${Math.round(this.health)}%</div></div>
+      `;
+
+      // Check if last level
+      if (this.levelIdx >= LEVELS.length - 1) {
+        this.victory();
+        return;
+      }
+
+      this.showScreen('complete-screen');
+    }, 1500);
+  },
+
+  nextLevel() {
+    this.levelIdx++;
+    this.showIntro();
+  },
+
+  // ── Game Over ──
+  gameOver() {
+    this.isPlaying = false;
+    clearTimeout(this.spawnTimer);
+    document.getElementById('game-area').querySelectorAll('.target').forEach(e => e.remove());
+
+    const rank = this.getRank();
+    document.getElementById('go-rank').textContent = rank.letter;
+    document.getElementById('go-rank').className = 'rank-letter rank-' + rank.letter.toLowerCase();
+
+    const isRecord = this.checkRecord();
+    document.getElementById('go-record').style.display = isRecord ? 'block' : 'none';
+
+    this.animateScore('go-score', this.score);
+    this.showFinalStats('go-stats');
+    this.showScreen('gameover-screen');
+  },
+
+  // ── Victory ──
+  victory() {
+    const rank = this.getRank();
+    document.getElementById('vic-rank').textContent = rank.letter;
+    document.getElementById('vic-rank').className = 'rank-letter rank-' + rank.letter.toLowerCase();
+
+    const isRecord = this.checkRecord();
+    document.getElementById('vic-record').style.display = isRecord ? 'block' : 'none';
+
+    this.animateScore('vic-score', this.score);
+    this.showFinalStats('vic-stats');
+    this.showScreen('victory-screen');
+  },
+
+  getRank() {
+    if (this.score > 15000) return { letter: 'S' };
+    if (this.score > 10000) return { letter: 'A' };
+    if (this.score > 7000) return { letter: 'B' };
+    if (this.score > 4000) return { letter: 'C' };
+    if (this.score > 2000) return { letter: 'D' };
+    return { letter: 'F' };
+  },
+
+  checkRecord() {
+    const pb = parseInt(localStorage.getItem('snapshot_pb')) || 0;
+    if (this.score > pb) { localStorage.setItem('snapshot_pb', this.score); return true; }
+    return false;
+  },
+
+  animateScore(elId, target) {
+    const el = document.getElementById(elId);
+    let current = 0;
+    const step = Math.max(1, Math.floor(target / 60));
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= target) { current = target; clearInterval(interval); }
+      el.textContent = current.toLocaleString();
+    }, 16);
+  },
+
+  showFinalStats(elId) {
+    const total = this.totalHits + this.totalMisses;
+    const acc = total > 0 ? Math.round(this.totalHits / total * 100) : 0;
+    const avgRT = this.reactionTimes.length > 0 ? Math.round(this.reactionTimes.reduce((a,b)=>a+b,0) / this.reactionTimes.length) : 0;
+    document.getElementById(elId).innerHTML = `
+      <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value">${acc}%</div></div>
+      <div class="stat-item"><div class="stat-label">Best Combo</div><div class="stat-value" style="color:var(--gold)">x${this.maxCombo}</div></div>
+      <div class="stat-item"><div class="stat-label">Avg Reaction</div><div class="stat-value">${avgRT}ms</div></div>
+      <div class="stat-item"><div class="stat-label">Levels</div><div class="stat-value">${this.levelIdx + 1}/${LEVELS.length}</div></div>
+      <div class="stat-item"><div class="stat-label">Targets Hit</div><div class="stat-value" style="color:var(--green)">${this.totalHits}</div></div>
+      <div class="stat-item"><div class="stat-label">Total Score</div><div class="stat-value" style="color:var(--accent-light)">${this.score.toLocaleString()}</div></div>
+    `;
+  },
+};
+
+// Init
+Game.showTitle();
+</script>
+<script src="../shared/recommendations.js" defer></script>
+</body>
+</html>
