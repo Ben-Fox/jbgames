@@ -83,8 +83,20 @@ a { color: inherit; text-decoration: none; }
 
 /* Targets */
 .target { position: absolute; border-radius: 50%; cursor: pointer; transform: scale(0); animation: targetPop 0.15s ease forwards; z-index: 10; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: rgba(0,0,0,0.5); will-change: transform; }
-.target.good { background: radial-gradient(circle at 35% 35%, #6ee7a0, var(--green)); box-shadow: 0 0 20px rgba(74,222,128,0.3); }
-.target.decoy { background: radial-gradient(circle at 35% 35%, #f87171, var(--red)); box-shadow: 0 0 20px rgba(239,68,68,0.3); }
+/* Good target: bullseye rings */
+.target.good {
+  background: radial-gradient(circle, var(--bg) 0%, var(--bg) 18%, var(--green) 20%, var(--green) 30%, var(--bg) 32%, var(--bg) 42%, var(--green) 44%, var(--green) 54%, var(--bg) 56%, var(--bg) 66%, var(--green) 68%, var(--green) 100%);
+  box-shadow: 0 0 20px rgba(74,222,128,0.3), inset 0 0 8px rgba(74,222,128,0.2);
+}
+/* Decoy: spiky danger look */
+.target.decoy {
+  background: radial-gradient(circle, #fff 0%, #fff 15%, var(--red) 17%, var(--red) 35%, #1a0505 37%, #1a0505 50%, var(--red) 52%, var(--red) 100%);
+  box-shadow: 0 0 20px rgba(239,68,68,0.4), inset 0 0 8px rgba(239,68,68,0.3);
+  border: 2px solid rgba(239,68,68,0.6);
+}
+.target.decoy::after {
+  content: '✕'; position: absolute; font-size: inherit; color: rgba(255,255,255,0.7); font-weight: 900;
+}
 .target.ghost { opacity: 0; }
 .target.ghost-hint { box-shadow: 0 0 30px rgba(124,58,237,0.4); border: 2px dashed rgba(124,58,237,0.3); background: transparent; }
 .target.shrinking { animation: targetPop 0.15s ease forwards; }
