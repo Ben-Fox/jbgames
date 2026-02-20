@@ -19,6 +19,7 @@
 <meta name="twitter:title" content="Daily Puzzles — Four Daily Puzzle Games | BrainSmacks">
 <meta name="twitter:description" content="Four games, fresh daily. Free browser puzzle games.">
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300;1,600&family=Azeret+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -70,6 +71,14 @@ body.light-theme {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Performance: reduce layout thrashing */
+.game-card, .spectrum-bar, .spectrum-guess-marker, .spectrum-target,
+.cipher-cell, .letter-box, .chronicle-event, .round-dot, .result-banner {
+  will-change: transform;
+  contain: layout style;
+}
+.game-grid, #game-content { contain: layout; }
+
 body {
   background: var(--bg);
   color: var(--ink);
@@ -92,8 +101,10 @@ body.light-theme {
     radial-gradient(ellipse at 50% 50%, rgba(60,50,40,0.02) 0%, transparent 80%);
 }
 
-/* Transition all themed elements */
-body *, body *::before, body *::after {
+/* Transition themed containers (not every element — too expensive) */
+body, #game-shell, #hub, .game-card, .game-header, .how-to-play, .big-prompt,
+.result-banner, .back-btn, .submit-btn, .cipher-quote-area, .cipher-key,
+.cipher-freq, .chronicle-event, .spectrum-bar, .feedback-msg {
   transition: background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease;
 }
 
@@ -3576,6 +3587,6 @@ function startMimic() {
   });
 })();
 </script>
-<script src="../shared/recommendations.js"></script>
+<script src="../shared/recommendations.js" defer></script>
 </body>
 </html>
