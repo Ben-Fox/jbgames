@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickDraw — Rail Shooter | BrainSmacks</title>
+<meta name="description" content="QuickDraw — a Wild West rail shooter. Shoot bandits, spare civilians, survive 10 levels.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#0e0e12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e12; --bg2: #1a1a24; --bg3: #22222e;
+  --ink: #f0f0f0; --muted: #888; --border: rgba(255,255,255,0.08);
+  --accent: #c44536; --accent-light: #e07a5f;
+  --green: #4ade80; --red: #ef4444; --gold: #ffd700;
+  --yellow: #facc15; --blue: #60a5fa; --orange: #f97316;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
+a{color:inherit;text-decoration:none}
+.home-btn{position:fixed;top:10px;left:10px;z-index:9999;padding:6px 12px;border-radius:20px;font-size:14px;background:rgba(14,14,18,0.8);backdrop-filter:blur(8px);border:1px solid var(--border);opacity:0.7;transition:opacity 0.2s}
+.home-btn:hover{opacity:1}
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;text-align:center}
+.screen.active{display:flex}
+.title{font-size:clamp(36px,8vw,64px);font-weight:700;background:linear-gradient(135deg,var(--accent-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{color:var(--muted);font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-top:8px}
+.btn{padding:14px 36px;border:none;border-radius:12px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:transform 0.15s,filter 0.15s}
+.btn:hover{transform:scale(1.05);filter:brightness(1.1)}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-light));color:#fff;box-shadow:0 4px 20px rgba(196,69,54,0.3)}
+.btn-secondary{background:var(--bg2);color:var(--ink);border:1px solid var(--border)}
+.btn-danger{background:linear-gradient(135deg,#dc2626,var(--red));color:#fff}
+.pb-display{margin-top:16px;font-size:13px;color:var(--muted)}
+.pb-display span{color:var(--gold);font-weight:700}
+.level-num{font-size:80px;font-weight:700;color:var(--accent-light);opacity:0.3}
+.level-name{font-size:32px;font-weight:700;margin:8px 0}
+.level-desc{color:var(--muted);font-size:14px;max-width:400px;line-height:1.6;margin-bottom:24px}
+.level-mechanic{display:inline-block;padding:4px 14px;background:rgba(196,69,54,0.15);border:1px solid rgba(196,69,54,0.3);border-radius:20px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:16px}
+/* HUD */
+.hud{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(14,14,18,0.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:8px 16px}
+.hud-row{display:flex;justify-content:space-between;align-items:center;max-width:840px;margin:0 auto;gap:12px;flex-wrap:wrap}
+.hud-item{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.hud-item span{color:var(--ink);font-weight:700;font-size:14px}
+.hud-score span{color:var(--gold);font-size:18px}
+.health-wrap{max-width:840px;margin:4px auto 0;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative}
+.health-bar{height:100%;border-radius:4px;transition:width 0.4s ease,background-color 0.4s;background:var(--green)}
+.health-text{position:absolute;right:8px;top:-1px;font-size:9px;font-weight:700;color:var(--ink);line-height:10px}
+/* Ammo */
+.ammo-wrap{display:flex;gap:4px;align-items:center}
+.ammo-dot{width:8px;height:16px;border-radius:3px;background:var(--gold);transition:all 0.15s}
+.ammo-dot.spent{background:var(--bg3);transform:scaleY(0.6)}
+.reload-hint{font-size:10px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;opacity:0;transition:opacity 0.2s}
+.reload-hint.show{opacity:1;animation:pulse 0.5s ease infinite alternate}
+@keyframes pulse{0%{opacity:0.5}100%{opacity:1}}
+/* Game area */
+.game-wrap{display:flex;justify-content:center;align-items:center;min-height:100vh;padding:70px 16px 16px}
+.game-area{position:relative;width:100%;max-width:800px;height:500px;border-radius:16px;overflow:hidden;cursor:crosshair;background:linear-gradient(180deg,#2a1a0e 0%,#3d2b1a 30%,#5c4033 60%,#8b7355 85%,#c4a882 100%);border:1px solid var(--border)}
+/* Depth lanes - visual parallax */
+.depth-lane{position:absolute;left:0;right:0;pointer-events:none}
+.lane-0{top:20%;height:15%;opacity:0.5}
+.lane-1{top:30%;height:15%;opacity:0.6}
+.lane-2{top:42%;height:16%;opacity:0.75}
+.lane-3{top:55%;height:18%;opacity:0.9}
+.lane-4{top:68%;height:22%;opacity:1}
+/* Scenery */
+.scenery-mountains{position:absolute;bottom:40%;left:0;right:0;height:80px;background:linear-gradient(135deg,#3d2b1a 25%,transparent 25%) -50px 0,linear-gradient(225deg,#3d2b1a 25%,transparent 25%) -50px 0,linear-gradient(315deg,#4a3728 25%,transparent 25%),linear-gradient(45deg,#4a3728 25%,transparent 25%);background-size:100px 80px;opacity:0.3;pointer-events:none}
+.scenery-ground{position:absolute;bottom:0;left:0;right:0;height:30%;background:linear-gradient(0deg,#8b7355,#6b5840);pointer-events:none}
+/* Targets */
+.target{position:absolute;border-radius:6px;cursor:pointer;transform:scale(0);animation:targetPop 0.2s ease forwards;z-index:10;display:flex;align-items:center;justify-content:center;transition:opacity 0.1s;pointer-events:auto;box-shadow:0 4px 12px rgba(0,0,0,0.4)}
+@keyframes targetPop{0%{transform:scale(0) translateY(20px)}60%{transform:scale(1.1) translateY(-3px)}100%{transform:scale(1) translateY(0)}}
+/* Bandit */
+.target.bandit{background:linear-gradient(180deg,#4a3728,#3d2b1a);border:2px solid #6b5840}
+.target.bandit::before{content:'🤠';font-size:inherit}
+.target.bandit.far::before{font-size:10px}
+/* Civilian */
+.target.civilian{background:linear-gradient(180deg,#2a4a6b,#1a3352);border:2px solid #4a7fad}
+.target.civilian::before{content:'🙋';font-size:inherit}
+/* Dynamite */
+.target.dynamite{background:linear-gradient(180deg,#8b2500,#5c1a00);border:2px solid var(--red);animation:targetPop 0.2s ease forwards,dynamitePulse 0.4s ease 0.2s infinite alternate}
+.target.dynamite::before{content:'🧨';font-size:inherit}
+@keyframes dynamitePulse{0%{box-shadow:0 4px 12px rgba(0,0,0,0.4)}100%{box-shadow:0 4px 20px rgba(239,68,68,0.6),0 0 30px rgba(239,68,68,0.3)}}
+/* Wanted poster */
+.target.wanted{background:linear-gradient(180deg,#d4a04a,#b8860b);border:3px solid var(--gold);animation:targetPop 0.2s ease forwards,wantedGlow 0.6s ease 0.2s infinite alternate}
+.target.wanted::before{content:'⭐';font-size:inherit}
+@keyframes wantedGlow{0%{box-shadow:0 4px 12px rgba(0,0,0,0.4)}100%{box-shadow:0 0 20px rgba(255,215,0,0.5)}}
+/* TNT barrel */
+.target.tnt{background:linear-gradient(180deg,#8b4513,#654321);border:2px solid var(--orange)}
+.target.tnt::before{content:'🪣';font-size:inherit}
+/* Hit/miss effects */
+.hit-marker{position:absolute;pointer-events:none;z-index:20;font-size:24px;animation:hitFloat 0.5s ease forwards}
+@keyframes hitFloat{0%{transform:scale(1.5);opacity:1}100%{transform:scale(0.8) translateY(-30px);opacity:0}}
+.score-popup{position:absolute;pointer-events:none;z-index:25;font-weight:700;font-size:14px;text-shadow:0 2px 6px rgba(0,0,0,0.7);animation:popFloat 0.7s ease forwards;white-space:nowrap}
+@keyframes popFloat{0%{transform:translateY(0) scale(0.8);opacity:1}100%{transform:translateY(-40px) scale(1);opacity:0}}
+.muzzle-flash{position:absolute;pointer-events:none;z-index:30;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(255,200,50,0.8),rgba(255,100,0,0.4),transparent);animation:flashOut 0.15s ease forwards}
+@keyframes flashOut{0%{transform:scale(1);opacity:1}100%{transform:scale(2);opacity:0}}
+.flash-overlay{position:absolute;inset:0;pointer-events:none;z-index:28;border-radius:16px;animation:flashAnim 0.2s ease}
+.flash-overlay.red{background:rgba(239,68,68,0.15)}
+.flash-overlay.gold{background:rgba(255,215,0,0.08)}
+@keyframes flashAnim{0%{opacity:1}100%{opacity:0}}
+.shake{animation:shake 0.3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+/* Explosion */
+.explosion{position:absolute;pointer-events:none;z-index:22;border-radius:50%;background:radial-gradient(circle,rgba(255,200,50,0.9),rgba(255,100,0,0.6),rgba(255,50,0,0.2),transparent);animation:explode 0.6s ease forwards}
+@keyframes explode{0%{transform:scale(0.3);opacity:1}50%{transform:scale(1);opacity:0.8}100%{transform:scale(1.5);opacity:0}}
+/* Reload bar */
+.reload-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:35;background:rgba(0,0,0,0.7);border-radius:12px;padding:12px 24px;opacity:0;pointer-events:none;transition:opacity 0.15s}
+.reload-overlay.show{opacity:1}
+.reload-bar-bg{width:120px;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:6px}
+.reload-bar-fill{height:100%;background:var(--gold);border-radius:4px;transition:width 0.05s linear;width:0%}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;text-align:left}
+.stat-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.stat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.stat-value{font-size:22px;font-weight:700;margin-top:2px}
+.rank-letter{font-size:120px;font-weight:700;line-height:1}
+.rank-s{color:var(--gold);text-shadow:0 0 40px rgba(255,215,0,0.5)}
+.rank-a{color:var(--green);text-shadow:0 0 40px rgba(74,222,128,0.4)}
+.rank-b{color:var(--accent-light);text-shadow:0 0 40px rgba(224,122,95,0.4)}
+.rank-c{color:var(--yellow)}
+.rank-d{color:var(--muted)}
+.rank-f{color:var(--red);text-shadow:0 0 30px rgba(239,68,68,0.3)}
+.new-record{color:var(--gold);font-size:18px;font-weight:700;letter-spacing:3px;text-transform:uppercase;animation:recordPulse 0.6s ease infinite alternate;margin:8px 0}
+@keyframes recordPulse{0%{opacity:0.7;transform:scale(1)}100%{opacity:1;transform:scale(1.05)}}
+.final-score{font-size:48px;font-weight:700;color:var(--gold);margin:8px 0}
+/* Progress bar */
+.progress-wrap{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,0.05);z-index:5}
+.progress-bar{height:100%;background:var(--accent);transition:width 0.3s;border-radius:0 2px 0 0}
+/* Responsive */
+@media(max-width:768px){
+  .game-area{height:400px}
+  .hud-row{gap:8px}.hud-item{font-size:10px}.hud-item span{font-size:12px}
+  .rank-letter{font-size:80px}
+  .stats-grid{gap:8px}
+}
+@media(max-width:480px){
+  .game-area{height:350px;border-radius:10px}
+  .title{font-size:32px}.level-num{font-size:50px}.level-name{font-size:24px}
+  .btn{padding:12px 28px;font-size:14px}
+  .stat-value{font-size:18px}.final-score{font-size:36px}
+  .hud{padding:6px 10px}.health-wrap{height:6px}
+}
+@media(hover:none) and (pointer:coarse){.btn{min-height:48px}}
+</style>
+</head>
+<body>
+<a href="../" class="home-btn">Home</a>
+
+<div class="screen active" id="title-screen">
+  <div class="title">QuickDraw</div>
+  <div class="subtitle">Wild West Rail Shooter · 10 Levels</div>
+  <div style="margin-top:32px">
+    <button class="btn btn-primary" onclick="QD.start()">Draw!</button>
+  </div>
+  <div class="pb-display">Personal Best: <span id="pb-value">—</span></div>
+  <div style="margin-top:16px;color:var(--muted);font-size:12px;max-width:360px;line-height:1.6">
+    Shoot bandits 🤠, spare civilians 🙋, dodge dynamite 🧨<br>
+    <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px">R</kbd> to reload your revolver
+  </div>
+</div>
+
+<div class="screen" id="intro-screen">
+  <div class="level-num" id="intro-num"></div>
+  <div class="level-mechanic" id="intro-mechanic"></div>
+  <div class="level-name" id="intro-name"></div>
+  <div class="level-desc" id="intro-desc"></div>
+  <button class="btn btn-primary" onclick="QD.startLevel()">Ready, Partner</button>
+</div>
+
+<div id="game-screen" class="screen">
+  <div class="hud">
+    <div class="hud-row">
+      <div class="hud-item" id="hud-level">Level: <span>1</span></div>
+      <div class="hud-item hud-score">Score: <span id="hud-score">0</span></div>
+      <div class="ammo-wrap" id="ammo-wrap"></div>
+      <div class="reload-hint" id="reload-hint">RELOAD [R]</div>
+      <div class="hud-item">Accuracy: <span id="hud-acc">100%</span></div>
+    </div>
+    <div class="health-wrap">
+      <div class="health-bar" id="health-bar" style="width:100%"></div>
+      <div class="health-text" id="health-text">100%</div>
+    </div>
+  </div>
+  <div class="game-wrap">
+    <div class="game-area" id="game-area">
+      <div class="scenery-ground"></div>
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="reload-overlay" id="reload-overlay">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold)">Reloading...</div>
+        <div class="reload-bar-bg"><div class="reload-bar-fill" id="reload-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="complete-screen">
+  <div class="level-name" id="comp-title"></div>
+  <div style="font-size:14px;color:var(--muted);margin-bottom:8px" id="comp-subtitle"></div>
+  <div class="stats-grid" id="comp-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-primary" onclick="QD.nextLevel()">Next Level</button>
+  </div>
+</div>
+
+<div class="screen" id="gameover-screen">
+  <div style="font-size:24px;font-weight:700;color:var(--red);margin-bottom:8px">GAME OVER</div>
+  <div class="rank-letter" id="go-rank"></div>
+  <div class="final-score" id="go-score"></div>
+  <div id="go-record" style="display:none" class="new-record">NEW RECORD!</div>
+  <div class="stats-grid" id="go-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-danger" onclick="QD.start()">Retry</button>
+    <button class="btn btn-secondary" onclick="QD.showTitle()">Home</button>
+  </div>
+</div>
+
+<div class="screen" id="victory-screen">
+  <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:4px">SHERIFF'S BADGE EARNED</div>
+  <div class="rank-letter" id="vic-rank"></div>
+  <div class="final-score" id="vic-score"></div>
+  <div id="vic-record" style="display:none" class="new-record">NEW RECORD!</div>
+  <div class="stats-grid" id="vic-stats"></div>
+  <div style="display:flex;gap:12px;margin-top:8px">
+    <button class="btn btn-primary" onclick="QD.start()">Play Again</button>
+    <button class="btn btn-secondary" onclick="QD.showTitle()">Home</button>
+  </div>
+</div>
+<script>
+var QD = (() => {
+  // ===== DEPTH CONFIG =====
+  // 5 lanes: 0=far (small, high points) to 4=close (big, low points)
+  const DEPTHS = [
+    { y: [18, 28], size: [18, 24], points: 50, label: 'far' },
+    { y: [28, 38], size: [24, 32], points: 40, label: 'mid-far' },
+    { y: [38, 52], size: [32, 42], points: 30, label: 'mid' },
+    { y: [52, 66], size: [42, 52], points: 20, label: 'mid-close' },
+    { y: [66, 82], size: [52, 64], points: 10, label: 'close' },
+  ];
+
+  // ===== LEVELS =====
+  const LEVELS = [
+    { name:'Target Practice', mechanic:'Basics', desc:'Bandits only, nice and close. Get your aim right.',
+      waves:3, perWave:3, spawnMs:1500, lifeMs:3000, depthRange:[3,4], types:{bandit:1}, civRate:0, dynamiteRate:0, wantedRate:0, tntRate:0 },
+    { name:'Quick Shots', mechanic:'Speed', desc:'Targets vanish faster. Don\'t hesitate.',
+      waves:3, perWave:4, spawnMs:1200, lifeMs:2200, depthRange:[2,4], types:{bandit:1}, civRate:0, dynamiteRate:0, wantedRate:0, tntRate:0 },
+    { name:'Long Range', mechanic:'Distance', desc:'Targets appear further away. Smaller targets, bigger rewards.',
+      waves:4, perWave:3, spawnMs:1400, lifeMs:2800, depthRange:[0,3], types:{bandit:1}, civRate:0, dynamiteRate:0, wantedRate:0, tntRate:0 },
+    { name:'Bystanders', mechanic:'Judgement', desc:'Civilians on the field! Shoot a bystander and lose health.',
+      waves:4, perWave:4, spawnMs:1200, lifeMs:2400, depthRange:[1,4], types:{bandit:1}, civRate:0.25, dynamiteRate:0, wantedRate:0, tntRate:0 },
+    { name:'Under Fire', mechanic:'Threats', desc:'Dynamite incoming! Shoot it before the fuse runs out.',
+      waves:4, perWave:4, spawnMs:1100, lifeMs:2200, depthRange:[1,4], types:{bandit:1}, civRate:0.15, dynamiteRate:0.2, wantedRate:0, tntRate:0 },
+    { name:'Bounty Hunter', mechanic:'Bonus', desc:'Wanted posters flash up briefly. Hit them for double points.',
+      waves:5, perWave:4, spawnMs:1000, lifeMs:2000, depthRange:[0,4], types:{bandit:1}, civRate:0.15, dynamiteRate:0.15, wantedRate:0.15, tntRate:0 },
+    { name:'Powder Kegs', mechanic:'Explosives', desc:'TNT barrels clear nearby targets. Use wisely — civilians nearby!',
+      waves:5, perWave:5, spawnMs:1000, lifeMs:2200, depthRange:[0,4], types:{bandit:1}, civRate:0.2, dynamiteRate:0.15, wantedRate:0.1, tntRate:0.1 },
+    { name:'Ambush', mechanic:'Swarm', desc:'They\'re everywhere. Stay calm, reload fast.',
+      waves:5, perWave:6, spawnMs:800, lifeMs:1800, depthRange:[0,4], types:{bandit:1}, civRate:0.2, dynamiteRate:0.2, wantedRate:0.08, tntRate:0.05 },
+    { name:'Dead Eye', mechanic:'Precision', desc:'Far targets, short windows, heavy civilian mix.',
+      waves:6, perWave:5, spawnMs:700, lifeMs:1500, depthRange:[0,3], types:{bandit:1}, civRate:0.3, dynamiteRate:0.2, wantedRate:0.1, tntRate:0.05 },
+    { name:'High Noon', mechanic:'Everything', desc:'The final showdown. All target types. Maximum speed. Survive.',
+      waves:6, perWave:7, spawnMs:600, lifeMs:1400, depthRange:[0,4], types:{bandit:1}, civRate:0.25, dynamiteRate:0.25, wantedRate:0.1, tntRate:0.08 },
+  ];
+
+  // ===== STATE =====
+  let level = 0, score = 0, health = 100;
+  let totalHits = 0, totalShots = 0, civKills = 0, banditsHit = 0, dynamitesCleared = 0;
+  let ammo = 6, maxAmmo = 6, reloading = false;
+  let activeTargets = [], spawnTimer = null, waveIdx = 0, waveSpawned = 0;
+  let personalBest = parseInt(localStorage.getItem('quickdraw_pb')) || 0;
+  let comboCount = 0, maxCombo = 0;
+
+  const $ = id => document.getElementById(id);
+  const area = () => $('game-area');
+  const screens = ['title-screen','intro-screen','game-screen','complete-screen','gameover-screen','victory-screen'];
+
+  function showScreen(id) { screens.forEach(s => $(s).classList.toggle('active', s === id)); }
+
+  // ===== AMMO =====
+  function renderAmmo() {
+    const wrap = $('ammo-wrap');
+    wrap.innerHTML = '';
+    for (let i = 0; i < maxAmmo; i++) {
+      const d = document.createElement('div');
+      d.className = 'ammo-dot' + (i >= ammo ? ' spent' : '');
+      wrap.appendChild(d);
+    }
+    $('reload-hint').classList.toggle('show', ammo === 0 && !reloading);
+  }
+
+  function reload() {
+    if (reloading || ammo === maxAmmo) return;
+    reloading = true;
+    $('reload-hint').classList.remove('show');
+    const overlay = $('reload-overlay');
+    const fill = $('reload-fill');
+    overlay.classList.add('show');
+    fill.style.width = '0%';
+    const reloadTime = 800; // ms
+    const startTime = performance.now();
+    function tick() {
+      const elapsed = performance.now() - startTime;
+      const pct = Math.min(100, (elapsed / reloadTime) * 100);
+      fill.style.width = pct + '%';
+      if (elapsed < reloadTime) {
+        requestAnimationFrame(tick);
+      } else {
+        ammo = maxAmmo;
+        reloading = false;
+        overlay.classList.remove('show');
+        renderAmmo();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ===== TITLE =====
+  function showTitle() {
+    $('pb-value').textContent = personalBest > 0 ? personalBest.toLocaleString() : '—';
+    showScreen('title-screen');
+  }
+
+  // ===== START =====
+  function start() {
+    level = 0; score = 0; health = 100;
+    totalHits = 0; totalShots = 0; civKills = 0; banditsHit = 0; dynamitesCleared = 0;
+    comboCount = 0; maxCombo = 0;
+    showIntro();
+  }
+
+  function showIntro() {
+    const L = LEVELS[level];
+    $('intro-num').textContent = String(level + 1).padStart(2, '0');
+    $('intro-mechanic').textContent = L.mechanic;
+    $('intro-name').textContent = L.name;
+    $('intro-desc').textContent = L.desc;
+    showScreen('intro-screen');
+  }
+
+  // ===== START LEVEL =====
+  function startLevel() {
+    const L = LEVELS[level];
+    ammo = maxAmmo; reloading = false;
+    waveIdx = 0; waveSpawned = 0;
+    activeTargets = [];
+    comboCount = 0;
+
+    $('hud-level').querySelector('span').textContent = level + 1;
+    $('hud-score').textContent = score;
+    updateHealth();
+    updateAccuracy();
+    $('progress-bar').style.width = '0%';
+    $('reload-overlay').classList.remove('show');
+    renderAmmo();
+
+    // Clear game area (keep scenery + progress bar + reload overlay)
+    const ga = area();
+    ga.querySelectorAll('.target,.hit-marker,.score-popup,.muzzle-flash,.flash-overlay,.explosion').forEach(el => el.remove());
+
+    showScreen('game-screen');
+
+    // Click/touch handler
+    ga.onmousedown = ga.ontouchstart = handleShot;
+
+    // Keyboard: R to reload
+    document.onkeydown = (e) => {
+      if (e.key === 'r' || e.key === 'R') reload();
+    };
+
+    // Start spawning
+    spawnWave(L);
+  }
+
+  // ===== WAVE SPAWNING =====
+  function spawnWave(L) {
+    waveSpawned = 0;
+    const total = L.perWave;
+
+    function spawnNext() {
+      if (health <= 0) return;
+      if (waveSpawned >= total) {
+        // Wait for wave to clear, then next wave or end level
+        waitForClear(() => {
+          waveIdx++;
+          const totalWaves = L.waves;
+          $('progress-bar').style.width = (waveIdx / totalWaves * 100) + '%';
+          if (waveIdx >= totalWaves) {
+            endLevel();
+          } else {
+            setTimeout(() => spawnWave(L), 600);
+          }
+        });
+        return;
+      }
+      spawnTarget(L);
+      waveSpawned++;
+      spawnTimer = setTimeout(spawnNext, L.spawnMs + (Math.random() - 0.5) * 200);
+    }
+
+    requestAnimationFrame(() => spawnNext());
+  }
+
+  // ===== SPAWN TARGET =====
+  function spawnTarget(L) {
+    // Determine type
+    const r = Math.random();
+    let type = 'bandit';
+    let cumulative = 0;
+    if (L.tntRate && r < (cumulative += L.tntRate)) type = 'tnt';
+    else if (L.wantedRate && r < (cumulative += L.wantedRate)) type = 'wanted';
+    else if (L.dynamiteRate && r < (cumulative += L.dynamiteRate)) type = 'dynamite';
+    else if (L.civRate && r < (cumulative += L.civRate)) type = 'civilian';
+
+    // Pick depth
+    const minD = L.depthRange[0], maxD = L.depthRange[1];
+    const depthIdx = minD + Math.floor(Math.random() * (maxD - minD + 1));
+    const depth = DEPTHS[depthIdx];
+
+    const ga = area();
+    const aW = ga.clientWidth || 800;
+    const aH = ga.clientHeight || 500;
+
+    const size = depth.size[0] + Math.random() * (depth.size[1] - depth.size[0]);
+    const yPct = depth.y[0] + Math.random() * (depth.y[1] - depth.y[0]);
+    const x = 10 + Math.random() * (aW - size - 20);
+    const y = (yPct / 100) * aH;
+
+    const el = document.createElement('div');
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.fontSize = Math.max(10, size * 0.5) + 'px';
+    el.style.zIndex = depthIdx + 5; // closer = higher z
+    ga.appendChild(el);
+    void el.offsetWidth;
+    el.className = 'target ' + type;
+
+    const lifeMs = type === 'wanted' ? L.lifeMs * 0.6 : // wanted = brief
+                   type === 'dynamite' ? L.lifeMs * 0.8 : // dynamite = medium
+                   L.lifeMs;
+
+    const t = { el, type, depthIdx, size, x, y, spawnTime: performance.now() };
+
+    // Dynamite: if not shot in time, explodes and damages player
+    if (type === 'dynamite') {
+      t.fuseTimer = setTimeout(() => {
+        if (activeTargets.includes(t)) {
+          health = Math.max(0, health - 15);
+          comboCount = 0;
+          updateHealth();
+          showExplosion(x + size/2, y + size/2, size * 2);
+          flashArea('red');
+          area().classList.add('shake');
+          setTimeout(() => area().classList.remove('shake'), 300);
+          removeTarget(t);
+          if (health <= 0) endGame(false);
+        }
+      }, lifeMs);
+    }
+
+    // Auto-expire (for non-dynamite)
+    t.expireTimer = setTimeout(() => {
+      if (type !== 'dynamite' && type === 'bandit') {
+        // Missed bandit — break combo
+        comboCount = 0;
+      }
+      removeTarget(t);
+    }, lifeMs);
+
+    activeTargets.push(t);
+  }
+
+  // ===== HANDLE SHOT =====
+  function handleShot(e) {
+    if (e.type === 'touchstart') e.preventDefault();
+    if (reloading) return;
+    if (ammo <= 0) { reload(); return; }
+
+    ammo--;
+    totalShots++;
+    renderAmmo();
+
+    const rect = area().getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+    // Muzzle flash
+    showMuzzleFlash(cx, cy);
+
+    // Check targets (back to front: hit the frontmost)
+    let hitTarget = null;
+    for (let i = activeTargets.length - 1; i >= 0; i--) {
+      const t = activeTargets[i];
+      const tr = t.el.getBoundingClientRect();
+      const tx = tr.left - rect.left + tr.width / 2;
+      const ty = tr.top - rect.top + tr.height / 2;
+      const dist = Math.hypot(cx - tx, cy - ty);
+      if (dist <= Math.max(tr.width, tr.height) / 2 + 5) {
+        hitTarget = t;
+        break;
+      }
+    }
+
+    if (hitTarget) {
+      processHit(hitTarget, cx, cy);
+    } else {
+      // Miss - break combo
+      comboCount = 0;
+    }
+
+    updateAccuracy();
+    if (ammo === 0) $('reload-hint').classList.add('show');
+  }
+
+  // ===== PROCESS HIT =====
+  function processHit(t, cx, cy) {
+    const depth = DEPTHS[t.depthIdx];
+
+    switch (t.type) {
+      case 'bandit': {
+        banditsHit++;
+        totalHits++;
+        comboCount++;
+        if (comboCount > maxCombo) maxCombo = comboCount;
+        const comboMult = Math.min(comboCount, 8);
+        const pts = Math.round(depth.points * (1 + (comboMult - 1) * 0.12));
+        score += pts;
+        $('hud-score').textContent = score;
+        showHitMarker(cx, cy, '💥');
+        showScorePopup(cx, cy, `+${pts}`, 'var(--gold)');
+        if (comboCount >= 3) showScorePopup(cx - 30, cy - 20, `x${comboCount}`, 'var(--accent-light)');
+        break;
+      }
+      case 'civilian': {
+        civKills++;
+        health = Math.max(0, health - 20);
+        comboCount = 0;
+        updateHealth();
+        showHitMarker(cx, cy, '😵');
+        showScorePopup(cx, cy, '-20% HP', 'var(--red)');
+        flashArea('red');
+        area().classList.add('shake');
+        setTimeout(() => area().classList.remove('shake'), 300);
+        if (health <= 0) { removeTarget(t); endGame(false); return; }
+        break;
+      }
+      case 'dynamite': {
+        dynamitesCleared++;
+        totalHits++;
+        comboCount++;
+        if (comboCount > maxCombo) maxCombo = comboCount;
+        score += 25;
+        $('hud-score').textContent = score;
+        clearTimeout(t.fuseTimer);
+        showHitMarker(cx, cy, '💨');
+        showScorePopup(cx, cy, '+25 Defused', 'var(--green)');
+        break;
+      }
+      case 'wanted': {
+        totalHits++;
+        comboCount++;
+        if (comboCount > maxCombo) maxCombo = comboCount;
+        const pts = depth.points * 2;
+        score += pts;
+        $('hud-score').textContent = score;
+        showHitMarker(cx, cy, '⭐');
+        showScorePopup(cx, cy, `+${pts} BOUNTY!`, 'var(--gold)');
+        flashArea('gold');
+        break;
+      }
+      case 'tnt': {
+        totalHits++;
+        comboCount++;
+        if (comboCount > maxCombo) maxCombo = comboCount;
+        // Explode: damage all nearby targets within blast radius
+        const blastRadius = 120;
+        const bx = t.x + t.size / 2;
+        const by = t.y + t.size / 2;
+        showExplosion(bx, by, blastRadius);
+        let blastKills = 0;
+        let civCaught = false;
+        [...activeTargets].forEach(other => {
+          if (other === t) return;
+          const ox = other.x + other.size / 2;
+          const oy = other.y + other.size / 2;
+          if (Math.hypot(bx - ox, by - oy) <= blastRadius) {
+            if (other.type === 'civilian') {
+              civCaught = true;
+              civKills++;
+            } else {
+              blastKills++;
+              if (other.type === 'bandit') banditsHit++;
+            }
+            if (other.type === 'dynamite') clearTimeout(other.fuseTimer);
+            removeTarget(other);
+          }
+        });
+        let pts = 15 + blastKills * 20;
+        if (civCaught) {
+          health = Math.max(0, health - 20);
+          comboCount = 0;
+          updateHealth();
+          showScorePopup(cx, cy - 30, 'COLLATERAL!', 'var(--red)');
+          flashArea('red');
+          if (health <= 0) { removeTarget(t); endGame(false); return; }
+        } else {
+          score += pts;
+          $('hud-score').textContent = score;
+          showScorePopup(cx, cy, `+${pts} BOOM!`, 'var(--orange)');
+        }
+        break;
+      }
+    }
+
+    removeTarget(t);
+  }
+
+  // ===== REMOVE TARGET =====
+  function removeTarget(t) {
+    const idx = activeTargets.indexOf(t);
+    if (idx === -1) return;
+    activeTargets.splice(idx, 1);
+    clearTimeout(t.expireTimer);
+    if (t.fuseTimer) clearTimeout(t.fuseTimer);
+    if (t.el.parentNode) t.el.remove();
+  }
+
+  // ===== VISUAL EFFECTS =====
+  function showMuzzleFlash(x, y) {
+    const el = document.createElement('div');
+    el.className = 'muzzle-flash';
+    el.style.left = (x - 15) + 'px';
+    el.style.top = (y - 15) + 'px';
+    area().appendChild(el);
+    setTimeout(() => el.remove(), 150);
+  }
+
+  function showHitMarker(x, y, emoji) {
+    const el = document.createElement('div');
+    el.className = 'hit-marker';
+    el.textContent = emoji;
+    el.style.left = (x - 12) + 'px';
+    el.style.top = (y - 12) + 'px';
+    area().appendChild(el);
+    setTimeout(() => el.remove(), 500);
+  }
+
+  function showScorePopup(x, y, text, color) {
+    const el = document.createElement('div');
+    el.className = 'score-popup';
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = (y - 10) + 'px';
+    el.style.color = color;
+    area().appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  }
+
+  function showExplosion(x, y, radius) {
+    const el = document.createElement('div');
+    el.className = 'explosion';
+    el.style.left = (x - radius / 2) + 'px';
+    el.style.top = (y - radius / 2) + 'px';
+    el.style.width = radius + 'px';
+    el.style.height = radius + 'px';
+    area().appendChild(el);
+    setTimeout(() => el.remove(), 600);
+  }
+
+  function flashArea(type) {
+    const el = document.createElement('div');
+    el.className = 'flash-overlay ' + type;
+    area().appendChild(el);
+    setTimeout(() => el.remove(), 200);
+  }
+
+  // ===== HEALTH / ACCURACY =====
+  function updateHealth() {
+    const bar = $('health-bar');
+    bar.style.width = health + '%';
+    bar.style.backgroundColor = health > 50 ? 'var(--green)' : health > 25 ? 'var(--yellow)' : 'var(--red)';
+    $('health-text').textContent = Math.round(health) + '%';
+  }
+
+  function updateAccuracy() {
+    const acc = totalShots === 0 ? 100 : Math.round((totalHits / totalShots) * 100);
+    $('hud-acc').textContent = acc + '%';
+  }
+
+  // ===== WAIT FOR CLEAR =====
+  function waitForClear(cb) {
+    const check = setInterval(() => {
+      if (activeTargets.length === 0 || health <= 0) {
+        clearInterval(check);
+        if (health <= 0) endGame(false);
+        else cb();
+      }
+    }, 200);
+  }
+
+  // ===== END LEVEL =====
+  function endLevel() {
+    cleanup();
+    const L = LEVELS[level];
+    const acc = totalShots === 0 ? 100 : Math.round((totalHits / totalShots) * 100);
+
+    $('comp-title').textContent = `Level ${level + 1}: ${L.name}`;
+    $('comp-subtitle').textContent = level >= LEVELS.length - 1 ? 'Final level complete!' : 'Moving on...';
+    $('comp-stats').innerHTML = `
+      <div class="stat-item"><div class="stat-label">Score</div><div class="stat-value" style="color:var(--gold)">${score.toLocaleString()}</div></div>
+      <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value">${acc}%</div></div>
+      <div class="stat-item"><div class="stat-label">Best Combo</div><div class="stat-value" style="color:var(--accent-light)">x${maxCombo}</div></div>
+      <div class="stat-item"><div class="stat-label">Health</div><div class="stat-value" style="color:${health > 50 ? 'var(--green)' : 'var(--yellow)'}">${Math.round(health)}%</div></div>
+    `;
+
+    if (level >= LEVELS.length - 1) {
+      endGame(true);
+    } else {
+      showScreen('complete-screen');
+    }
+  }
+
+  function nextLevel() { level++; showIntro(); }
+
+  // ===== END GAME =====
+  function endGame(victory) {
+    cleanup();
+    const acc = totalShots === 0 ? 100 : Math.round((totalHits / totalShots) * 100);
+    const rank = getRank(score, acc, level);
+    const isRecord = score > personalBest;
+    if (isRecord) { personalBest = score; localStorage.setItem('quickdraw_pb', personalBest); }
+
+    const prefix = victory ? 'vic' : 'go';
+    $(prefix + '-rank').textContent = rank;
+    $(prefix + '-rank').className = 'rank-letter rank-' + rank.toLowerCase();
+    $(prefix + '-score').textContent = score.toLocaleString();
+    $(prefix + '-record').style.display = isRecord ? 'block' : 'none';
+
+    $(prefix + '-stats').innerHTML = `
+      <div class="stat-item"><div class="stat-label">Bandits Hit</div><div class="stat-value" style="color:var(--accent-light)">${banditsHit}</div></div>
+      <div class="stat-item"><div class="stat-label">Civilians Hit</div><div class="stat-value" style="color:${civKills > 0 ? 'var(--red)' : 'var(--green)'}">${civKills}</div></div>
+      <div class="stat-item"><div class="stat-label">Accuracy</div><div class="stat-value">${acc}%</div></div>
+      <div class="stat-item"><div class="stat-label">Best Combo</div><div class="stat-value" style="color:var(--gold)">x${maxCombo}</div></div>
+      <div class="stat-item"><div class="stat-label">Dynamite Cleared</div><div class="stat-value" style="color:var(--green)">${dynamitesCleared}</div></div>
+      <div class="stat-item"><div class="stat-label">Level Reached</div><div class="stat-value">${level + 1} / 10</div></div>
+    `;
+
+    showScreen(victory ? 'victory-screen' : 'gameover-screen');
+  }
+
+  function getRank(score, acc, level) {
+    const s = score / 80 + acc * 0.4 + level * 5;
+    if (s >= 75) return 'S';
+    if (s >= 60) return 'A';
+    if (s >= 45) return 'B';
+    if (s >= 30) return 'C';
+    if (s >= 18) return 'D';
+    return 'F';
+  }
+
+  // ===== CLEANUP =====
+  function cleanup() {
+    if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
+    activeTargets.forEach(t => {
+      clearTimeout(t.expireTimer);
+      if (t.fuseTimer) clearTimeout(t.fuseTimer);
+    });
+    activeTargets = [];
+    const ga = area();
+    if (ga) { ga.onmousedown = null; ga.ontouchstart = null; }
+    document.onkeydown = null;
+  }
+
+  // ===== INIT =====
+  $('pb-value').textContent = personalBest > 0 ? personalBest.toLocaleString() : '—';
+
+  return { start, startLevel, nextLevel, showTitle };
+})();
+</script>
+</body>
+</html>
