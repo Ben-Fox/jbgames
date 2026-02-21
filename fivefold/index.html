@@ -544,7 +544,7 @@ body.light-theme .htp-text strong { color: var(--accent); }
 .result-banner.won::before { background: radial-gradient(circle at 50% 0%, var(--sage), transparent 60%); }
 .result-banner.lost { border-top: 3px solid var(--rust); }
 .result-banner.lost::before { background: radial-gradient(circle at 50% 0%, var(--rust), transparent 60%); }
-.result-emoji { font-size: 48px; margin-bottom: 14px; animation: popBounce 0.6s ease 0.2s both; }
+.result-emoji { display: none; }
 .result-title {
   font-family: 'Cormorant Garamond', serif;
   font-size: 34px;
@@ -1191,7 +1191,7 @@ body.light-theme .score-pip.won { background: rgba(90,122,154,.15); color: var(-
 <!-- GAME SHELL (no hub — games launch directly) -->
 <div id="game-shell">
   <div class="game-header">
-    <a href="../" class="back-btn" id="home-nav">🏠 Home</a>
+    <a href="../" class="back-btn" id="home-nav">Home</a>
     <div class="game-title-bar" id="shell-title"></div>
     <div style="display:flex;gap:6px;align-items:center;">
       <div class="round-indicator" id="shell-round"></div>
@@ -2508,14 +2508,14 @@ function launchGame(g) {
   shell.style.animation = 'none';
   shell.offsetHeight;
   shell.style.animation = 'fadeIn 0.3s ease';
-  document.getElementById('shell-title').textContent = g.emoji + ' ' + g.name;
+  document.getElementById('shell-title').textContent = g.name;
   document.getElementById('shell-round').textContent = g.type;
   document.getElementById('game-content').innerHTML = '';
 
   // Next game button
   const nextBtn = document.getElementById('next-game-btn');
   const next = getNextGame(g.id);
-  nextBtn.textContent = next.emoji + ' Next: ' + next.name + ' →';
+  nextBtn.textContent = 'Next: ' + next.name + ' →';
   nextBtn.style.display = 'inline-block';
   nextBtn.onclick = () => launchGame(next);
 
@@ -2528,31 +2528,73 @@ function launchGame(g) {
 // Build "other games" cards shown after completing a game
 function otherGamesCards(currentId) {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin-top:24px;';
+  wrap.style.cssText = 'margin-top:28px;';
 
   const lbl = document.createElement('div');
-  lbl.className = 'prompt-label';
-  lbl.textContent = 'More daily puzzles';
-  lbl.style.marginBottom = '12px';
+  lbl.style.cssText = 'font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;text-align:center;';
+  lbl.textContent = 'More Daily Puzzles';
   wrap.appendChild(lbl);
 
   const grid = document.createElement('div');
-  grid.className = 'game-grid';
-  grid.style.cssText = 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;';
 
   GAMES.filter(g => g.id !== currentId).forEach((g, idx) => {
     const prog = loadProgress(g.id);
     const done = prog && prog.finished;
     const card = document.createElement('div');
-    card.className = 'game-card' + (done ? ' done' : '');
-    card.style.setProperty('--card-accent', g.accent);
-    card.style.animationDelay = (idx * 0.08) + 's';
-    card.innerHTML = `
-      <span class="card-emoji" style="font-size:24px">${g.emoji}</span>
-      <div class="card-name" style="font-size:20px">${g.name}</div>
-      <div class="card-type">${g.type}</div>
-      <div class="card-cta ${done ? 'done-label' : ''}">${done ? '✓ Completed' : '▶ Play'}</div>
+    card.style.cssText = `
+      background: color-mix(in srgb, ${g.accent} 12%, var(--paper2));
+      border: 1px solid color-mix(in srgb, ${g.accent} 25%, transparent);
+      border-radius: 16px;
+      padding: 20px 18px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeInScale 0.4s ease ${idx * 0.08}s forwards;
+      transition: transform 0.3s cubic-bezier(.25,.46,.45,.94), box-shadow 0.3s;
     `;
+    card.onmouseenter = () => {
+      card.style.transform = 'translateY(-6px) scale(1.02)';
+      card.style.boxShadow = `0 10px 30px rgba(0,0,0,.4), 0 0 20px color-mix(in srgb, ${g.accent} 20%, transparent)`;
+    };
+    card.onmouseleave = () => {
+      card.style.transform = '';
+      card.style.boxShadow = '';
+    };
+    if (done) card.style.opacity = '0.5';
+
+    // Accent bar at top
+    const bar = document.createElement('div');
+    bar.style.cssText = `position:absolute;top:0;left:0;right:0;height:3px;background:${g.accent};border-radius:16px 16px 0 0;`;
+    card.appendChild(bar);
+
+    // Glow overlay
+    const glow = document.createElement('div');
+    glow.style.cssText = `position:absolute;inset:0;border-radius:16px;opacity:0.4;background:radial-gradient(circle at 50% 0%, color-mix(in srgb, ${g.accent} 15%, transparent), transparent 70%);pointer-events:none;`;
+    card.appendChild(glow);
+
+    const name = document.createElement('div');
+    name.style.cssText = `font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:${g.accent};margin-bottom:4px;filter:brightness(1.6);`;
+    name.textContent = g.name;
+    card.appendChild(name);
+
+    const type = document.createElement('div');
+    type.style.cssText = 'font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;';
+    type.textContent = g.type;
+    card.appendChild(type);
+
+    const desc = document.createElement('div');
+    desc.style.cssText = 'font-size:12px;line-height:1.5;color:var(--muted);margin-bottom:14px;';
+    desc.textContent = g.desc;
+    card.appendChild(desc);
+
+    const cta = document.createElement('div');
+    cta.style.cssText = `font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:600;padding:7px 16px;border-radius:8px;display:inline-block;
+      ${done ? 'color:var(--sage);background:rgba(111,207,111,.08);' : `color:${g.accent};filter:brightness(1.6);background:color-mix(in srgb, ${g.accent} 10%, transparent);`}`;
+    cta.textContent = done ? 'Completed' : 'Play';
+    card.appendChild(cta);
+
     card.onclick = () => launchGame(g);
     grid.appendChild(card);
   });
@@ -2561,9 +2603,10 @@ function otherGamesCards(currentId) {
   // Home button
   const homeBtn = document.createElement('a');
   homeBtn.href = '../';
-  homeBtn.className = 'back-btn';
-  homeBtn.style.cssText = 'display:inline-block;margin-top:16px;text-decoration:none;';
-  homeBtn.textContent = '🏠 Back to BrainSmacks';
+  homeBtn.style.cssText = 'display:inline-block;margin-top:18px;text-decoration:none;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 18px;border:1px solid var(--border);border-radius:10px;transition:all 0.2s;';
+  homeBtn.textContent = 'Back to BrainSmacks';
+  homeBtn.onmouseenter = () => { homeBtn.style.color = 'var(--ink)'; homeBtn.style.borderColor = 'var(--accent)'; };
+  homeBtn.onmouseleave = () => { homeBtn.style.color = 'var(--muted)'; homeBtn.style.borderColor = 'var(--border)'; };
   wrap.appendChild(homeBtn);
 
   return wrap;
@@ -2643,23 +2686,23 @@ function resultBanner(won, title, answer, sub, scoreEl, gameId) {
   const div = document.createElement('div');
   div.className = 'result-banner ' + (won ? 'won' : 'lost');
   if (won) makeConfetti(div);
-  div.innerHTML += `<div class="result-emoji">${won ? '🎉' : '😔'}</div>
-    <div class="result-title">${title}</div>
-    <div class="result-answer">${answer}</div>`;
+  div.innerHTML += `<div class="result-title" style="font-size:28px;margin-bottom:8px">${title}</div>
+    <div class="result-answer" style="font-size:15px;line-height:1.5">${answer}</div>`;
   if (scoreEl) div.appendChild(scoreEl);
   const sub2 = document.createElement('div');
   sub2.className = 'result-sub';
+  sub2.style.cssText = 'font-size:12px;margin-top:8px;';
   sub2.textContent = sub;
   div.appendChild(sub2);
-  // Come-back message based on performance
+  // Come-back message
   const comeback = document.createElement('div');
-  comeback.style.cssText = 'margin-top:10px;font-size:14px;font-weight:600;letter-spacing:1px;';
+  comeback.style.cssText = 'margin-top:12px;font-size:13px;font-weight:600;letter-spacing:1px;';
   if (won) {
-    const msgs = ['🔥 Come back tomorrow for more!', '💪 See you tomorrow, champ!', '⭐ New puzzle drops tomorrow!'];
+    const msgs = ['Come back tomorrow for more!', 'See you tomorrow, champ!', 'New puzzle drops tomorrow!'];
     comeback.style.color = 'var(--accent-light)';
     comeback.textContent = msgs[Math.floor(Math.random() * msgs.length)];
   } else {
-    const msgs = ['💡 Try again tomorrow!', '📈 New puzzle tomorrow — you got this!', '🎯 Tomorrow\'s a new chance!'];
+    const msgs = ['Try again tomorrow!', 'New puzzle tomorrow — you got this!', 'Tomorrow is a new chance!'];
     comeback.style.color = 'var(--muted)';
     comeback.textContent = msgs[Math.floor(Math.random() * msgs.length)];
   }
@@ -2752,7 +2795,7 @@ function startCipher() {
     if (prog.hints < 3) {
       const hintBtn = document.createElement('button');
       hintBtn.className = 'cipher-hint-btn';
-      hintBtn.textContent = `💡 Hint (${3 - prog.hints} left)`;
+      hintBtn.textContent = `Hint (${3 - prog.hints} left)`;
       hintBtn.onclick = () => {
         for (const enc of encLetters) {
           if (!prog.userMap[enc] || !isCorrect(enc, prog.userMap[enc])) {
@@ -3214,7 +3257,7 @@ function renderWavelength() {
   howToPlay(`
     A scientific object or phenomenon appears. Place it at the <strong>correct position</strong> on a real logarithmic scale.<br><br>
     Each day features a different science category: EM wavelengths, energy, force, speed, temperature, frequency, mass, pressure, or distance.<br><br>
-    Drag the slider to where you think the value falls. <strong>Scoring:</strong> 🎯 Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
+    Drag the slider to where you think the value falls. <strong>Scoring:</strong> Bullseye = 3 pts, Close = 2 pts, Nearby = 1 pt, Miss = 0.<br><br>
     5 rounds · New category every <strong>day</strong>.
   `, startWavelength);
 }
@@ -3335,7 +3378,7 @@ function startWavelength() {
       const tol = round.tolerance || 12;
       let pts = 0;
       let msg = '';
-      if (diff <= tol * 0.33) { pts = 3; msg = '🎯 Right on!'; }
+      if (diff <= tol * 0.33) { pts = 3; msg = 'Right on!'; }
       else if (diff <= tol * 0.66) { pts = 2; msg = '✓ Close!'; }
       else if (diff <= tol) { pts = 1; msg = '≈ Nearby'; }
       else { pts = 0; msg = '✗ Off target'; }
