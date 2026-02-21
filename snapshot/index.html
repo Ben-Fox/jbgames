@@ -342,8 +342,10 @@ var Game = (() => {
     showScreen('game-screen');
     levelStartTime = performance.now();
 
-    // Spawn first target immediately
-    spawnTarget(L);
+    // Spawn first target after a frame (ensure layout is computed)
+    requestAnimationFrame(() => {
+      spawnTarget(L);
+    });
 
     // Spawn loop
     spawnTimer = setInterval(() => {
@@ -400,22 +402,28 @@ var Game = (() => {
   // ===== SPAWN TARGET =====
   function spawnTarget(L) {
     targetsSpawned++;
-    $('progress-bar').style.width = (targetsSpawned / targetsTotal * 100) + '%';
+    const pb = $('progress-bar');
+    if (pb) pb.style.width = (targetsSpawned / targetsTotal * 100) + '%';
 
     const isDecoy = L.decoys && Math.random() < (L.decoyRate || 0.25);
     const size = L.size[0] + Math.random() * (L.size[1] - L.size[0]);
-    const areaRect = area().getBoundingClientRect();
-    const maxX = areaRect.width - size - 10;
-    const maxY = areaRect.height - size - 30;
-    const x = 10 + Math.random() * maxX;
-    const y = 10 + Math.random() * maxY;
+    const a = area();
+    const w = a.clientWidth || a.offsetWidth || 800;
+    const h = a.clientHeight || a.offsetHeight || 500;
+    const maxX = Math.max(w - size - 10, 10);
+    const maxY = Math.max(h - size - 30, 10);
+    const x = 10 + Math.random() * (maxX - 10);
+    const y = 10 + Math.random() * (maxY - 10);
 
     const el = document.createElement('div');
-    el.className = 'target ' + (isDecoy ? 'decoy' : 'good');
     el.style.width = size + 'px';
     el.style.height = size + 'px';
     el.style.left = x + 'px';
     el.style.top = y + 'px';
+    a.appendChild(el);
+    // Force reflow before applying class (ensures animation triggers)
+    void el.offsetWidth;
+    el.className = 'target ' + (isDecoy ? 'decoy' : 'good');
 
     // Ghost mechanic
     if (L.ghost && !isDecoy) {
@@ -438,8 +446,6 @@ var Game = (() => {
         el.style.height = '8px';
       });
     }
-
-    area().appendChild(el);
 
     const t = {
       el, isDecoy, size, x, y,
