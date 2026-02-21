@@ -3245,6 +3245,16 @@ function startWavelength() {
 
     area.appendChild(roundProgress(prog.scores, puzzle.rounds.length, roundIdx));
 
+    // Running score
+    if (prog.scores.length > 0) {
+      const runScore = document.createElement('div');
+      runScore.style.cssText = 'text-align:center;font-size:13px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;';
+      const total = prog.scores.reduce((a, b) => a + b, 0);
+      const max = prog.scores.length * 3;
+      runScore.innerHTML = `Score: <strong style="color:var(--accent-light)">${total}</strong> / ${max}`;
+      area.appendChild(runScore);
+    }
+
     // Category badge
     const catBadge = document.createElement('div');
     catBadge.className = 'wl-category-badge';
