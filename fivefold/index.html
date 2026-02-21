@@ -3082,6 +3082,9 @@ function startChronicle() {
 
       row.draggable = !correctPositions.has(i);
 
+      // Allow drops on all rows (even locked) so items can be dragged past locked positions
+      row.addEventListener('dragover', e => { e.preventDefault(); });
+
       const handle = document.createElement('span');
       handle.className = 'event-handle';
       handle.textContent = correctPositions.has(i) ? '✓' : '⠿';
@@ -3100,36 +3103,57 @@ function startChronicle() {
       if (!correctPositions.has(i)) {
         row.addEventListener('dragstart', () => { dragging = i; row.classList.add('dragging'); });
         row.addEventListener('dragend', () => { row.classList.remove('dragging'); dragging = null; });
-        row.addEventListener('dragover', e => { e.preventDefault(); });
         row.addEventListener('drop', e => {
           e.preventDefault();
           if (dragging !== null && dragging !== i && !correctPositions.has(dragging)) {
+            // Find nearest unlocked slot at or near drop target
             const newOrder = [...currentOrder];
-            const [removed] = newOrder.splice(dragging, 1);
-            newOrder.splice(i, 0, removed);
+            const item = newOrder.splice(dragging, 1)[0];
+            // If dropping on a locked slot, find closest unlocked
+            let dropIdx = i > dragging ? i - 1 : i;
+            if (correctPositions.has(dropIdx)) {
+              // Search nearby for unlocked
+              for (let d = 1; d < newOrder.length; d++) {
+                if (dropIdx - d >= 0 && !correctPositions.has(dropIdx - d)) { dropIdx = dropIdx - d; break; }
+                if (dropIdx + d < newOrder.length && !correctPositions.has(dropIdx + d)) { dropIdx = dropIdx + d; break; }
+              }
+            }
+            newOrder.splice(dropIdx, 0, item);
             currentOrder = newOrder;
             renderEvents();
           }
         });
 
+        // Find nearest unlocked neighbor up and down (skip over locked positions)
+        function findSwapTarget(from, dir) {
+          let idx = from + dir;
+          while (idx >= 0 && idx < currentOrder.length) {
+            if (!correctPositions.has(idx)) return idx;
+            idx += dir;
+          }
+          return -1;
+        }
+
         const btnWrap = document.createElement('div');
         btnWrap.style.cssText = 'display:flex;gap:4px;margin-left:auto;flex-shrink:0;';
-        if (i > 0 && !correctPositions.has(i - 1)) {
+        const upTarget = findSwapTarget(i, -1);
+        if (upTarget >= 0) {
           const up = document.createElement('button');
           up.textContent = '↑';
           up.style.cssText = 'padding:4px 10px;background:var(--paper3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink);transition:all .15s;';
           up.onmouseover = () => { up.style.borderColor = 'var(--accent)'; };
           up.onmouseout = () => { up.style.borderColor = 'var(--border)'; };
-          up.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[i-1]] = [currentOrder[i-1], currentOrder[i]]; renderEvents(); };
+          up.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[upTarget]] = [currentOrder[upTarget], currentOrder[i]]; renderEvents(); };
           btnWrap.appendChild(up);
         }
-        if (i < currentOrder.length - 1 && !correctPositions.has(i + 1)) {
+        const dnTarget = findSwapTarget(i, 1);
+        if (dnTarget >= 0) {
           const dn = document.createElement('button');
           dn.textContent = '↓';
           dn.style.cssText = 'padding:4px 10px;background:var(--paper3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink);transition:all .15s;';
           dn.onmouseover = () => { dn.style.borderColor = 'var(--accent)'; };
           dn.onmouseout = () => { dn.style.borderColor = 'var(--border)'; };
-          dn.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[i+1]] = [currentOrder[i+1], currentOrder[i]]; renderEvents(); };
+          dn.onclick = (e) => { e.stopPropagation(); [currentOrder[i], currentOrder[dnTarget]] = [currentOrder[dnTarget], currentOrder[i]]; renderEvents(); };
           btnWrap.appendChild(dn);
         }
         row.appendChild(btnWrap);
