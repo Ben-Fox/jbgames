@@ -873,6 +873,16 @@ body.light-theme .htp-text strong { color: var(--accent); }
   overflow: visible;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.15), 0 0 20px rgba(124,58,237,.08);
 }
+.spectrum-bar .mid-tick {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255,255,255,0.25);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
 .wl-category-badge {
   text-align: center;
   font-size: 11px;
@@ -901,11 +911,19 @@ body.light-theme .htp-text strong { color: var(--accent); }
 .spectrum-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--muted);
   letter-spacing: 1px;
   margin-bottom: 20px;
   padding: 0 4px;
+  position: relative;
+}
+.spectrum-labels .mid-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  opacity: 0.7;
 }
 .spectrum-target {
   position: absolute;
@@ -1096,7 +1114,8 @@ body.light-theme .letter-box.absent { border-color: rgba(0,0,0,.08); }
   /* Wavelength */
   .spectrum-bar { height: 42px; border-radius: 10px; }
   .spectrum-guess-marker { width: 20px; height: 20px; }
-  .spectrum-labels { font-size: 9px; letter-spacing: 0; }
+  .spectrum-labels { font-size: 11px; letter-spacing: 0; }
+  .spectrum-labels .mid-label { font-size: 10px; }
   .wl-category-badge { font-size: 10px; letter-spacing: 1px; }
   .spectrum-slider { height: 8px; /* easier to tap on mobile */ }
 
@@ -1131,7 +1150,8 @@ body.light-theme .letter-box.absent { border-color: rgba(0,0,0,.08); }
   .cipher-cell { width: 20px; }
   .cipher-decoded { font-size: 16px; }
   .big-prompt { font-size: 15px; }
-  .spectrum-labels { font-size: 8px; }
+  .spectrum-labels { font-size: 10px; }
+  .spectrum-labels .mid-label { font-size: 9px; }
 }
 
 /* ── Touch-friendly: larger tap targets on touch devices ── */
@@ -3253,11 +3273,16 @@ function startWavelength() {
     const specBar = document.createElement('div');
     specBar.className = 'spectrum-bar';
     specBar.style.background = category.gradient;
+    const midTick = document.createElement('div');
+    midTick.className = 'mid-tick';
+    specBar.appendChild(midTick);
     specWrap.appendChild(specBar);
 
     const labels = document.createElement('div');
     labels.className = 'spectrum-labels';
-    labels.innerHTML = `<span>${category.scaleLabel.left}</span><span>${category.scaleLabel.right}</span>`;
+    const midValue = Math.sqrt(category.scaleMin * category.scaleMax);
+    const midLabel = formatSciValue(midValue, category.unit);
+    labels.innerHTML = `<span>${category.scaleLabel.left}</span><span class="mid-label">${midLabel}</span><span>${category.scaleLabel.right}</span>`;
     specWrap.appendChild(labels);
     area.appendChild(specWrap);
 
