@@ -2651,6 +2651,19 @@ function resultBanner(won, title, answer, sub, scoreEl, gameId) {
   sub2.className = 'result-sub';
   sub2.textContent = sub;
   div.appendChild(sub2);
+  // Come-back message based on performance
+  const comeback = document.createElement('div');
+  comeback.style.cssText = 'margin-top:10px;font-size:14px;font-weight:600;letter-spacing:1px;';
+  if (won) {
+    const msgs = ['🔥 Come back tomorrow for more!', '💪 See you tomorrow, champ!', '⭐ New puzzle drops tomorrow!'];
+    comeback.style.color = 'var(--accent-light)';
+    comeback.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  } else {
+    const msgs = ['💡 Try again tomorrow!', '📈 New puzzle tomorrow — you got this!', '🎯 Tomorrow\'s a new chance!'];
+    comeback.style.color = 'var(--muted)';
+    comeback.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  }
+  div.appendChild(comeback);
   wrap.appendChild(div);
   // Show other daily games after completion
   if (gameId) wrap.appendChild(otherGamesCards(gameId));
