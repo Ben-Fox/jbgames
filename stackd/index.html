@@ -60,11 +60,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
     <div class="name" id="shape-name">—</div>
   </div>
   <div id="instructions">
-    Arrow keys = move block | Q / E = rotate | Space = drop | WASD = orbit camera
+    Left/Right = move | Up/Down = raise/lower | Q/E = rotate | Space = drop | WASD = camera
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Arrow keys to position, Q/E to rotate, Space to drop. WASD to look around. If anything falls off the edge — game over!</p>
+    <p>Stack random 3D blocks as high as you can! Left/Right arrows to slide, Up/Down to raise and lower, Q/E to rotate, Space to drop. WASD to orbit the camera. If anything falls off the edge — game over!</p>
     <button onclick="GAME.start()">Start Stacking</button>
   </div>
   <div id="game-over-overlay">
@@ -480,13 +480,49 @@ const GAME = {
     this.syncMesh();
   },
 
+  // Move block up/down (Y axis), stopping just above obstacles below
+  moveBlockY(dy) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    const step = this.moveStep;
+    const pos = this.currentBody.position;
+    const newY = pos.y + dy * step;
+
+    if (dy < 0) {
+      // Moving down — find the floor below
+      const minY = this.getFloorBelow(pos.x, pos.z) + 1.5; // 1.5 units above surface
+      pos.y = Math.max(newY, minY);
+    } else {
+      // Moving up — cap at reasonable height
+      pos.y = Math.min(newY, this.maxHeight + 12);
+    }
+    this.dropY = pos.y; // update float center
+    this.syncMesh();
+  },
+
+  // Find the highest surface directly below a given x,z position
+  getFloorBelow(x, z) {
+    let highest = 0; // ground level
+    for (const body of this.bodies) {
+      const p = body.position;
+      // Simple proximity check — if block is roughly above this body
+      const dx = Math.abs(p.x - x);
+      const dz = Math.abs(p.z - z);
+      if (dx < 2 && dz < 2) {
+        // Estimate top of this body (position.y + ~half height)
+        const top = p.y + 1;
+        if (top > highest) highest = top;
+      }
+    }
+    return highest;
+  },
+
   onKey(e) {
     if (this.phase === 'placing') {
       switch(e.key) {
         case 'ArrowLeft': e.preventDefault(); this.moveBlock(-1, 0); return;
         case 'ArrowRight': e.preventDefault(); this.moveBlock(1, 0); return;
-        case 'ArrowUp': e.preventDefault(); this.moveBlock(0, -1); return;
-        case 'ArrowDown': e.preventDefault(); this.moveBlock(0, 1); return;
+        case 'ArrowUp': e.preventDefault(); this.moveBlockY(1); return;
+        case 'ArrowDown': e.preventDefault(); this.moveBlockY(-1); return;
         case 'q': case 'Q': this.rotateBlock(1); return;
         case 'e': case 'E': this.rotateBlock(-1); return;
         case ' ': e.preventDefault(); this.dropBlock(); return;
