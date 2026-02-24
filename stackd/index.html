@@ -12,7 +12,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:rgba(14,14,18,0.8);z-index:10;position:relative}
 #top-bar a{color:#a78bfa;text-decoration:none;font-size:13px}
 #top-bar h1{font-size:20px;color:#c4b5fd;letter-spacing:2px}
-#game-container{flex:1;width:100%;position:relative}
+#game-container{flex:1;width:100%;position:relative;min-height:0}
 #hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;font-size:15px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,0.6);z-index:5;pointer-events:none}
 .hud-item{display:flex;align-items:center;gap:6px}
 #height-display{color:#c4b5fd}
@@ -23,7 +23,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #shape-preview .name{font-size:14px;font-weight:700;color:#c4b5fd}
 #instructions{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:#6b7280;z-index:5;text-align:center;pointer-events:none;line-height:1.6}
 #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20;transition:opacity .3s}
-#overlay.hidden{opacity:0;pointer-events:none}
+#overlay.hidden{opacity:0;pointer-events:none;visibility:hidden}
 #overlay h2{font-size:36px;color:#c4b5fd;margin-bottom:10px;letter-spacing:2px}
 #overlay p{color:#9ca3af;font-size:15px;margin-bottom:16px;max-width:440px;text-align:center;line-height:1.6}
 #overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
@@ -154,7 +154,7 @@ const GAME = {
   init() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1a1520);
-    this.scene.fog = new THREE.Fog(0x1a1520, 25, 60);
+    // No fog — keep it clean
 
     const container = document.getElementById('game-container');
     const aspect = container.clientWidth / container.clientHeight;
@@ -167,6 +167,9 @@ const GAME = {
     this.renderer.shadowMap.enabled = false;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
+    this.renderer.domElement.style.display = 'block';
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
     container.insertBefore(this.renderer.domElement, container.firstChild);
 
     // Lighting
@@ -174,16 +177,15 @@ const GAME = {
     const dir = new THREE.DirectionalLight(0xffffff, 1.2);
     dir.position.set(5, 12, 8);
     this.scene.add(dir);
-    this.scene.add(Object.assign(new THREE.DirectionalLight(0x8888ff, 0.3), { position: new THREE.Vector3(-4, 6, -4) }));
-    this.scene.add(Object.assign(new THREE.PointLight(0xff8844, 0.4, 20), { position: new THREE.Vector3(-3, 8, 5) }));
+    const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
+    fill.position.set(-4, 6, -4);
+    this.scene.add(fill);
+    const rim = new THREE.PointLight(0xff8844, 0.4, 20);
+    rim.position.set(-3, 8, 5);
+    this.scene.add(rim);
 
-    // Environment map
-    const pmremGen = new THREE.PMREMGenerator(this.renderer);
-    const envScene = new THREE.Scene();
-    envScene.background = new THREE.Color(0x2a2030);
-    envScene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 1));
-    this.scene.environment = pmremGen.fromScene(envScene).texture;
-    pmremGen.dispose();
+    // Hemisphere light for ambient fill (replaces env map for compatibility)
+    this.scene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 0.4));
 
     this.createGround();
 
@@ -629,7 +631,8 @@ const GAME = {
 };
 
 window.GAME = GAME;
-GAME.init();
+try { GAME.init(); console.log('Stack\'d init OK'); }
+catch(e) { console.error('Stack\'d init failed:', e); }
 </script>
 </body>
 </html>
