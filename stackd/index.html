@@ -241,7 +241,7 @@ const GAME = {
   processKeys(dt) {
     const speed = 1.8 * dt;
     let changed = false;
-    if (this.keysDown['w']) { this.camPhi = Math.max(0.15, this.camPhi - speed); changed = true; }
+    if (this.keysDown['w']) { this.camPhi = Math.max(0.05, this.camPhi - speed); changed = true; }
     if (this.keysDown['s']) { this.camPhi = Math.min(Math.PI * 0.48, this.camPhi + speed); changed = true; }
     if (this.keysDown['a']) { this.camTheta += speed; changed = true; }
     if (this.keysDown['d']) { this.camTheta -= speed; changed = true; }
@@ -345,6 +345,10 @@ const GAME = {
     const rz = (Math.random() - 0.5) * (PLATFORM_SIZE - 2);
     mesh.position.set(rx, spawnY, rz);
     body.position.set(rx, spawnY, rz);
+
+    // Auto-track camera to keep the spawned block visible
+    this.camTarget.y = spawnY * 0.5;
+    this.updateCamera();
     body.type = CANNON.Body.KINEMATIC;
     body.velocity.set(0, 0, 0);
     body.angularVelocity.set(0, 0, 0);
