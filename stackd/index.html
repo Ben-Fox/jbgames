@@ -159,7 +159,8 @@ const GAME = {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = false;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
     this.renderer.domElement.style.display = 'block';
@@ -171,6 +172,12 @@ const GAME = {
     this.scene.add(new THREE.AmbientLight(0xfff5e6, 0.6));
     const dir = new THREE.DirectionalLight(0xffffff, 1.2);
     dir.position.set(5, 12, 8);
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(2048, 2048);
+    dir.shadow.camera.left = -10; dir.shadow.camera.right = 10;
+    dir.shadow.camera.top = 15; dir.shadow.camera.bottom = -5;
+    dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 30;
+    dir.shadow.bias = -0.001;
     this.scene.add(dir);
     const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
     fill.position.set(-4, 6, -4);
@@ -252,6 +259,7 @@ const GAME = {
     const woodMat = createWoodMaterial();
     const floor = new THREE.Mesh(new THREE.BoxGeometry(PLATFORM_SIZE, 1, PLATFORM_SIZE), woodMat);
     floor.position.y = -0.5;
+    floor.receiveShadow = true;
     this.scene.add(floor);
 
     // Edge trim
@@ -318,8 +326,11 @@ const GAME = {
     if (shape.compound === 'L') { mesh = this.compoundMesh_L(shape); body = this.compoundBody_L(shape); }
     else if (shape.compound === 'T') { mesh = this.compoundMesh_T(shape); body = this.compoundBody_T(shape); }
     else if (shape.compound === 'step') { mesh = this.compoundMesh_Step(shape); body = this.compoundBody_Step(shape); }
-    else {
+    // Enable shadows on compound groups
+    if (mesh.isGroup) mesh.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+    if (!shape.compound) {
       mesh = new THREE.Mesh(new THREE.BoxGeometry(shape.w, shape.h, shape.d), createToyMaterial(shape.color));
+      mesh.castShadow = true; mesh.receiveShadow = true;
       body = new CANNON.Body({
         mass: shape.mass, material: this.blockMaterial,
         shape: new CANNON.Box(new CANNON.Vec3(shape.w/2, shape.h/2, shape.d/2)),
