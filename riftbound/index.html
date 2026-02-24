@@ -83,7 +83,7 @@ canvas{width:100%;height:100%;display:block;border-radius:8px;cursor:crosshair}
   <div id="card-bar"></div>
   <div id="bottom-row">
     <div id="wave-preview" style="font-size:12px;color:#9ca3af"></div>
-    <span class="hint">Click grid to place | Adjacent = fuse | R = reroll (5)</span>
+    <span class="hint">Click grid to place | Adjacent = fuse | R = reroll</span>
     <div id="controls">
       <button id="btn-send" onclick="G.sendWave()" disabled>Send Wave</button>
       <button id="btn-speed" onclick="G.toggleSpeed()">1x</button>
@@ -116,99 +116,105 @@ function buildPath(){
 }
 const pathData=buildPath();
 
-// ==================== TOWER DEFS (DPS-BALANCED) ====================
-// Balance target: ~0.5 effective DPS per shard spent (utility towers get lower raw DPS)
-// Bolt: 10/0.8=12.5 DPS, cost 20 → 0.63/shard (fast single, no utility)
-// Blast: 18/1.6=11.25 DPS + splash, cost 25 → 0.45/shard (AoE premium)
-// Frost: 5/1.0=5 DPS + 40% slow, cost 20 → 0.25/shard (utility king)
-// Drain: 7/1.3=5.4 DPS + lifesteal, cost 20 → 0.27/shard (sustain)
-// Arc: 10/1.5=6.7×3=20 eff DPS, cost 35 → 0.57/shard (needs groups)
-// Void: 35/3.0=11.7 DPS armor-pierce, cost 45 → 0.26/shard (anti-tank niche)
+// ==================== TOWER DEFS (REBALANCED) ====================
+// Cheaper towers, more accessible early. DPS balanced per shard.
+// Bolt: 10/0.8=12.5 DPS, cost 15 → 0.83/shard (bread & butter)
+// Blast: 16/1.5=10.7 DPS + splash, cost 20 → 0.53/shard (AoE)
+// Frost: 5/1.0=5 DPS + 40% slow, cost 15 → 0.33/shard (utility)
+// Drain: 7/1.2=5.8 DPS + lifesteal, cost 15 → 0.39/shard (sustain)
+// Arc: 10/1.5=6.7×3=20 eff, cost 25 → 0.8/shard (needs groups)
+// Void: 30/2.8=10.7 DPS pierce, cost 35 → 0.31/shard (anti-tank)
 const TOWERS={
-  bolt:{name:'Bolt Tower',color:'#facc15',dmg:10,rate:0.8,range:2.5,cost:20,desc:'Fast single-target shots',projColor:'#facc15',projSpeed:6,splash:0},
-  blast:{name:'Blast Tower',color:'#f97316',dmg:18,rate:1.6,range:2.0,cost:25,desc:'Slow AoE splash damage',projColor:'#f97316',projSpeed:4,splash:40},
-  frost:{name:'Frost Tower',color:'#67e8f9',dmg:5,rate:1.0,range:2.5,cost:20,desc:'Slows enemies by 40%',projColor:'#67e8f9',projSpeed:5,splash:0,slow:0.4},
-  drain:{name:'Drain Tower',color:'#a3e635',dmg:7,rate:1.3,range:2.0,cost:20,desc:'Steals HP, heals you',projColor:'#a3e635',projSpeed:4,splash:0,lifesteal:0.5},
-  arc:{name:'Arc Tower',color:'#a78bfa',dmg:10,rate:1.5,range:2.8,cost:35,desc:'Chain lightning hits 3 targets',projColor:'#a78bfa',projSpeed:0,splash:0,chain:3},
-  void:{name:'Void Tower',color:'#f472b6',dmg:35,rate:3.0,range:3.5,cost:45,desc:'Massive damage, ignores armor',projColor:'#f472b6',projSpeed:3,splash:0,ignoreArmor:true}
+  bolt:{name:'Bolt Tower',color:'#facc15',dmg:10,rate:0.8,range:2.5,cost:15,desc:'Fast single-target shots',projColor:'#facc15',projSpeed:6,splash:0},
+  blast:{name:'Blast Tower',color:'#f97316',dmg:16,rate:1.5,range:2.0,cost:20,desc:'Slow AoE splash damage',projColor:'#f97316',projSpeed:4,splash:45},
+  frost:{name:'Frost Tower',color:'#67e8f9',dmg:5,rate:1.0,range:2.5,cost:15,desc:'Slows enemies by 40%',projColor:'#67e8f9',projSpeed:5,splash:0,slow:0.4},
+  drain:{name:'Drain Tower',color:'#a3e635',dmg:7,rate:1.2,range:2.0,cost:15,desc:'Steals HP, heals you',projColor:'#a3e635',projSpeed:4,splash:0,lifesteal:0.5},
+  arc:{name:'Arc Tower',color:'#a78bfa',dmg:10,rate:1.5,range:2.8,cost:25,desc:'Chain lightning hits 3 targets',projColor:'#a78bfa',projSpeed:0,splash:0,chain:3},
+  void:{name:'Void Tower',color:'#f472b6',dmg:30,rate:2.8,range:3.5,cost:35,desc:'Massive damage, ignores armor',projColor:'#f472b6',projSpeed:3,splash:0,ignoreArmor:true}
 };
-// Fused = ~1.8x DPS of base (costs 2 towers to make, so ~0.9x efficiency but unique abilities)
-// Railgun: 22/0.9=24.4 DPS + pierce → strong vs lines
-// Inferno: 12/0.5=24 DPS AoE + DOT → area denial
-// Glacier: 8/1.2=6.7 DPS + 70% slow + freeze → supreme CC
-// Siphon: 14/1.0=14 DPS + AoE lifesteal → sustain anchor
-// Storm: 18/1.8=10×5=50 eff DPS + stun → strong but needs groups
-// Singularity: 55/3.5=15.7 DPS + pull + AoE → combo enabler
+// Fused = ~2x DPS of base + unique abilities. Reward for fusion strategy.
 const FUSED={
-  bolt:{name:'Railgun',color:'#fde047',dmg:22,rate:0.9,range:4.0,desc:'Piercing line shot',projColor:'#fde047',projSpeed:10,splash:0,pierce:true},
+  bolt:{name:'Railgun',color:'#fde047',dmg:25,rate:0.8,range:4.0,desc:'Piercing line shot',projColor:'#fde047',projSpeed:10,splash:0,pierce:true},
   blast:{name:'Inferno',color:'#fb923c',dmg:12,rate:0.5,range:2.5,desc:'Persistent fire zone',projColor:'#fb923c',projSpeed:0,splash:55,dot:6},
-  frost:{name:'Glacier',color:'#22d3ee',dmg:8,rate:1.2,range:3.0,desc:'Freeze + AoE slow field',projColor:'#22d3ee',projSpeed:5,splash:45,slow:0.7,freeze:0.4},
-  drain:{name:'Siphon',color:'#84cc16',dmg:14,rate:1.0,range:2.5,desc:'Area lifesteal + buff aura',projColor:'#84cc16',projSpeed:4,splash:35,lifesteal:0.8},
-  arc:{name:'Storm',color:'#8b5cf6',dmg:18,rate:1.8,range:3.2,desc:'Chain lightning + stun',projColor:'#8b5cf6',projSpeed:0,splash:0,chain:5,stun:0.6},
-  void:{name:'Singularity',color:'#ec4899',dmg:55,rate:3.5,range:3.0,desc:'Pulls enemies in + huge damage',projColor:'#ec4899',projSpeed:0,splash:45,pull:true,ignoreArmor:true}
+  frost:{name:'Glacier',color:'#22d3ee',dmg:8,rate:1.0,range:3.0,desc:'Freeze + AoE slow field',projColor:'#22d3ee',projSpeed:5,splash:50,slow:0.7,freeze:0.5},
+  drain:{name:'Siphon',color:'#84cc16',dmg:16,rate:1.0,range:2.5,desc:'Area lifesteal + buff aura',projColor:'#84cc16',projSpeed:4,splash:35,lifesteal:0.8},
+  arc:{name:'Storm',color:'#8b5cf6',dmg:20,rate:1.6,range:3.2,desc:'Chain lightning + stun',projColor:'#8b5cf6',projSpeed:0,splash:0,chain:5,stun:0.6},
+  void:{name:'Singularity',color:'#ec4899',dmg:60,rate:3.5,range:3.0,desc:'Pulls enemies in + huge damage',projColor:'#ec4899',projSpeed:0,splash:50,pull:true,ignoreArmor:true}
 };
 
 // ==================== ENEMY DEFS ====================
 // Base stats at wave 1. HP/speed/armor scale dynamically in generateWaveEnemies.
 // Reward is base — actual reward = base * diminishing factor
 const ENEMY_TYPES={
-  grunt:{name:'Grunt',color:'#ef4444',hp:30,speed:1.0,reward:3,armor:0,size:11},
-  runner:{name:'Runner',color:'#fb923c',hp:15,speed:2.2,reward:3,armor:0,size:9},
-  tank:{name:'Tank',color:'#94a3b8',hp:90,speed:0.5,reward:6,armor:2,size:16},
-  swarm:{name:'Swarm',color:'#fbbf24',hp:10,speed:1.4,reward:1,armor:0,size:7},
-  healer:{name:'Healer',color:'#34d399',hp:40,speed:0.8,reward:5,armor:0,size:11,heals:true},
-  phaser:{name:'Phaser',color:'#c084fc',hp:25,speed:1.1,reward:5,armor:0,size:10,phases:true},
-  shield:{name:'Shield',color:'#38bdf8',hp:50,speed:0.7,reward:6,armor:1,size:14,shield:25},
-  boss:{name:'Boss',color:'#dc2626',hp:350,speed:0.4,reward:30,armor:3,size:22}
+  grunt:{name:'Grunt',color:'#ef4444',hp:25,speed:1.0,reward:4,armor:0,size:11},
+  runner:{name:'Runner',color:'#fb923c',hp:14,speed:2.0,reward:4,armor:0,size:9},
+  tank:{name:'Tank',color:'#94a3b8',hp:70,speed:0.5,reward:7,armor:2,size:16},
+  swarm:{name:'Swarm',color:'#fbbf24',hp:8,speed:1.3,reward:2,armor:0,size:7},
+  healer:{name:'Healer',color:'#34d399',hp:35,speed:0.8,reward:6,armor:0,size:11,heals:true},
+  phaser:{name:'Phaser',color:'#c084fc',hp:22,speed:1.1,reward:6,armor:0,size:10,phases:true},
+  shield:{name:'Shield',color:'#38bdf8',hp:45,speed:0.7,reward:7,armor:1,size:14,shield:20},
+  boss:{name:'Boss',color:'#dc2626',hp:250,speed:0.4,reward:35,armor:2,size:22}
 };
 
 // ==================== WAVE COMPOSITION TEMPLATES ====================
 // Each template defines weighted enemy distribution for that wave theme
 // Ensures strategic variety — forces different tower combos each wave
 const WAVE_TEMPLATES=[
-  {name:'Scouts',desc:'Light and fast',comp:{grunt:3,runner:2},minWave:1},
-  {name:'Assault',desc:'Standard mixed force',comp:{grunt:4,runner:1,tank:1},minWave:1},
-  {name:'Stampede',desc:'Speed rush!',comp:{runner:5,grunt:1},minWave:2},
-  {name:'Armored Column',desc:'Heavy hitters',comp:{tank:4,grunt:2},minWave:3},
-  {name:'Swarm Tide',desc:'Overwhelming numbers',comp:{swarm:8,grunt:1},minWave:4},
-  {name:'Field Medics',desc:'They heal each other',comp:{healer:3,tank:2,grunt:2},minWave:5},
-  {name:'Ghost Patrol',desc:'Now you see them...',comp:{phaser:4,runner:2},minWave:7},
-  {name:'Iron Wall',desc:'Shielded advance',comp:{shield:4,healer:1,tank:2},minWave:9},
-  {name:'Blitz',desc:'Everything at once',comp:{runner:3,swarm:4,phaser:2},minWave:7},
-  {name:'Deathball',desc:'Slow but unstoppable',comp:{tank:3,shield:3,healer:2},minWave:10},
-  {name:'Nightmare',desc:'The rift widens',comp:{phaser:3,shield:2,healer:2,tank:2,runner:2},minWave:12}
+  // Phase 1: Tutorial waves (1-5) — simple compositions, learn the ropes
+  {name:'Scouts',desc:'A few grunts approach',comp:{grunt:6},minWave:1},
+  {name:'Patrol',desc:'Grunts with some runners',comp:{grunt:4,runner:2},minWave:2},
+  {name:'Advance',desc:'Mixed light force',comp:{grunt:3,runner:3},minWave:3},
+  // Phase 2: Challenge waves (4-12) — introduce harder types gradually
+  {name:'Stampede',desc:'Speed rush!',comp:{runner:5,grunt:2},minWave:4},
+  {name:'Armored Column',desc:'Heavy hitters incoming',comp:{tank:3,grunt:3},minWave:4},
+  {name:'Swarm Tide',desc:'Overwhelming numbers',comp:{swarm:7,grunt:2},minWave:5},
+  {name:'Assault',desc:'Standard mixed force',comp:{grunt:3,runner:2,tank:2},minWave:6},
+  {name:'Field Medics',desc:'They heal each other',comp:{healer:2,tank:2,grunt:3},minWave:7},
+  {name:'Ghost Patrol',desc:'Now you see them...',comp:{phaser:3,runner:3},minWave:8},
+  // Phase 3: Survival waves (9+) — nasty combos
+  {name:'Iron Wall',desc:'Shielded advance',comp:{shield:3,healer:1,tank:2,grunt:1},minWave:10},
+  {name:'Blitz',desc:'Everything at once',comp:{runner:3,swarm:4,phaser:2},minWave:10},
+  {name:'Deathball',desc:'Slow but unstoppable',comp:{tank:3,shield:2,healer:2},minWave:12},
+  {name:'Nightmare',desc:'The rift widens',comp:{phaser:2,shield:2,healer:2,tank:2,runner:2},minWave:15}
 ];
 
 // ==================== SPELLS (SCALE WITH WAVE) ====================
 const SPELLS={
-  meteor:{name:'Meteor Strike',desc:'Heavy damage to all enemies',color:'#f97316',cost:20,
-    fn(g){const dmg=50+g.wave*8;g.enemies.forEach(e=>{e.hp-=dmg});}},
-  freeze:{name:'Flash Freeze',desc:'Freeze all enemies briefly',color:'#67e8f9',cost:15,
-    fn(g){const dur=Math.min(2+g.wave*0.1,4);g.enemies.forEach(e=>{e.frozenTimer=Math.max(e.frozenTimer,dur)});}},
+  meteor:{name:'Meteor Strike',desc:'Heavy damage to all enemies',color:'#f97316',cost:15,
+    fn(g){const dmg=40+g.wave*10;g.enemies.forEach(e=>{e.hp-=dmg});}},
+  freeze:{name:'Flash Freeze',desc:'Freeze all enemies briefly',color:'#67e8f9',cost:10,
+    fn(g){const dur=Math.min(2.5+g.wave*0.15,5);g.enemies.forEach(e=>{e.frozenTimer=Math.max(e.frozenTimer||0,dur)});}},
   bounty:{name:'Rift Bounty',desc:'Bonus shards',color:'#60a5fa',cost:0,
-    fn(g){g.shards+=Math.floor(15+g.wave*2);}},
-  fortify:{name:'Fortify',desc:'All towers +30% damage briefly',color:'#a78bfa',cost:12,
-    fn(g){const dur=Math.min(8+g.wave*0.3,15);g.towers.forEach(t=>{t.dmgBuff=dur});}},
-  heal:{name:'Rift Mend',desc:'Restore some lives',color:'#34d399',cost:15,
-    fn(g){g.lives=Math.min(g.lives+Math.min(3+Math.floor(g.wave/5),8),25);}}
+    fn(g){g.shards+=Math.floor(20+g.wave*3);}},
+  fortify:{name:'Fortify',desc:'All towers +30% damage briefly',color:'#a78bfa',cost:10,
+    fn(g){const dur=Math.min(10+g.wave*0.4,18);g.towers.forEach(t=>{t.dmgBuff=dur});}},
+  heal:{name:'Rift Mend',desc:'Restore some lives',color:'#34d399',cost:10,
+    fn(g){g.lives=Math.min(g.lives+Math.min(4+Math.floor(g.wave/4),10),25);}}
 };
 
 // ==================== BALANCE FUNCTIONS ====================
-// Compound scaling: linear×exponential. Gentle early, steep late.
-// Wave 1: 1.12 | Wave 5: 2.14 | Wave 10: 4.10 | Wave 15: 8.35 | Wave 20: 17.7 | Wave 30: 86
-function hpScale(w){return (1+0.12*w)*Math.pow(1.065,w);}
-// Speed: gradual increase, hard capped at 2.2x
-function spdScale(w){return Math.min(1+0.025*w,2.2);}
-// Armor: global +0.3 per 3 waves (stacks with base armor)
-function armorScale(w){return Math.floor(w/3)*0.3;}
-// Kill reward diminishing: starts at 100%, drops to ~40% by wave 20
-function rewardScale(w){return Math.max(0.4,1-w*0.03);}
-// Wave completion bonus (main income source later)
-function waveBonus(w){return Math.floor(10+w*3+Math.pow(w,1.3));}
-// Enemy count: grows but plateaus (prevents lag)
-function waveCount(w){return Math.min(Math.floor(6+w*2),50);}
-// Tower cost inflation: +3% per wave
-function costInflation(w){return 1+w*0.03;}
+// THREE-PHASE DIFFICULTY:
+// Phase 1 (W1-5): Tutorial — linear HP, generous income, build your defense
+// Phase 2 (W6-12): Challenge — compound scaling, income tightens
+// Phase 3 (W13+): Survival — exponential HP, real pressure
+// W1:1.08 | W5:1.4 | W10:2.05 | W15:4.3 | W20:10.7 | W25:26.6
+function hpScale(w){
+  if(w<=5) return 1 + 0.08*w;
+  if(w<=12) return (1+0.08*5) * Math.pow(1.07, w-5);
+  return (1+0.08*5) * Math.pow(1.07,7) * Math.pow(1.10, w-12);
+}
+// Speed: very gentle, caps at 1.8x
+function spdScale(w){return Math.min(1+0.02*w,1.8);}
+// Armor: no global armor until wave 6, then +0.2 per 3 waves
+function armorScale(w){return w<6?0:Math.floor((w-5)/3)*0.2;}
+// Kill rewards: generous early, slow decline, floor at 50%
+function rewardScale(w){return Math.max(0.5, 1-w*0.02);}
+// Wave completion bonus: main income source, generous
+function waveBonus(w){return Math.floor(12+w*4+Math.pow(w,1.2));}
+// Enemy count: starts small, grows moderately, caps at 45
+function waveCount(w){return Math.min(Math.floor(4+w*1.5),45);}
+// Tower cost inflation: NO inflation first 5 waves, then gentle +2.5%/wave
+function costInflation(w){return w<=5?1:1+(w-5)*0.025;}
 
 // ==================== SPRITE DRAWING ====================
 // Global anim tick (increments in loop)
@@ -790,7 +796,7 @@ var G={
   },
 
   startGame(){
-    this.lives=20;this.shards=40;this.score=0;this.wave=0;
+    this.lives=20;this.shards=60;this.score=0;this.wave=0;
     this.towers=[];this.enemies=[];this.projectiles=[];this.particles=[];this.effects=[];
     this.grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
     this.waveActive=false;this.spawnQueue=[];this.gameOver=false;
@@ -820,9 +826,12 @@ var G={
     const hand=[];
     const towerKeys=Object.keys(TOWERS),spellKeys=Object.keys(SPELLS);
     const inflation=costInflation(this.wave);
+    // Early waves (1-5): guarantee at least 2 tower cards
+    const earlyPhase=this.wave<=5;
     for(let i=0;i<3;i++){
       const r=Math.random();
-      if(r<0.55||i<1){
+      const forceTower=earlyPhase&&i<2;
+      if(forceTower||r<0.55||i<1){
         const k=towerKeys[Math.floor(Math.random()*towerKeys.length)];
         const t=TOWERS[k];
         hand.push({type:'tower',key:k,name:t.name,desc:t.desc,cost:Math.floor(t.cost*inflation),color:t.color});
@@ -921,8 +930,9 @@ var G={
   },
 
   rerollCards(){
-    if(this.shards<5||this.waveActive)return;
-    this.shards-=5;this.generateCards();this.updateHUD();
+    const cost=this.wave<=5?0:3;
+    if(this.shards<cost||this.waveActive)return;
+    this.shards-=cost;this.generateCards();this.updateHUD();
   },
 
   updateCardUI(){
