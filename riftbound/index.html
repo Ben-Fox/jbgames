@@ -7,48 +7,50 @@
 <meta name="description" content="Riftbound — a roguelike tower defense card game. Draft cards, place towers, fuse them into mega-towers, and survive infinite waves.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0e0e12;color:#e2e2e6;font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden;user-select:none}
-#top-bar{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;padding:10px 20px}
-#top-bar a{color:#a78bfa;text-decoration:none;font-size:15px}
+html,body{height:100%;overflow:hidden}
+body{background:#0e0e12;color:#e2e2e6;font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden;user-select:none}
+#top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 20px;flex-shrink:0}
+#top-bar a{color:#a78bfa;text-decoration:none;font-size:13px}
 #top-bar a:hover{color:#c4b5fd}
-#top-bar h1{font-size:24px;color:#c4b5fd;letter-spacing:2px}
-#game-wrap{position:relative;width:100%;max-width:1200px;aspect-ratio:16/10}
+#top-bar h1{font-size:20px;color:#c4b5fd;letter-spacing:2px}
+#game-wrap{position:relative;flex:1 1 auto;width:100%;min-height:0;aspect-ratio:16/10;max-height:calc(100vh - 200px);max-width:calc((100vh - 200px) * 1.6)}
 canvas{width:100%;height:100%;display:block;border-radius:8px;cursor:crosshair}
-#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:10px 18px;pointer-events:none;font-size:16px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:8px 14px;pointer-events:none;font-size:14px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 #hud .lives{color:#f87171}
 #hud .wave{color:#c4b5fd}
 #hud .shards{color:#60a5fa}
 #hud .score{color:#fbbf24}
-#card-bar{width:100%;max-width:1200px;display:flex;justify-content:center;gap:16px;padding:16px 12px;min-height:180px;align-items:center}
-.card{background:linear-gradient(135deg,#1a1a2e,#16162a);border:2px solid #333;border-radius:12px;padding:12px 14px 14px;width:220px;text-align:center;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
-.card:hover{transform:translateY(-6px);border-color:#7c3aed;box-shadow:0 4px 20px rgba(124,58,237,.3)}
-.card.selected{border-color:#a78bfa;box-shadow:0 0 16px rgba(167,139,250,.5);transform:translateY(-8px)}
-.card-icon{width:100%;height:80px;margin-bottom:8px;border-radius:6px;overflow:hidden}
+#bottom-panel{width:100%;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+#card-bar{width:100%;display:flex;justify-content:center;gap:10px;padding:6px 10px;align-items:stretch}
+.card{background:linear-gradient(135deg,#1a1a2e,#16162a);border:2px solid #333;border-radius:8px;padding:6px 10px 8px;width:200px;text-align:center;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s;display:flex;flex-direction:column;justify-content:center}
+.card:hover{transform:translateY(-4px);border-color:#7c3aed;box-shadow:0 4px 16px rgba(124,58,237,.3)}
+.card.selected{border-color:#a78bfa;box-shadow:0 0 14px rgba(167,139,250,.5);transform:translateY(-5px)}
+.card-icon{width:100%;height:50px;margin-bottom:4px;border-radius:4px;overflow:hidden}
 .card-icon canvas{width:100%;height:100%}
-.card-name{font-size:16px;font-weight:700;color:#e2e2e6;margin-bottom:4px}
-.card-type{font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.card-name{font-size:14px;font-weight:700;color:#e2e2e6;margin-bottom:2px}
+.card-type{font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
 .card-type.tower{color:#34d399}
 .card-type.spell{color:#f472b6}
 .card-type.upgrade{color:#fbbf24}
-.card-desc{font-size:13px;color:#9ca3af;line-height:1.4}
-.card-cost{font-size:14px;color:#60a5fa;margin-top:6px;font-weight:600}
-#info-bar{width:100%;max-width:1200px;display:flex;justify-content:center;gap:24px;padding:8px;font-size:14px;color:#6b7280}
-#info-bar span{display:inline-flex;align-items:center;gap:4px}
-#controls{display:flex;gap:12px;padding:10px}
-#controls button{background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.card-desc{font-size:11px;color:#9ca3af;line-height:1.3}
+.card-cost{font-size:12px;color:#60a5fa;margin-top:4px;font-weight:600}
+#bottom-row{display:flex;align-items:center;justify-content:center;gap:16px;padding:4px 10px;width:100%}
+#bottom-row .hint{font-size:12px;color:#6b7280}
+#controls{display:flex;gap:8px}
+#controls button{background:#7c3aed;color:#fff;border:none;border-radius:5px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
 #controls button:hover{background:#6d28d9}
 #controls button:disabled{background:#333;color:#666;cursor:default}
 #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,.92);border-radius:8px;z-index:10;transition:opacity .3s}
 #overlay.hidden{opacity:0;pointer-events:none}
-#overlay h2{font-size:38px;color:#c4b5fd;margin-bottom:10px;letter-spacing:2px}
-#overlay p{color:#9ca3af;font-size:16px;margin-bottom:20px;max-width:500px;text-align:center;line-height:1.6}
-#overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:14px 40px;font-size:18px;font-weight:700;cursor:pointer;margin-top:16px;transition:background .15s}
+#overlay h2{font-size:34px;color:#c4b5fd;margin-bottom:8px;letter-spacing:2px}
+#overlay p{color:#9ca3af;font-size:15px;margin-bottom:16px;max-width:460px;text-align:center;line-height:1.5}
+#overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px;transition:background .15s}
 #overlay button:hover{background:#6d28d9}
-#tower-info{position:absolute;bottom:12px;left:12px;background:rgba(20,20,30,.92);border:1px solid #333;border-radius:8px;padding:12px 16px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .2s;max-width:260px}
+#tower-info{position:absolute;bottom:10px;left:10px;background:rgba(20,20,30,.92);border:1px solid #333;border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .2s;max-width:240px}
 #tower-info.show{opacity:1}
-#tower-info .ti-name{font-size:16px;font-weight:700;color:#c4b5fd}
-#tower-info .ti-stat{color:#9ca3af;margin-top:3px;line-height:1.5}
-#sell-btn{position:absolute;bottom:12px;right:12px;background:#dc2626;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s}
+#tower-info .ti-name{font-size:14px;font-weight:700;color:#c4b5fd}
+#tower-info .ti-stat{color:#9ca3af;margin-top:2px;line-height:1.4}
+#sell-btn{position:absolute;bottom:10px;right:10px;background:#dc2626;color:#fff;border:none;border-radius:5px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s}
 #sell-btn.show{opacity:1;pointer-events:auto}
 </style>
 </head>
@@ -77,16 +79,16 @@ canvas{width:100%;height:100%;display:block;border-radius:8px;cursor:crosshair}
   </div>
   <button id="sell-btn" onclick="G.sellTower()">Sell</button>
 </div>
-<div id="card-bar"></div>
-<div id="wave-preview" style="width:100%;max-width:1200px;text-align:center;padding:6px 12px;font-size:14px;color:#9ca3af;min-height:24px"></div>
-<div id="info-bar">
-  <span>Click grid to place tower</span>
-  <span>Same-type adjacent towers fuse</span>
-  <span>R = reroll cards (5 shards)</span>
-</div>
-<div id="controls">
-  <button id="btn-send" onclick="G.sendWave()" disabled>Send Wave</button>
-  <button id="btn-speed" onclick="G.toggleSpeed()">Speed: 1x</button>
+<div id="bottom-panel">
+  <div id="card-bar"></div>
+  <div id="bottom-row">
+    <div id="wave-preview" style="font-size:12px;color:#9ca3af"></div>
+    <span class="hint">Click grid to place | Adjacent = fuse | R = reroll (5)</span>
+    <div id="controls">
+      <button id="btn-send" onclick="G.sendWave()" disabled>Send Wave</button>
+      <button id="btn-speed" onclick="G.toggleSpeed()">1x</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -931,7 +933,7 @@ var G={
       const typeClass=c.type==='tower'?'tower':c.type==='spell'?'spell':'upgrade';
       // Create card icon canvas
       const iconDiv=document.createElement('div');iconDiv.className='card-icon';
-      const iconCvs=document.createElement('canvas');iconCvs.width=220;iconCvs.height=80;
+      const iconCvs=document.createElement('canvas');iconCvs.width=200;iconCvs.height=50;
       drawCardIcon(iconCvs,c);
       iconDiv.appendChild(iconCvs);
       div.appendChild(iconDiv);
