@@ -18,10 +18,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #height-display{color:#c4b5fd}
 #blocks-display{color:#60a5fa}
 #best-display{color:#fbbf24}
-#controls-panel{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:5}
-#controls-panel button{background:rgba(124,58,237,0.85);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;backdrop-filter:blur(8px)}
-#controls-panel button:hover{background:rgba(109,40,217,0.9);transform:translateY(-1px)}
-#controls-panel button:disabled{background:rgba(51,51,51,0.7);color:#666;cursor:default;transform:none}
 #shape-preview{position:absolute;top:10px;right:16px;background:rgba(20,20,30,0.85);border:1px solid #333;border-radius:10px;padding:10px 14px;z-index:5;text-align:center;backdrop-filter:blur(8px)}
 #shape-preview .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 #shape-preview .name{font-size:14px;font-weight:700;color:#c4b5fd}
@@ -64,11 +60,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
     <div class="name" id="shape-name">—</div>
   </div>
   <div id="instructions">
-    Left-click &amp; drag to position | Q / E to rotate while holding | Release to drop
+    WASD = orbit camera | Left-click drag = move block | Q / E = rotate | Release = drop
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Click and drag to position, Q/E to rotate, then release to drop. If anything falls off the edge — game over!</p>
+    <p>Stack random 3D blocks as high as you can! Drag blocks with your mouse, Q/E to rotate, release to drop. Use WASD to look around. If anything falls off the edge — game over!</p>
     <button onclick="GAME.start()">Start Stacking</button>
   </div>
   <div id="game-over-overlay">
@@ -82,11 +78,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 
 // ==================== CONSTANTS ====================
-const PLATFORM_HALF = 3; // platform is 6×6 units (smaller grid)
+const PLATFORM_HALF = 3;
 const PLATFORM_SIZE = PLATFORM_HALF * 2;
 
 // ==================== SHAPE DEFINITIONS ====================
@@ -103,13 +98,10 @@ const SHAPES = [
   { name:'Step Block', w:1, h:1, d:1, color:0x00bcd4, mass:1.2, compound:'step' },
 ];
 
-// ==================== TOY BOX MATERIALS ====================
+// ==================== MATERIALS ====================
 function createToyMaterial(color) {
   return new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.35,
-    metalness: 0.05,
-    envMapIntensity: 0.6,
+    color, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.6,
   });
 }
 
@@ -132,41 +124,44 @@ function createWoodMaterial() {
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  return new THREE.MeshStandardMaterial({
-    map: tex, roughness: 0.6, metalness: 0,
-  });
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0 });
 }
 
 // ==================== GAME ====================
 const GAME = {
-  scene: null, camera: null, renderer: null, controls: null,
+  scene: null, camera: null, renderer: null,
   world: null, clock: new THREE.Clock(),
   bodies: [], meshes: [],
   currentBlock: null, currentBody: null, currentMesh: null,
   phase: 'idle', // idle | placing | dropping | settling | gameover
   blocksPlaced: 0, maxHeight: 0, best: 0,
-  dropY: 12, settleTimer: 0,
+  dropY: 8, settleTimer: 0,
+
+  // Camera orbit (manual, no OrbitControls — we want WASD)
+  camTheta: Math.PI / 4,   // horizontal angle
+  camPhi: Math.PI / 5,     // vertical angle (from top)
+  camDist: 14,
+  camTarget: new THREE.Vector3(0, 3, 0),
+  keysDown: {},
+
   // Drag state
   isDragging: false,
+  dragOffset: new THREE.Vector3(), // offset from block center to grab point
   raycaster: new THREE.Raycaster(),
   mouse: new THREE.Vector2(),
-  dragPlane: null, // invisible plane at spawn height for raycasting
+  dragPlane: null,
 
   init() {
-    // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1a1520);
     this.scene.fog = new THREE.Fog(0x1a1520, 25, 60);
 
-    // Camera
     const container = document.getElementById('game-container');
     const aspect = container.clientWidth / container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
-    this.camera.position.set(6, 8, 10);
-    this.camera.lookAt(0, 3, 0);
+    this.updateCamera();
 
-    // Renderer — NO shadows
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = false;
@@ -174,55 +169,31 @@ const GAME = {
     this.renderer.toneMappingExposure = 1.2;
     container.insertBefore(this.renderer.domElement, container.firstChild);
 
-    // Orbit controls — only right-click drag to orbit
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 3, 0);
-    this.controls.enablePan = false;
-    this.controls.minDistance = 5;
-    this.controls.maxDistance = 25;
-    this.controls.maxPolarAngle = Math.PI * 0.48;
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    // Disable left-click orbit (we use it for drag-to-place)
-    this.controls.mouseButtons = {
-      LEFT: null,
-      MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.ROTATE
-    };
-
-    // Lighting (no shadow casting)
-    const amb = new THREE.AmbientLight(0xfff5e6, 0.6);
-    this.scene.add(amb);
+    // Lighting
+    this.scene.add(new THREE.AmbientLight(0xfff5e6, 0.6));
     const dir = new THREE.DirectionalLight(0xffffff, 1.2);
     dir.position.set(5, 12, 8);
     this.scene.add(dir);
-    const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
-    fill.position.set(-4, 6, -4);
-    this.scene.add(fill);
-    const rim = new THREE.PointLight(0xff8844, 0.4, 20);
-    rim.position.set(-3, 8, 5);
-    this.scene.add(rim);
+    this.scene.add(Object.assign(new THREE.DirectionalLight(0x8888ff, 0.3), { position: new THREE.Vector3(-4, 6, -4) }));
+    this.scene.add(Object.assign(new THREE.PointLight(0xff8844, 0.4, 20), { position: new THREE.Vector3(-3, 8, 5) }));
 
     // Environment map
     const pmremGen = new THREE.PMREMGenerator(this.renderer);
     const envScene = new THREE.Scene();
     envScene.background = new THREE.Color(0x2a2030);
-    const envLight = new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 1);
-    envScene.add(envLight);
-    const envMap = pmremGen.fromScene(envScene).texture;
-    this.scene.environment = envMap;
+    envScene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 1));
+    this.scene.environment = pmremGen.fromScene(envScene).texture;
     pmremGen.dispose();
 
-    // Ground
     this.createGround();
 
-    // Invisible drag plane (updated per spawn)
+    // Invisible drag plane
     this.dragPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
       new THREE.MeshBasicMaterial({ visible: false })
     );
     this.dragPlane.rotation.x = -Math.PI / 2;
-    this.dragPlane.position.y = 10;
+    this.dragPlane.position.y = 8;
     this.scene.add(this.dragPlane);
 
     // Physics
@@ -232,38 +203,32 @@ const GAME = {
     this.world.solver.iterations = 15;
     this.world.solver.tolerance = 0.001;
 
-    // Ground physics — thin platform (only covers the small area)
     const groundBody = new CANNON.Body({ mass: 0, material: new CANNON.Material('ground') });
     groundBody.addShape(new CANNON.Box(new CANNON.Vec3(PLATFORM_HALF, 0.5, PLATFORM_HALF)));
     groundBody.position.set(0, -0.5, 0);
     this.world.addBody(groundBody);
 
-    // Contact materials
     const blockMat = new CANNON.Material('block');
-    this.world.addContactMaterial(new CANNON.ContactMaterial(blockMat, blockMat, {
-      friction: 0.7, restitution: 0.05
-    }));
-    this.world.addContactMaterial(new CANNON.ContactMaterial(groundBody.material, blockMat, {
-      friction: 0.8, restitution: 0.03
-    }));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(blockMat, blockMat, { friction: 0.7, restitution: 0.05 }));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(groundBody.material, blockMat, { friction: 0.8, restitution: 0.03 }));
     this.blockMaterial = blockMat;
 
-    // Load best
     this.best = parseInt(localStorage.getItem('stackd_best')) || 0;
     document.getElementById('best-display').textContent = 'Best: ' + this.best;
 
     // Input
-    document.addEventListener('keydown', e => this.onKey(e));
+    document.addEventListener('keydown', e => { this.keysDown[e.key.toLowerCase()] = true; this.onKey(e); });
+    document.addEventListener('keyup', e => { this.keysDown[e.key.toLowerCase()] = false; });
     const cvs = this.renderer.domElement;
     cvs.addEventListener('mousedown', e => this.onMouseDown(e));
     cvs.addEventListener('mousemove', e => this.onMouseMove(e));
     cvs.addEventListener('mouseup', e => this.onMouseUp(e));
-    // Touch support
+    cvs.addEventListener('wheel', e => this.onWheel(e), { passive: false });
     cvs.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
     cvs.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
     cvs.addEventListener('touchend', e => this.onTouchEnd(e));
+    cvs.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Resize
     window.addEventListener('resize', () => {
       const c = document.getElementById('game-container');
       this.camera.aspect = c.clientWidth / c.clientHeight;
@@ -274,82 +239,106 @@ const GAME = {
     this.animate();
   },
 
+  // ==================== CAMERA ====================
+  updateCamera() {
+    // Spherical coordinates around camTarget
+    const x = this.camTarget.x + this.camDist * Math.sin(this.camPhi) * Math.sin(this.camTheta);
+    const y = this.camTarget.y + this.camDist * Math.cos(this.camPhi);
+    const z = this.camTarget.z + this.camDist * Math.sin(this.camPhi) * Math.cos(this.camTheta);
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(this.camTarget);
+  },
+
+  processKeys(dt) {
+    const speed = 1.8 * dt;
+    let changed = false;
+    if (this.keysDown['w']) { this.camPhi = Math.max(0.15, this.camPhi - speed); changed = true; }
+    if (this.keysDown['s']) { this.camPhi = Math.min(Math.PI * 0.48, this.camPhi + speed); changed = true; }
+    if (this.keysDown['a']) { this.camTheta += speed; changed = true; }
+    if (this.keysDown['d']) { this.camTheta -= speed; changed = true; }
+    if (changed) this.updateCamera();
+  },
+
+  onWheel(e) {
+    e.preventDefault();
+    this.camDist = Math.max(5, Math.min(25, this.camDist + e.deltaY * 0.01));
+    this.updateCamera();
+  },
+
+  // ==================== GROUND ====================
   createGround() {
     const woodMat = createWoodMaterial();
-    // Smaller platform
-    const floor = new THREE.Mesh(
-      new THREE.BoxGeometry(PLATFORM_SIZE, 1, PLATFORM_SIZE),
-      woodMat
-    );
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(PLATFORM_SIZE, 1, PLATFORM_SIZE), woodMat);
     floor.position.y = -0.5;
     this.scene.add(floor);
 
-    // Edge trim (subtle border to show the drop-off)
-    const edgeMat = new THREE.MeshStandardMaterial({
-      color: 0x8b6b4a, roughness: 0.7, metalness: 0
-    });
-    const edgeH = 0.15;
-    const half = PLATFORM_HALF;
-    const edges = [
-      { pos: [0, edgeH/2, -half], size: [PLATFORM_SIZE + 0.2, edgeH, 0.1] },
-      { pos: [0, edgeH/2, half], size: [PLATFORM_SIZE + 0.2, edgeH, 0.1] },
-      { pos: [-half, edgeH/2, 0], size: [0.1, edgeH, PLATFORM_SIZE + 0.2] },
-      { pos: [half, edgeH/2, 0], size: [0.1, edgeH, PLATFORM_SIZE + 0.2] },
-    ];
-    edges.forEach(w => {
+    // Edge trim
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7, metalness: 0 });
+    const h = PLATFORM_HALF;
+    [
+      { pos: [0, 0.075, -h], size: [PLATFORM_SIZE + 0.2, 0.15, 0.1] },
+      { pos: [0, 0.075, h], size: [PLATFORM_SIZE + 0.2, 0.15, 0.1] },
+      { pos: [-h, 0.075, 0], size: [0.1, 0.15, PLATFORM_SIZE + 0.2] },
+      { pos: [h, 0.075, 0], size: [0.1, 0.15, PLATFORM_SIZE + 0.2] },
+    ].forEach(w => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(...w.size), edgeMat);
       m.position.set(...w.pos);
       this.scene.add(m);
     });
 
-    // Grid lines on floor
-    const gridHelper = new THREE.GridHelper(PLATFORM_SIZE, PLATFORM_SIZE, 0x4a3a2a, 0x3a2a1a);
-    gridHelper.position.y = 0.01;
-    this.scene.add(gridHelper);
+    // Grid
+    const grid = new THREE.GridHelper(PLATFORM_SIZE, PLATFORM_SIZE, 0x4a3a2a, 0x3a2a1a);
+    grid.position.y = 0.01;
+    this.scene.add(grid);
 
-    // Void below — dark plane far below to show there's nothing
-    const voidMat = new THREE.MeshBasicMaterial({ color: 0x0a0a10 });
-    const voidPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), voidMat);
+    // Void below
+    const voidPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100),
+      new THREE.MeshBasicMaterial({ color: 0x0a0a10 })
+    );
     voidPlane.rotation.x = -Math.PI / 2;
     voidPlane.position.y = -15;
     this.scene.add(voidPlane);
   },
 
-  // ==================== MOUSE DRAG ====================
-  getMouseNDC(e) {
+  // ==================== MOUSE / DRAG ====================
+  getNDC(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   },
 
-  raycastToPlane() {
+  raycastPlane() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const hits = this.raycaster.intersectObject(this.dragPlane);
-    if (hits.length > 0) return hits[0].point;
-    return null;
+    return hits.length > 0 ? hits[0].point : null;
   },
 
   onMouseDown(e) {
-    if (e.button !== 0) return; // left click only
+    if (e.button !== 0) return;
     if (this.phase !== 'placing' || !this.currentBody) return;
     e.preventDefault();
+
+    this.getNDC(e);
+    const pt = this.raycastPlane();
+    if (!pt) return;
+
+    // Calculate offset from block center to where user clicked — block stays put
+    this.dragOffset.set(
+      this.currentBody.position.x - pt.x,
+      0,
+      this.currentBody.position.z - pt.z
+    );
     this.isDragging = true;
-    this.getMouseNDC(e);
-    const pt = this.raycastToPlane();
-    if (pt) {
-      this.currentBody.position.x = pt.x;
-      this.currentBody.position.z = pt.z;
-      this.syncMesh();
-    }
   },
 
   onMouseMove(e) {
     if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
-    this.getMouseNDC(e);
-    const pt = this.raycastToPlane();
+    this.getNDC(e);
+    const pt = this.raycastPlane();
     if (pt) {
-      this.currentBody.position.x = pt.x;
-      this.currentBody.position.z = pt.z;
+      this.currentBody.position.x = pt.x + this.dragOffset.x;
+      this.currentBody.position.z = pt.z + this.dragOffset.z;
       this.syncMesh();
     }
   },
@@ -357,44 +346,38 @@ const GAME = {
   onMouseUp(e) {
     if (e.button !== 0 || !this.isDragging) return;
     this.isDragging = false;
-    if (this.phase === 'placing' && this.currentBody) {
-      this.dropBlock();
-    }
+    if (this.phase === 'placing' && this.currentBody) this.dropBlock();
   },
 
-  // Touch equivalents
+  // Touch
   onTouchStart(e) {
-    if (this.phase !== 'placing' || !this.currentBody) return;
-    if (e.touches.length !== 1) return;
+    if (this.phase !== 'placing' || !this.currentBody || e.touches.length !== 1) return;
     e.preventDefault();
-    this.isDragging = true;
     const t = e.touches[0];
-    this.getMouseNDC(t);
-    const pt = this.raycastToPlane();
-    if (pt) {
-      this.currentBody.position.x = pt.x;
-      this.currentBody.position.z = pt.z;
-      this.syncMesh();
-    }
+    this.getNDC(t);
+    const pt = this.raycastPlane();
+    if (!pt) return;
+    this.dragOffset.set(
+      this.currentBody.position.x - pt.x, 0,
+      this.currentBody.position.z - pt.z
+    );
+    this.isDragging = true;
   },
   onTouchMove(e) {
     if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
     e.preventDefault();
-    const t = e.touches[0];
-    this.getMouseNDC(t);
-    const pt = this.raycastToPlane();
+    this.getNDC(e.touches[0]);
+    const pt = this.raycastPlane();
     if (pt) {
-      this.currentBody.position.x = pt.x;
-      this.currentBody.position.z = pt.z;
+      this.currentBody.position.x = pt.x + this.dragOffset.x;
+      this.currentBody.position.z = pt.z + this.dragOffset.z;
       this.syncMesh();
     }
   },
-  onTouchEnd(e) {
+  onTouchEnd() {
     if (!this.isDragging) return;
     this.isDragging = false;
-    if (this.phase === 'placing' && this.currentBody) {
-      this.dropBlock();
-    }
+    if (this.phase === 'placing' && this.currentBody) this.dropBlock();
   },
 
   // ==================== GAME FLOW ====================
@@ -407,14 +390,17 @@ const GAME = {
     this.currentMesh = null; this.currentBody = null;
 
     this.blocksPlaced = 0; this.maxHeight = 0;
-    this.phase = 'idle';
-    this.isDragging = false;
+    this.phase = 'idle'; this.isDragging = false;
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('game-over-overlay').classList.remove('show');
     this.updateHUD();
 
-    this.camera.position.set(6, 8, 10);
-    this.controls.target.set(0, 3, 0);
+    // Reset camera to a straight-on top-down-ish angle
+    this.camTheta = Math.PI / 4;
+    this.camPhi = Math.PI / 5;
+    this.camDist = 14;
+    this.camTarget.set(0, 3, 0);
+    this.updateCamera();
 
     this.spawnNextBlock();
   },
@@ -426,27 +412,15 @@ const GAME = {
     document.getElementById('shape-name').style.color = '#' + shape.color.toString(16).padStart(6, '0');
 
     let mesh, body;
-
-    if (shape.compound === 'L') {
-      mesh = this.createCompoundMesh_L(shape);
-      body = this.createCompoundBody_L(shape);
-    } else if (shape.compound === 'T') {
-      mesh = this.createCompoundMesh_T(shape);
-      body = this.createCompoundBody_T(shape);
-    } else if (shape.compound === 'step') {
-      mesh = this.createCompoundMesh_Step(shape);
-      body = this.createCompoundBody_Step(shape);
-    } else {
-      mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(shape.w, shape.h, shape.d),
-        createToyMaterial(shape.color)
-      );
+    if (shape.compound === 'L') { mesh = this.compoundMesh_L(shape); body = this.compoundBody_L(shape); }
+    else if (shape.compound === 'T') { mesh = this.compoundMesh_T(shape); body = this.compoundBody_T(shape); }
+    else if (shape.compound === 'step') { mesh = this.compoundMesh_Step(shape); body = this.compoundBody_Step(shape); }
+    else {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(shape.w, shape.h, shape.d), createToyMaterial(shape.color));
       body = new CANNON.Body({
-        mass: shape.mass,
-        material: this.blockMaterial,
+        mass: shape.mass, material: this.blockMaterial,
         shape: new CANNON.Box(new CANNON.Vec3(shape.w/2, shape.h/2, shape.d/2)),
-        linearDamping: 0.4,
-        angularDamping: 0.6
+        linearDamping: 0.4, angularDamping: 0.6
       });
     }
 
@@ -458,7 +432,6 @@ const GAME = {
     body.velocity.set(0, 0, 0);
     body.angularVelocity.set(0, 0, 0);
 
-    // Update drag plane height
     this.dragPlane.position.y = spawnY;
 
     this.scene.add(mesh);
@@ -469,66 +442,57 @@ const GAME = {
   },
 
   // ==================== COMPOUND SHAPES ====================
-  createCompoundMesh_L(shape) {
-    const group = new THREE.Group();
-    const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0);
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(0, 1, 0);
-    group.add(m1, m2, m3);
-    return group;
+  compoundMesh_L(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m2.position.set(1,0,0); g.add(m2);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(0,1,0); g.add(m3);
+    return g;
   },
-  createCompoundBody_L(shape) {
-    const body = new CANNON.Body({ mass: shape.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(0, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(1, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(0, 1, 0));
-    return body;
+  compoundBody_L(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,1,0));
+    return b;
   },
-
-  createCompoundMesh_T(shape) {
-    const group = new THREE.Group();
-    const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m1.position.set(-1, 0, 0);
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 0, 0);
-    const m4 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m4.position.set(0, 1, 0);
-    group.add(m1, m2, m3, m4);
-    return group;
+  compoundMesh_T(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m1.position.set(-1,0,0); g.add(m1);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(1,0,0); g.add(m3);
+    const m4 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m4.position.set(0,1,0); g.add(m4);
+    return g;
   },
-  createCompoundBody_T(shape) {
-    const body = new CANNON.Body({ mass: shape.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(-1, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(0, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(1, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(0, 1, 0));
-    return body;
+  compoundBody_T(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(-1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,1,0));
+    return b;
   },
-
-  createCompoundMesh_Step(shape) {
-    const group = new THREE.Group();
-    const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0);
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 1, 0);
-    group.add(m1, m2, m3);
-    return group;
+  compoundMesh_Step(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m2.position.set(1,0,0); g.add(m2);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(1,1,0); g.add(m3);
+    return g;
   },
-  createCompoundBody_Step(shape) {
-    const body = new CANNON.Body({ mass: shape.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(0, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(1, 0, 0));
-    body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), new CANNON.Vec3(1, 1, 0));
-    return body;
+  compoundBody_Step(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.4, angularDamping: 0.6 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,1,0));
+    return b;
   },
 
   // ==================== CONTROLS ====================
   rotateBlock(dir = 1) {
     if (this.phase !== 'placing' || !this.currentBody) return;
-    const q = this.currentBody.quaternion;
     const rot = new CANNON.Quaternion();
     rot.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), dir * Math.PI / 4);
-    q.copy(rot.mult(q));
+    this.currentBody.quaternion.copy(rot.mult(this.currentBody.quaternion));
     this.syncMesh();
   },
 
@@ -545,48 +509,37 @@ const GAME = {
     this.bodies.push(this.currentBody);
     this.meshes.push(this.currentMesh);
 
-    const pos = this.currentBody.position;
-    const h = pos.y + 1;
+    const h = this.currentBody.position.y + 1;
     if (h > this.maxHeight) this.maxHeight = h;
-
     this.blocksPlaced++;
     this.currentMesh = null;
     this.currentBody = null;
     this.phase = 'idle';
 
+    // Pan camera up with stack
     if (this.maxHeight > 5) {
-      this.controls.target.y = this.maxHeight * 0.5;
-      this.camera.position.y = this.maxHeight + 4;
+      this.camTarget.y = this.maxHeight * 0.5;
+      this.updateCamera();
     }
 
     this.updateHUD();
     setTimeout(() => this.spawnNextBlock(), 500);
   },
 
-  // ==================== FALL DETECTION ====================
+  // ==================== STABILITY ====================
   checkStability() {
-    // Check if any block fell off the platform or into the void
     for (const body of this.bodies) {
       if (body.position.y < -2) return 'fallen';
-      // Off the platform edges
       if (Math.abs(body.position.x) > PLATFORM_HALF + 1 || Math.abs(body.position.z) > PLATFORM_HALF + 1) return 'fallen';
     }
-    if (this.currentBody) {
-      if (this.currentBody.position.y < -2) return 'fallen';
-    }
+    if (this.currentBody && this.currentBody.position.y < -2) return 'fallen';
 
-    let totalVelocity = 0;
-    for (const body of this.bodies) {
-      totalVelocity += body.velocity.length();
-      totalVelocity += body.angularVelocity.length();
-    }
+    let vel = 0;
+    for (const body of this.bodies) { vel += body.velocity.length() + body.angularVelocity.length(); }
     if (this.currentBody && this.currentBody.type === CANNON.Body.DYNAMIC) {
-      totalVelocity += this.currentBody.velocity.length();
-      totalVelocity += this.currentBody.angularVelocity.length();
+      vel += this.currentBody.velocity.length() + this.currentBody.angularVelocity.length();
     }
-
-    if (totalVelocity < 0.3) return 'stable';
-    return 'moving';
+    return vel < 0.3 ? 'stable' : 'moving';
   },
 
   gameOver() {
@@ -603,13 +556,12 @@ const GAME = {
     document.getElementById('game-over-overlay').classList.add('show');
   },
 
-  // ==================== SYNC & UPDATE ====================
+  // ==================== SYNC ====================
   syncMesh() {
     if (!this.currentMesh || !this.currentBody) return;
     this.currentMesh.position.copy(this.currentBody.position);
     this.currentMesh.quaternion.copy(this.currentBody.quaternion);
   },
-
   syncAllMeshes() {
     for (let i = 0; i < this.bodies.length; i++) {
       this.meshes[i].position.copy(this.bodies[i].position);
@@ -617,68 +569,51 @@ const GAME = {
     }
     this.syncMesh();
   },
-
   updateHUD() {
     document.getElementById('height-display').textContent = 'Height: ' + this.maxHeight.toFixed(1);
     document.getElementById('blocks-display').textContent = 'Blocks: ' + this.blocksPlaced;
   },
 
   onKey(e) {
+    // Q/E rotate block (works during placing, even while dragging)
     if (this.phase === 'placing') {
-      switch(e.key) {
-        case 'q': case 'Q': this.rotateBlock(1); break;
-        case 'e': case 'E': this.rotateBlock(-1); break;
-        // Arrow/WASD still work as backup for keyboard players
-        case 'ArrowLeft': case 'a': case 'A':
-          if (this.currentBody) { this.currentBody.position.x -= 0.5; this.syncMesh(); } break;
-        case 'ArrowRight': case 'd': case 'D':
-          if (this.currentBody) { this.currentBody.position.x += 0.5; this.syncMesh(); } break;
-        case 'ArrowUp': case 'w': case 'W':
-          if (this.currentBody) { this.currentBody.position.z -= 0.5; this.syncMesh(); } break;
-        case 'ArrowDown': case 's': case 'S':
-          if (this.currentBody) { this.currentBody.position.z += 0.5; this.syncMesh(); } break;
-        case ' ': e.preventDefault(); this.dropBlock(); break;
-      }
+      if (e.key === 'q' || e.key === 'Q') { this.rotateBlock(1); return; }
+      if (e.key === 'e' || e.key === 'E') { this.rotateBlock(-1); return; }
+      if (e.key === ' ') { e.preventDefault(); this.dropBlock(); return; }
     }
-    if (this.phase === 'settling' && e.key === 'Enter') {
-      this.commitBlock();
-    }
+    // WASD handled continuously in processKeys
   },
 
-  // ==================== ANIMATION LOOP ====================
+  // ==================== LOOP ====================
   animate() {
     requestAnimationFrame(() => this.animate());
-
     const dt = Math.min(this.clock.getDelta(), 0.05);
+
+    // WASD camera orbit (continuous)
+    this.processKeys(dt);
 
     if (this.phase !== 'idle' && this.phase !== 'gameover') {
       this.world.step(1/60, dt, 3);
       this.syncAllMeshes();
     }
 
-    // Dropping: check settle
     if (this.phase === 'dropping') {
       this.settleTimer += dt;
-      const stability = this.checkStability();
-      if (stability === 'fallen') {
-        this.gameOver();
-      } else if (stability === 'stable' && this.settleTimer > 0.5) {
-        // Auto-commit when settled
-        this.phase = 'settling';
-        this.commitBlock();
-      } else if (this.settleTimer > 8) {
+      const st = this.checkStability();
+      if (st === 'fallen') this.gameOver();
+      else if (st === 'stable' && this.settleTimer > 0.5) { this.phase = 'settling'; this.commitBlock(); }
+      else if (this.settleTimer > 8) {
         if (this.checkStability() === 'fallen') this.gameOver();
         else { this.phase = 'settling'; this.commitBlock(); }
       }
     }
 
-    // Settling: keep checking for late falls
     if (this.phase === 'settling') {
       this.settleTimer += dt;
       if (this.checkStability() === 'fallen') this.gameOver();
     }
 
-    // Float animation while placing
+    // Float animation
     if (this.phase === 'placing' && this.currentMesh) {
       const t = performance.now() * 0.001;
       this.currentMesh.position.y = this.dropY + Math.sin(t * 2) * 0.15;
@@ -689,7 +624,6 @@ const GAME = {
       }
     }
 
-    this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
 };
