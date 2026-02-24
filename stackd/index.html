@@ -12,8 +12,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:rgba(14,14,18,0.8);z-index:10;position:relative}
 #top-bar a{color:#a78bfa;text-decoration:none;font-size:13px}
 #top-bar h1{font-size:20px;color:#c4b5fd;letter-spacing:2px}
-#game-container{flex:1;width:100%;position:relative;cursor:grab}
-#game-container:active{cursor:grabbing}
+#game-container{flex:1;width:100%;position:relative}
 #hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;font-size:15px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,0.6);z-index:5;pointer-events:none}
 .hud-item{display:flex;align-items:center;gap:6px}
 #height-display{color:#c4b5fd}
@@ -23,17 +22,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #controls-panel button{background:rgba(124,58,237,0.85);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;backdrop-filter:blur(8px)}
 #controls-panel button:hover{background:rgba(109,40,217,0.9);transform:translateY(-1px)}
 #controls-panel button:disabled{background:rgba(51,51,51,0.7);color:#666;cursor:default;transform:none}
-#controls-panel button.commit{background:rgba(34,197,94,0.85)}
-#controls-panel button.commit:hover{background:rgba(22,163,74,0.9)}
 #shape-preview{position:absolute;top:10px;right:16px;background:rgba(20,20,30,0.85);border:1px solid #333;border-radius:10px;padding:10px 14px;z-index:5;text-align:center;backdrop-filter:blur(8px)}
 #shape-preview .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 #shape-preview .name{font-size:14px;font-weight:700;color:#c4b5fd}
-#instructions{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);font-size:12px;color:#6b7280;z-index:5;text-align:center;pointer-events:none}
+#instructions{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:#6b7280;z-index:5;text-align:center;pointer-events:none;line-height:1.6}
 #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20;transition:opacity .3s}
 #overlay.hidden{opacity:0;pointer-events:none}
 #overlay h2{font-size:36px;color:#c4b5fd;margin-bottom:10px;letter-spacing:2px}
 #overlay p{color:#9ca3af;font-size:15px;margin-bottom:16px;max-width:440px;text-align:center;line-height:1.6}
-#overlay .stat{font-size:20px;color:#e2e2e6;margin:4px 0}
 #overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
 #overlay button:hover{background:#6d28d9}
 #game-over-overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20}
@@ -68,16 +64,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
     <div class="name" id="shape-name">—</div>
   </div>
   <div id="instructions">
-    Arrow keys / WASD = move | Q/E = rotate | Space = drop | Enter = commit
-  </div>
-  <div id="controls-panel">
-    <button onclick="GAME.rotateBlock()" id="btn-rotate">Rotate</button>
-    <button onclick="GAME.dropBlock()" id="btn-drop">Drop</button>
-    <button onclick="GAME.commitBlock()" id="btn-commit" class="commit" disabled>Commit</button>
+    Left-click &amp; drag to position | Q / E to rotate while holding | Release to drop
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Place carefully — if your tower topples, it's game over.</p>
+    <p>Stack random 3D blocks as high as you can! Click and drag to position, Q/E to rotate, then release to drop. If anything falls off the edge — game over!</p>
     <button onclick="GAME.start()">Start Stacking</button>
   </div>
   <div id="game-over-overlay">
@@ -94,8 +85,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 
+// ==================== CONSTANTS ====================
+const PLATFORM_HALF = 3; // platform is 6×6 units (smaller grid)
+const PLATFORM_SIZE = PLATFORM_HALF * 2;
+
 // ==================== SHAPE DEFINITIONS ====================
-// Each shape: name, geometry dims, color, mass multiplier
 const SHAPES = [
   { name:'Cube', w:1, h:1, d:1, color:0xe74c3c, mass:1 },
   { name:'Flat Brick', w:2, h:0.5, d:1, color:0x3498db, mass:1.2 },
@@ -123,10 +117,8 @@ function createWoodMaterial() {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  // Base wood color
   ctx.fillStyle = '#c4a265';
   ctx.fillRect(0, 0, 256, 256);
-  // Wood grain lines
   for (let i = 0; i < 40; i++) {
     ctx.strokeStyle = `rgba(139,90,43,${0.05 + Math.random() * 0.1})`;
     ctx.lineWidth = 1 + Math.random() * 2;
@@ -153,8 +145,12 @@ const GAME = {
   currentBlock: null, currentBody: null, currentMesh: null,
   phase: 'idle', // idle | placing | dropping | settling | gameover
   blocksPlaced: 0, maxHeight: 0, best: 0,
-  dropY: 12, settleTimer: 0, settleChecks: 0,
-  groundY: 0,
+  dropY: 12, settleTimer: 0,
+  // Drag state
+  isDragging: false,
+  raycaster: new THREE.Raycaster(),
+  mouse: new THREE.Vector2(),
+  dragPlane: null, // invisible plane at spawn height for raycasting
 
   init() {
     // Scene
@@ -169,17 +165,16 @@ const GAME = {
     this.camera.position.set(6, 8, 10);
     this.camera.lookAt(0, 3, 0);
 
-    // Renderer
+    // Renderer — NO shadows
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = false;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
     container.insertBefore(this.renderer.domElement, container.firstChild);
 
-    // Controls
+    // Orbit controls — only right-click drag to orbit
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.target.set(0, 3, 0);
     this.controls.enablePan = false;
@@ -188,18 +183,18 @@ const GAME = {
     this.controls.maxPolarAngle = Math.PI * 0.48;
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
+    // Disable left-click orbit (we use it for drag-to-place)
+    this.controls.mouseButtons = {
+      LEFT: null,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.ROTATE
+    };
 
-    // Lighting
-    const amb = new THREE.AmbientLight(0xfff5e6, 0.5);
+    // Lighting (no shadow casting)
+    const amb = new THREE.AmbientLight(0xfff5e6, 0.6);
     this.scene.add(amb);
     const dir = new THREE.DirectionalLight(0xffffff, 1.2);
     dir.position.set(5, 12, 8);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(2048, 2048);
-    dir.shadow.camera.left = -10; dir.shadow.camera.right = 10;
-    dir.shadow.camera.top = 15; dir.shadow.camera.bottom = -5;
-    dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 30;
-    dir.shadow.bias = -0.001;
     this.scene.add(dir);
     const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
     fill.position.set(-4, 6, -4);
@@ -208,7 +203,7 @@ const GAME = {
     rim.position.set(-3, 8, 5);
     this.scene.add(rim);
 
-    // Environment map for reflections
+    // Environment map
     const pmremGen = new THREE.PMREMGenerator(this.renderer);
     const envScene = new THREE.Scene();
     envScene.background = new THREE.Color(0x2a2030);
@@ -218,8 +213,17 @@ const GAME = {
     this.scene.environment = envMap;
     pmremGen.dispose();
 
-    // Ground — toy box floor
+    // Ground
     this.createGround();
+
+    // Invisible drag plane (updated per spawn)
+    this.dragPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    this.dragPlane.rotation.x = -Math.PI / 2;
+    this.dragPlane.position.y = 10;
+    this.scene.add(this.dragPlane);
 
     // Physics
     this.world = new CANNON.World();
@@ -228,22 +232,20 @@ const GAME = {
     this.world.solver.iterations = 15;
     this.world.solver.tolerance = 0.001;
 
-    // Ground physics
+    // Ground physics — thin platform (only covers the small area)
     const groundBody = new CANNON.Body({ mass: 0, material: new CANNON.Material('ground') });
-    groundBody.addShape(new CANNON.Box(new CANNON.Vec3(10, 0.5, 10)));
+    groundBody.addShape(new CANNON.Box(new CANNON.Vec3(PLATFORM_HALF, 0.5, PLATFORM_HALF)));
     groundBody.position.set(0, -0.5, 0);
     this.world.addBody(groundBody);
 
-    // Contact material
+    // Contact materials
     const blockMat = new CANNON.Material('block');
-    const contact = new CANNON.ContactMaterial(blockMat, blockMat, {
+    this.world.addContactMaterial(new CANNON.ContactMaterial(blockMat, blockMat, {
       friction: 0.7, restitution: 0.05
-    });
-    const groundContact = new CANNON.ContactMaterial(groundBody.material, blockMat, {
+    }));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(groundBody.material, blockMat, {
       friction: 0.8, restitution: 0.03
-    });
-    this.world.addContactMaterial(contact);
-    this.world.addContactMaterial(groundContact);
+    }));
     this.blockMaterial = blockMat;
 
     // Load best
@@ -252,6 +254,14 @@ const GAME = {
 
     // Input
     document.addEventListener('keydown', e => this.onKey(e));
+    const cvs = this.renderer.domElement;
+    cvs.addEventListener('mousedown', e => this.onMouseDown(e));
+    cvs.addEventListener('mousemove', e => this.onMouseMove(e));
+    cvs.addEventListener('mouseup', e => this.onMouseUp(e));
+    // Touch support
+    cvs.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
+    cvs.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
+    cvs.addEventListener('touchend', e => this.onTouchEnd(e));
 
     // Resize
     window.addEventListener('resize', () => {
@@ -265,43 +275,130 @@ const GAME = {
   },
 
   createGround() {
-    // Wooden table/toy box floor
     const woodMat = createWoodMaterial();
+    // Smaller platform
     const floor = new THREE.Mesh(
-      new THREE.BoxGeometry(20, 1, 20),
+      new THREE.BoxGeometry(PLATFORM_SIZE, 1, PLATFORM_SIZE),
       woodMat
     );
     floor.position.y = -0.5;
-    floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Toy box walls (subtle)
-    const wallMat = new THREE.MeshStandardMaterial({
+    // Edge trim (subtle border to show the drop-off)
+    const edgeMat = new THREE.MeshStandardMaterial({
       color: 0x8b6b4a, roughness: 0.7, metalness: 0
     });
-    const wallH = 0.8;
-    const walls = [
-      { pos: [0, wallH/2, -10], size: [20, wallH, 0.3] },
-      { pos: [0, wallH/2, 10], size: [20, wallH, 0.3] },
-      { pos: [-10, wallH/2, 0], size: [0.3, wallH, 20] },
-      { pos: [10, wallH/2, 0], size: [0.3, wallH, 20] },
+    const edgeH = 0.15;
+    const half = PLATFORM_HALF;
+    const edges = [
+      { pos: [0, edgeH/2, -half], size: [PLATFORM_SIZE + 0.2, edgeH, 0.1] },
+      { pos: [0, edgeH/2, half], size: [PLATFORM_SIZE + 0.2, edgeH, 0.1] },
+      { pos: [-half, edgeH/2, 0], size: [0.1, edgeH, PLATFORM_SIZE + 0.2] },
+      { pos: [half, edgeH/2, 0], size: [0.1, edgeH, PLATFORM_SIZE + 0.2] },
     ];
-    walls.forEach(w => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
+    edges.forEach(w => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...w.size), edgeMat);
       m.position.set(...w.pos);
-      m.receiveShadow = true;
       this.scene.add(m);
     });
 
-    // Grid lines on floor for alignment
-    const gridHelper = new THREE.GridHelper(8, 8, 0x4a3a2a, 0x3a2a1a);
+    // Grid lines on floor
+    const gridHelper = new THREE.GridHelper(PLATFORM_SIZE, PLATFORM_SIZE, 0x4a3a2a, 0x3a2a1a);
     gridHelper.position.y = 0.01;
     this.scene.add(gridHelper);
+
+    // Void below — dark plane far below to show there's nothing
+    const voidMat = new THREE.MeshBasicMaterial({ color: 0x0a0a10 });
+    const voidPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), voidMat);
+    voidPlane.rotation.x = -Math.PI / 2;
+    voidPlane.position.y = -15;
+    this.scene.add(voidPlane);
+  },
+
+  // ==================== MOUSE DRAG ====================
+  getMouseNDC(e) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  },
+
+  raycastToPlane() {
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const hits = this.raycaster.intersectObject(this.dragPlane);
+    if (hits.length > 0) return hits[0].point;
+    return null;
+  },
+
+  onMouseDown(e) {
+    if (e.button !== 0) return; // left click only
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    e.preventDefault();
+    this.isDragging = true;
+    this.getMouseNDC(e);
+    const pt = this.raycastToPlane();
+    if (pt) {
+      this.currentBody.position.x = pt.x;
+      this.currentBody.position.z = pt.z;
+      this.syncMesh();
+    }
+  },
+
+  onMouseMove(e) {
+    if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
+    this.getMouseNDC(e);
+    const pt = this.raycastToPlane();
+    if (pt) {
+      this.currentBody.position.x = pt.x;
+      this.currentBody.position.z = pt.z;
+      this.syncMesh();
+    }
+  },
+
+  onMouseUp(e) {
+    if (e.button !== 0 || !this.isDragging) return;
+    this.isDragging = false;
+    if (this.phase === 'placing' && this.currentBody) {
+      this.dropBlock();
+    }
+  },
+
+  // Touch equivalents
+  onTouchStart(e) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    this.isDragging = true;
+    const t = e.touches[0];
+    this.getMouseNDC(t);
+    const pt = this.raycastToPlane();
+    if (pt) {
+      this.currentBody.position.x = pt.x;
+      this.currentBody.position.z = pt.z;
+      this.syncMesh();
+    }
+  },
+  onTouchMove(e) {
+    if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    this.getMouseNDC(t);
+    const pt = this.raycastToPlane();
+    if (pt) {
+      this.currentBody.position.x = pt.x;
+      this.currentBody.position.z = pt.z;
+      this.syncMesh();
+    }
+  },
+  onTouchEnd(e) {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    if (this.phase === 'placing' && this.currentBody) {
+      this.dropBlock();
+    }
   },
 
   // ==================== GAME FLOW ====================
   start() {
-    // Clear old blocks
     this.bodies.forEach(b => this.world.removeBody(b));
     this.meshes.forEach(m => this.scene.remove(m));
     this.bodies = []; this.meshes = [];
@@ -311,11 +408,11 @@ const GAME = {
 
     this.blocksPlaced = 0; this.maxHeight = 0;
     this.phase = 'idle';
+    this.isDragging = false;
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('game-over-overlay').classList.remove('show');
     this.updateHUD();
 
-    // Camera reset
     this.camera.position.set(6, 8, 10);
     this.controls.target.set(0, 3, 0);
 
@@ -328,7 +425,6 @@ const GAME = {
     document.getElementById('shape-name').textContent = shape.name;
     document.getElementById('shape-name').style.color = '#' + shape.color.toString(16).padStart(6, '0');
 
-    // Create mesh
     let mesh, body;
 
     if (shape.compound === 'L') {
@@ -341,22 +437,19 @@ const GAME = {
       mesh = this.createCompoundMesh_Step(shape);
       body = this.createCompoundBody_Step(shape);
     } else {
-      const geo = new THREE.BoxGeometry(shape.w, shape.h, shape.d);
-      // Rounded edges
-      mesh = new THREE.Mesh(geo, createToyMaterial(shape.color));
-      mesh.castShadow = true;
-
-      const halfExtents = new CANNON.Vec3(shape.w/2, shape.h/2, shape.d/2);
+      mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(shape.w, shape.h, shape.d),
+        createToyMaterial(shape.color)
+      );
       body = new CANNON.Body({
         mass: shape.mass,
         material: this.blockMaterial,
-        shape: new CANNON.Box(halfExtents),
+        shape: new CANNON.Box(new CANNON.Vec3(shape.w/2, shape.h/2, shape.d/2)),
         linearDamping: 0.4,
         angularDamping: 0.6
       });
     }
 
-    // Position above stack
     const spawnY = Math.max(this.maxHeight + 4, 8);
     this.dropY = spawnY;
     mesh.position.set(0, spawnY, 0);
@@ -365,24 +458,23 @@ const GAME = {
     body.velocity.set(0, 0, 0);
     body.angularVelocity.set(0, 0, 0);
 
+    // Update drag plane height
+    this.dragPlane.position.y = spawnY;
+
     this.scene.add(mesh);
     this.world.addBody(body);
     this.currentMesh = mesh;
     this.currentBody = body;
     this.phase = 'placing';
-
-    document.getElementById('btn-drop').disabled = false;
-    document.getElementById('btn-commit').disabled = true;
-    document.getElementById('btn-rotate').disabled = false;
   },
 
   // ==================== COMPOUND SHAPES ====================
   createCompoundMesh_L(shape) {
     const group = new THREE.Group();
     const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m1.castShadow = true;
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0); m2.castShadow = true;
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(0, 1, 0); m3.castShadow = true;
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(0, 1, 0);
     group.add(m1, m2, m3);
     return group;
   },
@@ -397,10 +489,10 @@ const GAME = {
   createCompoundMesh_T(shape) {
     const group = new THREE.Group();
     const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m1.position.set(-1, 0, 0); m1.castShadow = true;
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.castShadow = true;
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 0, 0); m3.castShadow = true;
-    const m4 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m4.position.set(0, 1, 0); m4.castShadow = true;
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m1.position.set(-1, 0, 0);
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 0, 0);
+    const m4 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m4.position.set(0, 1, 0);
     group.add(m1, m2, m3, m4);
     return group;
   },
@@ -416,9 +508,9 @@ const GAME = {
   createCompoundMesh_Step(shape) {
     const group = new THREE.Group();
     const mat = createToyMaterial(shape.color);
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m1.castShadow = true;
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0); m2.castShadow = true;
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 1, 0); m3.castShadow = true;
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m2.position.set(1, 0, 0);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); m3.position.set(1, 1, 0);
     group.add(m1, m2, m3);
     return group;
   },
@@ -431,19 +523,11 @@ const GAME = {
   },
 
   // ==================== CONTROLS ====================
-  moveBlock(dx, dz) {
-    if (this.phase !== 'placing' || !this.currentBody) return;
-    const p = this.currentBody.position;
-    p.x = Math.max(-3, Math.min(3, p.x + dx * 0.5));
-    p.z = Math.max(-3, Math.min(3, p.z + dz * 0.5));
-    this.syncMesh();
-  },
-
-  rotateBlock() {
+  rotateBlock(dir = 1) {
     if (this.phase !== 'placing' || !this.currentBody) return;
     const q = this.currentBody.quaternion;
     const rot = new CANNON.Quaternion();
-    rot.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), Math.PI / 4);
+    rot.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), dir * Math.PI / 4);
     q.copy(rot.mult(q));
     this.syncMesh();
   },
@@ -453,23 +537,16 @@ const GAME = {
     this.phase = 'dropping';
     this.currentBody.type = CANNON.Body.DYNAMIC;
     this.currentBody.wakeUp();
-    document.getElementById('btn-drop').disabled = true;
-    document.getElementById('btn-rotate').disabled = true;
-
-    // Wait for it to settle
     this.settleTimer = 0;
-    this.settleChecks = 0;
   },
 
   commitBlock() {
     if (this.phase !== 'settling') return;
-    // Finalize this block
     this.bodies.push(this.currentBody);
     this.meshes.push(this.currentMesh);
 
-    // Calculate max height
     const pos = this.currentBody.position;
-    const h = pos.y + 1; // approximate top
+    const h = pos.y + 1;
     if (h > this.maxHeight) this.maxHeight = h;
 
     this.blocksPlaced++;
@@ -477,35 +554,27 @@ const GAME = {
     this.currentBody = null;
     this.phase = 'idle';
 
-    // Move camera up with stack
     if (this.maxHeight > 5) {
       this.controls.target.y = this.maxHeight * 0.5;
       this.camera.position.y = this.maxHeight + 4;
     }
 
     this.updateHUD();
-    document.getElementById('btn-commit').disabled = true;
-
-    // Spawn next
     setTimeout(() => this.spawnNextBlock(), 500);
   },
 
-  // ==================== TILT/FALL DETECTION ====================
+  // ==================== FALL DETECTION ====================
   checkStability() {
-    // Check if any block has fallen off the platform or tipped over too far
+    // Check if any block fell off the platform or into the void
     for (const body of this.bodies) {
-      // Fallen off table
       if (body.position.y < -2) return 'fallen';
-      // Way off center
-      if (Math.abs(body.position.x) > 8 || Math.abs(body.position.z) > 8) return 'fallen';
+      // Off the platform edges
+      if (Math.abs(body.position.x) > PLATFORM_HALF + 1 || Math.abs(body.position.z) > PLATFORM_HALF + 1) return 'fallen';
     }
-
-    // Check current block too if it exists
     if (this.currentBody) {
       if (this.currentBody.position.y < -2) return 'fallen';
     }
 
-    // Check if stack is still moving significantly
     let totalVelocity = 0;
     for (const body of this.bodies) {
       totalVelocity += body.velocity.length();
@@ -522,6 +591,7 @@ const GAME = {
 
   gameOver() {
     this.phase = 'gameover';
+    this.isDragging = false;
     if (this.blocksPlaced > this.best) {
       this.best = this.blocksPlaced;
       localStorage.setItem('stackd_best', this.best);
@@ -556,18 +626,17 @@ const GAME = {
   onKey(e) {
     if (this.phase === 'placing') {
       switch(e.key) {
-        case 'ArrowLeft': case 'a': case 'A': this.moveBlock(-1, 0); break;
-        case 'ArrowRight': case 'd': case 'D': this.moveBlock(1, 0); break;
-        case 'ArrowUp': case 'w': case 'W': this.moveBlock(0, -1); break;
-        case 'ArrowDown': case 's': case 'S': this.moveBlock(0, 1); break;
-        case 'q': case 'Q': this.rotateBlock(); break;
-        case 'e': case 'E':
-          const q2 = this.currentBody.quaternion;
-          const rot2 = new CANNON.Quaternion();
-          rot2.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -Math.PI / 4);
-          q2.copy(rot2.mult(q2));
-          this.syncMesh();
-          break;
+        case 'q': case 'Q': this.rotateBlock(1); break;
+        case 'e': case 'E': this.rotateBlock(-1); break;
+        // Arrow/WASD still work as backup for keyboard players
+        case 'ArrowLeft': case 'a': case 'A':
+          if (this.currentBody) { this.currentBody.position.x -= 0.5; this.syncMesh(); } break;
+        case 'ArrowRight': case 'd': case 'D':
+          if (this.currentBody) { this.currentBody.position.x += 0.5; this.syncMesh(); } break;
+        case 'ArrowUp': case 'w': case 'W':
+          if (this.currentBody) { this.currentBody.position.z -= 0.5; this.syncMesh(); } break;
+        case 'ArrowDown': case 's': case 'S':
+          if (this.currentBody) { this.currentBody.position.z += 0.5; this.syncMesh(); } break;
         case ' ': e.preventDefault(); this.dropBlock(); break;
       }
     }
@@ -576,59 +645,44 @@ const GAME = {
     }
   },
 
-  // ==================== GHOST/PREVIEW ====================
-  updateGhost() {
-    // Show where the block will land (shadow projection)
-    if (this.phase !== 'placing' || !this.currentBody) return;
-    // Simple: just highlight the ground position
-  },
-
   // ==================== ANIMATION LOOP ====================
   animate() {
     requestAnimationFrame(() => this.animate());
 
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
-    // Physics step
     if (this.phase !== 'idle' && this.phase !== 'gameover') {
       this.world.step(1/60, dt, 3);
       this.syncAllMeshes();
     }
 
-    // Dropping phase: check if settled
+    // Dropping: check settle
     if (this.phase === 'dropping') {
       this.settleTimer += dt;
       const stability = this.checkStability();
-
       if (stability === 'fallen') {
         this.gameOver();
       } else if (stability === 'stable' && this.settleTimer > 0.5) {
+        // Auto-commit when settled
         this.phase = 'settling';
-        document.getElementById('btn-commit').disabled = false;
+        this.commitBlock();
       } else if (this.settleTimer > 8) {
-        // Taking too long, force settle or game over
-        const stability2 = this.checkStability();
-        if (stability2 === 'fallen') this.gameOver();
-        else {
-          this.phase = 'settling';
-          document.getElementById('btn-commit').disabled = false;
-        }
+        if (this.checkStability() === 'fallen') this.gameOver();
+        else { this.phase = 'settling'; this.commitBlock(); }
       }
     }
 
-    // Settling phase: keep checking for late falls
+    // Settling: keep checking for late falls
     if (this.phase === 'settling') {
       this.settleTimer += dt;
-      const stability = this.checkStability();
-      if (stability === 'fallen') this.gameOver();
+      if (this.checkStability() === 'fallen') this.gameOver();
     }
 
-    // Float animation for placing phase
+    // Float animation while placing
     if (this.phase === 'placing' && this.currentMesh) {
       const t = performance.now() * 0.001;
       this.currentMesh.position.y = this.dropY + Math.sin(t * 2) * 0.15;
       this.currentBody.position.y = this.currentMesh.position.y;
-      // Subtle glow pulse
       if (this.currentMesh.material) {
         this.currentMesh.material.emissive = new THREE.Color(this.currentBlock.color);
         this.currentMesh.material.emissiveIntensity = 0.1 + Math.sin(t * 3) * 0.05;
@@ -640,7 +694,6 @@ const GAME = {
   }
 };
 
-// Expose to global for onclick handlers
 window.GAME = GAME;
 GAME.init();
 </script>
