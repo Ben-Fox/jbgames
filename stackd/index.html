@@ -326,9 +326,7 @@ const GAME = {
     if (shape.compound === 'L') { mesh = this.compoundMesh_L(shape); body = this.compoundBody_L(shape); }
     else if (shape.compound === 'T') { mesh = this.compoundMesh_T(shape); body = this.compoundBody_T(shape); }
     else if (shape.compound === 'step') { mesh = this.compoundMesh_Step(shape); body = this.compoundBody_Step(shape); }
-    // Enable shadows on compound groups
-    if (mesh.isGroup) mesh.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-    if (!shape.compound) {
+    else {
       mesh = new THREE.Mesh(new THREE.BoxGeometry(shape.w, shape.h, shape.d), createToyMaterial(shape.color));
       mesh.castShadow = true; mesh.receiveShadow = true;
       body = new CANNON.Body({
@@ -337,6 +335,8 @@ const GAME = {
         linearDamping: 0.1, angularDamping: 0.15
       });
     }
+    // Enable shadows on compound groups
+    if (mesh.isGroup) mesh.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
 
     const spawnY = Math.max(this.maxHeight + 4, 8);
     this.dropY = spawnY;
