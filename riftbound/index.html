@@ -921,6 +921,7 @@ var G={
   },
 
   setOverlay(show,title,desc,stats){
+    this.overlay=show;
     const el=document.getElementById('overlay');
     if(!show){el.classList.add('hidden');return;}
     el.classList.remove('hidden');
