@@ -60,11 +60,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
     <div class="name" id="shape-name">—</div>
   </div>
   <div id="instructions">
-    WASD = orbit camera | Left-click drag = move block | Q / E = rotate | Release = drop
+    Arrow keys = move block | Q / E = rotate | Space = drop | WASD = orbit camera
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Drag blocks with your mouse, Q/E to rotate, release to drop. Use WASD to look around. If anything falls off the edge — game over!</p>
+    <p>Stack random 3D blocks as high as you can! Arrow keys to position, Q/E to rotate, Space to drop. WASD to look around. If anything falls off the edge — game over!</p>
     <button onclick="GAME.start()">Start Stacking</button>
   </div>
   <div id="game-over-overlay">
@@ -144,12 +144,7 @@ const GAME = {
   camTarget: new THREE.Vector3(0, 3, 0),
   keysDown: {},
 
-  // Drag state
-  isDragging: false,
-  dragOffset: new THREE.Vector3(), // offset from block center to grab point
-  raycaster: new THREE.Raycaster(),
-  mouse: new THREE.Vector2(),
-  dragPlane: null,
+  moveStep: 0.5, // grid movement step
 
   init() {
     this.scene = new THREE.Scene();
@@ -184,19 +179,10 @@ const GAME = {
     rim.position.set(-3, 8, 5);
     this.scene.add(rim);
 
-    // Hemisphere light for ambient fill (replaces env map for compatibility)
+    // Hemisphere light for ambient fill
     this.scene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 0.4));
 
     this.createGround();
-
-    // Invisible drag plane
-    this.dragPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshBasicMaterial({ visible: false })
-    );
-    this.dragPlane.rotation.x = -Math.PI / 2;
-    this.dragPlane.position.y = 8;
-    this.scene.add(this.dragPlane);
 
     // Physics
     this.world = new CANNON.World();
@@ -222,14 +208,7 @@ const GAME = {
     document.addEventListener('keydown', e => { this.keysDown[e.key.toLowerCase()] = true; this.onKey(e); });
     document.addEventListener('keyup', e => { this.keysDown[e.key.toLowerCase()] = false; });
     const cvs = this.renderer.domElement;
-    cvs.addEventListener('mousedown', e => this.onMouseDown(e));
-    cvs.addEventListener('mousemove', e => this.onMouseMove(e));
-    cvs.addEventListener('mouseup', e => this.onMouseUp(e));
     cvs.addEventListener('wheel', e => this.onWheel(e), { passive: false });
-    cvs.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
-    cvs.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
-    cvs.addEventListener('touchend', e => this.onTouchEnd(e));
-    cvs.addEventListener('contextmenu', e => e.preventDefault());
 
     window.addEventListener('resize', () => {
       const c = document.getElementById('game-container');
@@ -303,85 +282,6 @@ const GAME = {
     this.scene.add(voidPlane);
   },
 
-  // ==================== MOUSE / DRAG ====================
-  getNDC(e) {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  },
-
-  raycastPlane() {
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const hits = this.raycaster.intersectObject(this.dragPlane);
-    return hits.length > 0 ? hits[0].point : null;
-  },
-
-  onMouseDown(e) {
-    if (e.button !== 0) return;
-    if (this.phase !== 'placing' || !this.currentBody) return;
-    e.preventDefault();
-
-    this.getNDC(e);
-    const pt = this.raycastPlane();
-    if (!pt) return;
-
-    // Calculate offset from block center to where user clicked — block stays put
-    this.dragOffset.set(
-      this.currentBody.position.x - pt.x,
-      0,
-      this.currentBody.position.z - pt.z
-    );
-    this.isDragging = true;
-  },
-
-  onMouseMove(e) {
-    if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
-    this.getNDC(e);
-    const pt = this.raycastPlane();
-    if (pt) {
-      this.currentBody.position.x = pt.x + this.dragOffset.x;
-      this.currentBody.position.z = pt.z + this.dragOffset.z;
-      this.syncMesh();
-    }
-  },
-
-  onMouseUp(e) {
-    if (e.button !== 0 || !this.isDragging) return;
-    this.isDragging = false;
-    if (this.phase === 'placing' && this.currentBody) this.dropBlock();
-  },
-
-  // Touch
-  onTouchStart(e) {
-    if (this.phase !== 'placing' || !this.currentBody || e.touches.length !== 1) return;
-    e.preventDefault();
-    const t = e.touches[0];
-    this.getNDC(t);
-    const pt = this.raycastPlane();
-    if (!pt) return;
-    this.dragOffset.set(
-      this.currentBody.position.x - pt.x, 0,
-      this.currentBody.position.z - pt.z
-    );
-    this.isDragging = true;
-  },
-  onTouchMove(e) {
-    if (!this.isDragging || this.phase !== 'placing' || !this.currentBody) return;
-    e.preventDefault();
-    this.getNDC(e.touches[0]);
-    const pt = this.raycastPlane();
-    if (pt) {
-      this.currentBody.position.x = pt.x + this.dragOffset.x;
-      this.currentBody.position.z = pt.z + this.dragOffset.z;
-      this.syncMesh();
-    }
-  },
-  onTouchEnd() {
-    if (!this.isDragging) return;
-    this.isDragging = false;
-    if (this.phase === 'placing' && this.currentBody) this.dropBlock();
-  },
-
   // ==================== GAME FLOW ====================
   start() {
     this.bodies.forEach(b => this.world.removeBody(b));
@@ -392,7 +292,7 @@ const GAME = {
     this.currentMesh = null; this.currentBody = null;
 
     this.blocksPlaced = 0; this.maxHeight = 0;
-    this.phase = 'idle'; this.isDragging = false;
+    this.phase = 'idle';
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('game-over-overlay').classList.remove('show');
     this.updateHUD();
@@ -433,8 +333,6 @@ const GAME = {
     body.type = CANNON.Body.KINEMATIC;
     body.velocity.set(0, 0, 0);
     body.angularVelocity.set(0, 0, 0);
-
-    this.dragPlane.position.y = spawnY;
 
     this.scene.add(mesh);
     this.world.addBody(body);
@@ -546,7 +444,6 @@ const GAME = {
 
   gameOver() {
     this.phase = 'gameover';
-    this.isDragging = false;
     if (this.blocksPlaced > this.best) {
       this.best = this.blocksPlaced;
       localStorage.setItem('stackd_best', this.best);
@@ -576,12 +473,24 @@ const GAME = {
     document.getElementById('blocks-display').textContent = 'Blocks: ' + this.blocksPlaced;
   },
 
+  moveBlock(dx, dz) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    this.currentBody.position.x += dx * this.moveStep;
+    this.currentBody.position.z += dz * this.moveStep;
+    this.syncMesh();
+  },
+
   onKey(e) {
-    // Q/E rotate block (works during placing, even while dragging)
     if (this.phase === 'placing') {
-      if (e.key === 'q' || e.key === 'Q') { this.rotateBlock(1); return; }
-      if (e.key === 'e' || e.key === 'E') { this.rotateBlock(-1); return; }
-      if (e.key === ' ') { e.preventDefault(); this.dropBlock(); return; }
+      switch(e.key) {
+        case 'ArrowLeft': e.preventDefault(); this.moveBlock(-1, 0); return;
+        case 'ArrowRight': e.preventDefault(); this.moveBlock(1, 0); return;
+        case 'ArrowUp': e.preventDefault(); this.moveBlock(0, -1); return;
+        case 'ArrowDown': e.preventDefault(); this.moveBlock(0, 1); return;
+        case 'q': case 'Q': this.rotateBlock(1); return;
+        case 'e': case 'E': this.rotateBlock(-1); return;
+        case ' ': e.preventDefault(); this.dropBlock(); return;
+      }
     }
     // WASD handled continuously in processKeys
   },
