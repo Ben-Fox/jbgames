@@ -23,11 +23,12 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0e0e12;--surface:#1a1a24;--text:#f0f0f0;--muted:#888}
-body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .about-link{position:fixed;top:16px;right:16px;z-index:9999;color:#fff;text-decoration:none;font-size:1rem;font-weight:600;padding:8px 18px;border:2px solid rgba(139,92,246,0.6);border-radius:20px;background:rgba(139,92,246,0.25);backdrop-filter:blur(8px);transition:all 0.2s;letter-spacing:0.5px}
 .about-link:hover{color:#fff;border-color:#8b5cf6;background:rgba(139,92,246,0.4)}
 a{text-decoration:none;color:inherit}
@@ -35,15 +36,15 @@ a{text-decoration:none;color:inherit}
 /* HERO */
 .hero{text-align:center;padding:5rem 1.5rem 3rem;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,92,246,.15),transparent 70%);pointer-events:none}
-.hero-logo{animation:fadeUp .8s ease;max-width:600px;width:90%;margin:0 auto}
+.hero-logo{animation:fadeUp .4s ease;max-width:600px;width:90%;margin:0 auto}
 .logo-svg{width:100%;height:auto}
 .crunch-particles{animation:crunchBob 2s ease-in-out infinite}
 @keyframes crunchBob{0%,100%{transform:translate(0,0)}50%{transform:translate(-3px,2px)}}
-.tagline{font-size:1.4rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .8s ease .1s both}
-.subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .8s ease .2s both}
+.tagline{font-size:1.4rem;color:#c4b5fd;margin:.5rem 0;animation:fadeUp .3s ease .05s both}
+.subtitle{color:var(--muted);font-size:1.05rem;margin-top:.5rem;animation:fadeUp .3s ease .1s both}
 
 /* DAILY BANNER */
-.daily-banner{width:100%;padding:0 1.5rem;margin-bottom:2rem;animation:fadeUp .7s ease .15s both}
+.daily-banner{width:100%;padding:0 1.5rem;margin-bottom:2rem;animation:fadeUp .3s ease .05s both}
 .daily-inner{max-width:1200px;margin:0 auto;background:linear-gradient(160deg,#1a1128 0%,#0f0a1a 50%,#1a0a2e 100%);border:1px solid rgba(139,92,246,.2);border-radius:24px;padding:2rem 2.5rem;position:relative;overflow:hidden}
 .daily-inner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(139,92,246,.12),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(184,134,11,.08),transparent 50%);pointer-events:none}
 .daily-header{text-align:center;margin-bottom:1.5rem;position:relative}
@@ -55,7 +56,7 @@ a{text-decoration:none;color:inherit}
 .daily-games{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;position:relative}
 
 .daily-card{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;transition:transform .3s cubic-bezier(.25,.46,.45,.94),box-shadow .3s,border-color .3s;cursor:pointer;text-decoration:none;color:inherit;position:relative;border:1px solid rgba(255,255,255,.1);animation:fadeUp .6s ease both;will-change:transform;contain:layout style}
-.daily-card:nth-child(1){animation-delay:.1s}.daily-card:nth-child(2){animation-delay:.18s}.daily-card:nth-child(3){animation-delay:.26s}.daily-card:nth-child(4){animation-delay:.34s}.daily-card:nth-child(5){animation-delay:.42s}
+.daily-card:nth-child(1){animation-delay:.02s}.daily-card:nth-child(2){animation-delay:.06s}.daily-card:nth-child(3){animation-delay:.1s}.daily-card:nth-child(4){animation-delay:.14s}.daily-card:nth-child(5){animation-delay:.18s}
 .daily-card:hover{transform:translateY(-8px) scale(1.03)}
 
 .daily-card--cipher{background:linear-gradient(160deg,#0a1a0e 0%,#0e2214 100%);border-color:rgba(74,103,65,.25)}
@@ -127,7 +128,7 @@ a{text-decoration:none;color:inherit}
 
 /* CARD — redesigned */
 .card{border-radius:20px;overflow:hidden;transition:transform .3s cubic-bezier(.25,.46,.45,.94),box-shadow .3s;animation:fadeUp .6s ease both;cursor:pointer;display:flex;flex-direction:column;position:relative;will-change:transform;contain:layout style}
-.card:nth-child(1){animation-delay:.15s}.card:nth-child(2){animation-delay:.25s}.card:nth-child(3){animation-delay:.35s}.card:nth-child(4){animation-delay:.45s}
+.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.1s}.card:nth-child(3){animation-delay:.15s}.card:nth-child(4){animation-delay:.2s}
 .card:hover{transform:translateY(-10px) scale(1.03)}
 
 /* Emoji badge */
@@ -206,7 +207,7 @@ a{text-decoration:none;color:inherit}
 @keyframes dotPulse{0%,100%{r:2}50%{r:4}}
 
 /* COMING SOON — redesigned */
-.coming-soon{text-align:center;padding:2rem 1.5rem 3rem;max-width:1200px;margin:0 auto}
+.coming-soon{text-align:center;padding:2rem 1.5rem 3rem;max-width:1200px;margin:0 auto;content-visibility:auto;contain-intrinsic-size:auto 600px}
 .coming-soon h2{font-size:1.6rem;color:var(--text);margin-bottom:.5rem;animation:fadeUp .6s ease .5s both}
 .coming-soon p{color:var(--muted);font-size:1.05rem;margin-bottom:2rem;animation:fadeUp .6s ease .6s both}
 .coming-soon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;max-width:700px;margin:0 auto}
