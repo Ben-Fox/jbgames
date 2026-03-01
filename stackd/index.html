@@ -21,7 +21,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 #shape-preview{position:absolute;top:10px;right:16px;background:rgba(20,20,30,0.85);border:1px solid #333;border-radius:10px;padding:10px 14px;z-index:5;text-align:center;backdrop-filter:blur(8px)}
 #shape-preview .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 #shape-preview .name{font-size:14px;font-weight:700;color:#c4b5fd}
-#instructions{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:#6b7280;z-index:5;text-align:center;pointer-events:none;line-height:1.6}
+#controls-guide{position:absolute;bottom:12px;left:12px;background:rgba(14,14,18,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;z-index:5;backdrop-filter:blur(8px);pointer-events:none;font-size:11px;line-height:1.7;color:#9ca3af}
+#controls-guide .cg-title{font-size:10px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+#controls-guide kbd{display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:1px 5px;font-family:inherit;font-size:10px;color:#e2e2e6;min-width:18px;text-align:center}
 #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20;transition:opacity .3s}
 #overlay.hidden{opacity:0;pointer-events:none;visibility:hidden}
 #overlay h2{font-size:36px;color:#c4b5fd;margin-bottom:10px;letter-spacing:2px}
@@ -59,12 +61,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
     <div class="label">Next Shape</div>
     <div class="name" id="shape-name">—</div>
   </div>
-  <div id="instructions">
-    Left/Right = move | Up/Down = raise/lower | Q/E = rotate | Space = drop | WASD = camera
+  <div id="controls-guide">
+    <div class="cg-title">Controls</div>
+    <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> Move block<br>
+    <kbd>Shift</kbd>+<kbd>↑</kbd> <kbd>↓</kbd> Raise / Lower<br>
+    <kbd>Q</kbd> <kbd>E</kbd> Rotate block<br>
+    <kbd>Space</kbd> Drop block<br>
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Orbit camera
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Left/Right arrows to slide, Up/Down to raise and lower, Q/E to rotate, Space to drop. WASD to orbit the camera. If anything falls off the edge — game over!</p>
+    <p>Stack random 3D blocks as high as you can! Arrow keys to move the block across the board. Shift + Up/Down to raise and lower. Q/E to rotate. Space to drop. WASD to orbit the camera. If anything falls off the edge — game over!</p>
     <button onclick="GAME.start()">Start Stacking</button>
   </div>
   <div id="game-over-overlay">
@@ -537,11 +544,18 @@ const GAME = {
 
   onKey(e) {
     if (this.phase === 'placing') {
+      if (e.shiftKey) {
+        // Shift + arrows = raise/lower
+        switch(e.key) {
+          case 'ArrowUp': e.preventDefault(); this.moveBlockY(1); return;
+          case 'ArrowDown': e.preventDefault(); this.moveBlockY(-1); return;
+        }
+      }
       switch(e.key) {
         case 'ArrowLeft': e.preventDefault(); this.moveBlock(-1, 0); return;
         case 'ArrowRight': e.preventDefault(); this.moveBlock(1, 0); return;
-        case 'ArrowUp': e.preventDefault(); this.moveBlockY(1); return;
-        case 'ArrowDown': e.preventDefault(); this.moveBlockY(-1); return;
+        case 'ArrowUp': e.preventDefault(); this.moveBlock(0, -1); return;
+        case 'ArrowDown': e.preventDefault(); this.moveBlock(0, 1); return;
         case 'q': case 'Q': this.rotateBlock(1); return;
         case 'e': case 'E': this.rotateBlock(-1); return;
         case ' ': e.preventDefault(); this.dropBlock(); return;
