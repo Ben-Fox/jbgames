@@ -284,10 +284,6 @@ const GAME = {
     });
 
     // Grid
-    const grid = new THREE.GridHelper(PLATFORM_SIZE, PLATFORM_SIZE, 0x4a3a2a, 0x3a2a1a);
-    grid.position.y = 0.01;
-    this.scene.add(grid);
-
     // Void below
     const voidPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(100, 100),
