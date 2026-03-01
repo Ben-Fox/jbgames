@@ -71,15 +71,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
   </div>
   <div id="overlay">
     <h2>STACK'D</h2>
-    <p>Stack random 3D blocks as high as you can! Arrow keys to move the block across the board. Shift + Up/Down to raise and lower. Q/E to rotate. Space to drop. WASD to orbit the camera. If anything falls off the edge — game over!</p>
-    <button onclick="GAME.start()">Start Stacking</button>
+    <p>Stack random 3D blocks as high as you can! Arrow keys to move, Shift+Up/Down to raise/lower, Q/E to rotate, Space to drop. WASD to orbit camera. If anything falls off the edge — game over!</p>
+    <div id="diff-buttons" style="display:flex;gap:10px;margin-top:8px">
+      <button onclick="GAME.start('easy')" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Easy</button>
+      <button onclick="GAME.start('medium')" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Medium</button>
+      <button onclick="GAME.start('hard')" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Hard</button>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#6b7280">Easy = big platform · Medium = standard · Hard = tiny platform, no shadows</div>
   </div>
   <div id="game-over-overlay">
     <h2>TOPPLED!</h2>
     <div class="stat" id="go-height">Height: 0</div>
     <div class="stat" id="go-blocks">Blocks: 0</div>
     <div class="stat" id="go-best">Best: 0</div>
-    <button onclick="GAME.start()">Try Again</button>
+    <div id="go-diff-buttons" style="display:flex;gap:10px;margin-top:12px">
+      <button onclick="GAME.start('easy')" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Easy</button>
+      <button onclick="GAME.start('medium')" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Medium</button>
+      <button onclick="GAME.start('hard')" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Hard</button>
+    </div>
   </div>
 </div>
 
@@ -87,9 +96,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
-// ==================== CONSTANTS ====================
-const PLATFORM_HALF = 3;
-const PLATFORM_SIZE = PLATFORM_HALF * 2;
+// ==================== DIFFICULTY ====================
+const DIFFICULTIES = {
+  easy:   { half: 4, label: 'Easy',   color: '#22c55e', shadows: true },
+  medium: { half: 3, label: 'Medium', color: '#f59e0b', shadows: true },
+  hard:   { half: 2, label: 'Hard',   color: '#ef4444', shadows: false },
+};
 
 // ==================== SHAPE DEFINITIONS ====================
 const SHAPES = [
@@ -143,6 +155,9 @@ const GAME = {
   phase: 'idle', // idle | placing | dropping | settling | gameover
   blocksPlaced: 0, maxHeight: 0, best: 0,
   dropY: 8, settleTimer: 0,
+  difficulty: 'medium',
+  platformHalf: 3,
+  groundMeshes: [], groundBody: null, dirLight: null,
 
   // Camera orbit (manual, no OrbitControls — we want WASD)
   camTheta: Math.PI / 4,   // horizontal angle
@@ -177,15 +192,15 @@ const GAME = {
 
     // Lighting
     this.scene.add(new THREE.AmbientLight(0xfff5e6, 0.6));
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-    dir.position.set(0, 20, 0);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(2048, 2048);
-    dir.shadow.camera.left = -10; dir.shadow.camera.right = 10;
-    dir.shadow.camera.top = 15; dir.shadow.camera.bottom = -5;
-    dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 30;
-    dir.shadow.bias = -0.001;
-    this.scene.add(dir);
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    this.dirLight.position.set(0, 20, 0);
+    this.dirLight.castShadow = true;
+    this.dirLight.shadow.mapSize.set(2048, 2048);
+    this.dirLight.shadow.camera.left = -10; this.dirLight.shadow.camera.right = 10;
+    this.dirLight.shadow.camera.top = 15; this.dirLight.shadow.camera.bottom = -5;
+    this.dirLight.shadow.camera.near = 0.5; this.dirLight.shadow.camera.far = 30;
+    this.dirLight.shadow.bias = -0.001;
+    this.scene.add(this.dirLight);
     const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
     fill.position.set(-4, 6, -4);
     this.scene.add(fill);
@@ -196,8 +211,6 @@ const GAME = {
     // Hemisphere light for ambient fill
     this.scene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 0.4));
 
-    this.createGround();
-
     // Physics
     this.world = new CANNON.World();
     this.world.gravity.set(0, -20, 0);
@@ -205,18 +218,12 @@ const GAME = {
     this.world.solver.iterations = 20;
     this.world.solver.tolerance = 0.0001;
 
-    const groundBody = new CANNON.Body({ mass: 0, material: new CANNON.Material('ground') });
-    groundBody.addShape(new CANNON.Box(new CANNON.Vec3(PLATFORM_HALF, 0.5, PLATFORM_HALF)));
-    groundBody.position.set(0, -0.5, 0);
-    this.world.addBody(groundBody);
+    this.blockMaterial = new CANNON.Material('block');
+    this.world.addContactMaterial(new CANNON.ContactMaterial(this.blockMaterial, this.blockMaterial, { friction: 0.6, restitution: 0.02 }));
 
-    const blockMat = new CANNON.Material('block');
-    // Realistic friction + minimal bounce — blocks tilt and topple naturally
-    this.world.addContactMaterial(new CANNON.ContactMaterial(blockMat, blockMat, { friction: 0.6, restitution: 0.02 }));
-    this.world.addContactMaterial(new CANNON.ContactMaterial(groundBody.material, blockMat, { friction: 0.7, restitution: 0.01 }));
-    this.blockMaterial = blockMat;
+    this.createGround();
 
-    this.best = parseInt(localStorage.getItem('stackd_best')) || 0;
+    this.best = parseInt(localStorage.getItem('stackd_best_medium')) || 0;
     document.getElementById('best-display').textContent = 'Best: ' + this.best;
 
     // Input
@@ -262,29 +269,37 @@ const GAME = {
   },
 
   // ==================== GROUND ====================
+  clearGround() {
+    this.groundMeshes.forEach(m => this.scene.remove(m));
+    this.groundMeshes = [];
+    if (this.groundBody) { this.world.removeBody(this.groundBody); this.groundBody = null; }
+  },
+
   createGround() {
+    this.clearGround();
+    const half = this.platformHalf;
+    const size = half * 2;
+
     const woodMat = createWoodMaterial();
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(PLATFORM_SIZE, 1, PLATFORM_SIZE), woodMat);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(size, 1, size), woodMat);
     floor.position.y = -0.5;
     floor.receiveShadow = true;
     this.scene.add(floor);
+    this.groundMeshes.push(floor);
 
-    // Edge trim
     const edgeMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7, metalness: 0 });
-    const h = PLATFORM_HALF;
     [
-      { pos: [0, 0.075, -h], size: [PLATFORM_SIZE + 0.2, 0.15, 0.1] },
-      { pos: [0, 0.075, h], size: [PLATFORM_SIZE + 0.2, 0.15, 0.1] },
-      { pos: [-h, 0.075, 0], size: [0.1, 0.15, PLATFORM_SIZE + 0.2] },
-      { pos: [h, 0.075, 0], size: [0.1, 0.15, PLATFORM_SIZE + 0.2] },
+      { pos: [0, 0.075, -half], size: [size + 0.2, 0.15, 0.1] },
+      { pos: [0, 0.075, half], size: [size + 0.2, 0.15, 0.1] },
+      { pos: [-half, 0.075, 0], size: [0.1, 0.15, size + 0.2] },
+      { pos: [half, 0.075, 0], size: [0.1, 0.15, size + 0.2] },
     ].forEach(w => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(...w.size), edgeMat);
       m.position.set(...w.pos);
       this.scene.add(m);
+      this.groundMeshes.push(m);
     });
 
-    // Grid
-    // Void below
     const voidPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(100, 100),
       new THREE.MeshBasicMaterial({ color: 0x0a0a10 })
@@ -292,10 +307,29 @@ const GAME = {
     voidPlane.rotation.x = -Math.PI / 2;
     voidPlane.position.y = -15;
     this.scene.add(voidPlane);
+    this.groundMeshes.push(voidPlane);
+
+    // Physics ground
+    const groundMat = new CANNON.Material('ground');
+    this.groundBody = new CANNON.Body({ mass: 0, material: groundMat });
+    this.groundBody.addShape(new CANNON.Box(new CANNON.Vec3(half, 0.5, half)));
+    this.groundBody.position.set(0, -0.5, 0);
+    this.world.addBody(this.groundBody);
+    this.world.addContactMaterial(new CANNON.ContactMaterial(groundMat, this.blockMaterial, { friction: 0.7, restitution: 0.01 }));
   },
 
   // ==================== GAME FLOW ====================
-  start() {
+  start(diff) {
+    // Set difficulty
+    if (diff) this.difficulty = diff;
+    const d = DIFFICULTIES[this.difficulty];
+    this.platformHalf = d.half;
+
+    // Shadows on/off based on difficulty
+    this.renderer.shadowMap.enabled = d.shadows;
+    this.dirLight.castShadow = d.shadows;
+
+    // Clear old blocks
     this.bodies.forEach(b => this.world.removeBody(b));
     this.meshes.forEach(m => this.scene.remove(m));
     this.bodies = []; this.meshes = [];
@@ -303,16 +337,23 @@ const GAME = {
     if (this.currentBody) this.world.removeBody(this.currentBody);
     this.currentMesh = null; this.currentBody = null;
 
+    // Rebuild ground for new size
+    this.createGround();
+
     this.blocksPlaced = 0; this.maxHeight = 0;
     this.phase = 'idle';
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('game-over-overlay').classList.remove('show');
+
+    // Load best for this difficulty
+    this.best = parseInt(localStorage.getItem('stackd_best_' + this.difficulty)) || 0;
+    document.getElementById('best-display').textContent = 'Best: ' + this.best + ' (' + d.label + ')';
     this.updateHUD();
 
-    // Reset camera to a straight-on top-down-ish angle
+    // Reset camera
     this.camTheta = Math.PI / 4;
     this.camPhi = Math.PI / 5;
-    this.camDist = 14;
+    this.camDist = this.difficulty === 'hard' ? 10 : this.difficulty === 'easy' ? 16 : 14;
     this.camTarget.set(0, 3, 0);
     this.updateCamera();
 
@@ -344,8 +385,9 @@ const GAME = {
     const spawnY = Math.max(this.maxHeight + 4, 8);
     this.dropY = spawnY;
     // Random spawn position within platform bounds
-    const rx = (Math.random() - 0.5) * (PLATFORM_SIZE - 2);
-    const rz = (Math.random() - 0.5) * (PLATFORM_SIZE - 2);
+    const spawnRange = Math.max(this.platformHalf * 2 - 2, 1);
+    const rx = (Math.random() - 0.5) * spawnRange;
+    const rz = (Math.random() - 0.5) * spawnRange;
     mesh.position.set(rx, spawnY, rz);
     body.position.set(rx, spawnY, rz);
 
@@ -452,7 +494,7 @@ const GAME = {
   checkStability() {
     for (const body of this.bodies) {
       if (body.position.y < -2) return 'fallen';
-      if (Math.abs(body.position.x) > PLATFORM_HALF + 1 || Math.abs(body.position.z) > PLATFORM_HALF + 1) return 'fallen';
+      if (Math.abs(body.position.x) > this.platformHalf + 1 || Math.abs(body.position.z) > this.platformHalf + 1) return 'fallen';
     }
     if (this.currentBody && this.currentBody.position.y < -2) return 'fallen';
 
@@ -468,8 +510,9 @@ const GAME = {
     this.phase = 'gameover';
     if (this.blocksPlaced > this.best) {
       this.best = this.blocksPlaced;
-      localStorage.setItem('stackd_best', this.best);
-      document.getElementById('best-display').textContent = 'Best: ' + this.best;
+      localStorage.setItem('stackd_best_' + this.difficulty, this.best);
+      const d = DIFFICULTIES[this.difficulty];
+      document.getElementById('best-display').textContent = 'Best: ' + this.best + ' (' + d.label + ')';
     }
     document.getElementById('go-height').textContent = 'Height: ' + this.maxHeight.toFixed(1);
     document.getElementById('go-blocks').textContent = 'Blocks: ' + this.blocksPlaced;
