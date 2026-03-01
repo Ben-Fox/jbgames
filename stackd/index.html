@@ -611,6 +611,16 @@ const GAME = {
     // WASD camera orbit (continuous)
     this.processKeys(dt);
 
+    // Smooth camera tracking — follow the current block
+    if (this.currentBody && (this.phase === 'placing' || this.phase === 'dropping')) {
+      const bp = this.currentBody.position;
+      const lerp = 0.08;
+      this.camTarget.x += (bp.x - this.camTarget.x) * lerp;
+      this.camTarget.y += (bp.y * 0.5 - this.camTarget.y) * lerp;
+      this.camTarget.z += (bp.z - this.camTarget.z) * lerp;
+      this.updateCamera();
+    }
+
     if (this.phase !== 'idle' && this.phase !== 'gameover') {
       this.world.step(1/60, dt, 3);
       this.syncAllMeshes();
