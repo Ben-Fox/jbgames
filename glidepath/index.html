@@ -390,10 +390,10 @@ const G = {
 
   // Timing
   elapsed: 0,
-  gravity: 0.12,
-  maxVel: 6,
-  windInfluence: 0.08,
-  dragCoeff: 0.992,
+  gravity: 0.08,
+  maxVel: 8,
+  windInfluence: 0.35,
+  dragCoeff: 0.994,
 
   // Particles
   particles: [],
@@ -597,7 +597,7 @@ const G = {
     this.inkUsed += dist;
 
     // Strength based on draw speed (faster = stronger wind)
-    const strength = Math.min(dist / 15, 3);
+    const strength = Math.min(dist / 8, 5);
     this.currentStroke.push({ x: p.x, y: p.y, strength });
     this.lastDrawPt = p;
     this.updateInkHUD();
@@ -662,7 +662,7 @@ const G = {
     // Drag (parachute)
     if (this.chuteOpen) {
       this.vx *= this.dragCoeff;
-      this.vy *= 0.985; // more vertical drag from chute
+      this.vy *= 0.99; // parachute drag
     }
 
     // Wind zones
@@ -682,8 +682,8 @@ const G = {
         const a = stroke[i], b = stroke[i+1];
         // Distance from player to line segment
         const d = this.distToSegment(this.px, this.py, a.x, a.y, b.x, b.y);
-        if (d < 30) {
-          const influence = (1 - d / 30) * this.windInfluence * (a.strength + b.strength) / 2;
+        if (d < 60) {
+          const influence = (1 - d / 60) * this.windInfluence * (a.strength + b.strength) / 2;
           // Direction along the stroke
           const dx = b.x - a.x;
           const dy = b.y - a.y;
