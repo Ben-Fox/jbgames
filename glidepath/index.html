@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlidePath | BrainSmacks</title>
+<meta name="description" content="GlidePath — Draw wind currents to guide your parachutist to the landing zone. A physics puzzle game.">
+<link rel="canonical" href="https://brainsmacks.com/glidepath/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0a0a14;font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6}
+#top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:rgba(14,14,18,0.9);z-index:10;position:relative}
+#top-bar a{color:#a78bfa;text-decoration:none;font-size:13px}
+#top-bar h1{font-size:18px;color:#93c5fd;letter-spacing:2px}
+#game-container{position:relative;width:100%;height:calc(100vh - 36px);overflow:hidden}
+canvas{display:block;width:100%;height:100%;cursor:crosshair}
+canvas.phase-watch{cursor:default}
+
+/* HUD */
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:14px;font-weight:600;z-index:5;pointer-events:none;text-shadow:0 2px 4px rgba(0,0,0,0.8)}
+.hud-item{display:flex;align-items:center;gap:4px}
+#hud-level{color:#93c5fd}
+#hud-stars{color:#fbbf24}
+#hud-ink{color:#a78bfa}
+
+/* Controls guide */
+#guide{position:absolute;bottom:12px;left:12px;background:rgba(14,14,18,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;z-index:5;font-size:11px;color:#6b7280;line-height:1.7;backdrop-filter:blur(6px);pointer-events:none}
+#guide b{color:#93c5fd}
+
+/* Action button */
+#action-btn{position:absolute;bottom:16px;right:16px;z-index:5;background:rgba(59,130,246,0.9);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:background .15s,transform .1s;backdrop-filter:blur(6px)}
+#action-btn:hover{background:rgba(37,99,235,0.95);transform:translateY(-1px)}
+#action-btn.retry{background:rgba(239,68,68,0.9)}
+#action-btn.retry:hover{background:rgba(220,38,38,0.95)}
+#action-btn.next{background:rgba(34,197,94,0.9)}
+#action-btn.next:hover{background:rgba(22,163,74,0.95)}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,20,0.92);z-index:20;transition:opacity .3s}
+.overlay.hidden{opacity:0;pointer-events:none;visibility:hidden}
+.overlay h2{font-size:34px;color:#93c5fd;margin-bottom:8px;letter-spacing:2px}
+.overlay h3{font-size:22px;color:#fbbf24;margin-bottom:6px}
+.overlay p{color:#9ca3af;font-size:14px;margin-bottom:12px;max-width:440px;text-align:center;line-height:1.6}
+.overlay button{background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .15s}
+.overlay button:hover{background:#2563eb}
+.star-display{font-size:36px;letter-spacing:8px;margin:8px 0}
+.level-select{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0;max-width:320px}
+.level-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 0;text-align:center;cursor:pointer;color:#e2e2e6;font-size:14px;font-weight:600;transition:all .15s}
+.level-btn:hover{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
+.level-btn.locked{opacity:.3;cursor:default;pointer-events:none}
+.level-btn .lb-stars{font-size:10px;color:#fbbf24;display:block;margin-top:2px;height:12px}
+.level-btn.current{border-color:#3b82f6;background:rgba(59,130,246,0.2)}
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <a href="/">BrainSmacks</a>
+  <h1>GLIDEPATH</h1>
+  <div style="font-size:12px;color:#6b7280" id="total-stars">0 / 45</div>
+</div>
+<div id="game-container">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <span class="hud-item" id="hud-level">Level 1</span>
+    <span class="hud-item" id="hud-stars">-- --</span>
+    <span class="hud-item" id="hud-ink">Ink: 100%</span>
+  </div>
+  <div id="guide">
+    <b>Draw</b> wind paths with mouse<br>
+    <b>Launch</b> when ready<br>
+    <b>R</b> to retry · <b>C</b> to clear lines
+  </div>
+  <div id="action-btn" onclick="G.launch()">Launch</div>
+
+  <!-- Start overlay -->
+  <div class="overlay" id="start-overlay">
+    <h2>GLIDEPATH</h2>
+    <p>Draw wind currents to guide your parachutist safely to the landing zone. The faster you draw, the stronger the wind!</p>
+    <button onclick="G.showLevels()">Play</button>
+  </div>
+
+  <!-- Level select overlay -->
+  <div class="overlay hidden" id="level-overlay">
+    <h2>LEVELS</h2>
+    <div class="level-select" id="level-grid"></div>
+    <button onclick="G.hideOverlays()" style="background:#555;margin-top:4px;padding:8px 20px;font-size:13px">Back</button>
+  </div>
+
+  <!-- Win overlay -->
+  <div class="overlay hidden" id="win-overlay">
+    <h3>LANDED!</h3>
+    <div class="star-display" id="win-stars"></div>
+    <p id="win-msg"></p>
+    <div style="display:flex;gap:10px">
+      <button onclick="G.retry()" style="background:#555">Retry</button>
+      <button onclick="G.nextLevel()" id="btn-next">Next Level</button>
+    </div>
+  </div>
+
+  <!-- Fail overlay -->
+  <div class="overlay hidden" id="fail-overlay">
+    <h3 style="color:#f87171">MISSED!</h3>
+    <p id="fail-msg"></p>
+    <button onclick="G.retry()">Try Again</button>
+  </div>
+</div>
+
+<script>
+// ==================== GAME ENGINE ====================
+const $ = id => document.getElementById(id);
+const cvs = $('c');
+const ctx = cvs.getContext('2d');
+let W, H;
+
+function resize() {
+  const cont = $('game-container');
+  W = cvs.width = cont.clientWidth;
+  H = cvs.height = cont.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ==================== LEVELS ====================
+// Each level: spawn, target, obstacles, par time, flavor
+function makeLevels() {
+  const lv = [];
+  // Helper: scale positions to canvas size (designed for ~800x600)
+  const sx = x => x / 800 * W;
+  const sy = y => y / 600 * H;
+  const sr = r => r / 800 * Math.min(W, H);
+
+  // 1: Straight drop — tutorial
+  lv.push({
+    name: 'First Flight',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.88, 0.08],
+    obstacles: [],
+    wind: [],
+    par: 6,
+    ink: 1.0,
+    hint: 'Draw a path straight down to the target!'
+  });
+
+  // 2: Offset landing
+  lv.push({
+    name: 'Side Step',
+    spawn: [0.2, 0.05],
+    target: [0.75, 0.88, 0.07],
+    obstacles: [],
+    wind: [],
+    par: 7,
+    ink: 1.0,
+    hint: 'Draw a curve to redirect toward the platform.'
+  });
+
+  // 3: Gap between buildings
+  lv.push({
+    name: 'Urban Drop',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.88, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.0, y: 0.55, w: 0.38, h: 0.45 },
+      { type: 'rect', x: 0.62, y: 0.55, w: 0.38, h: 0.45 },
+    ],
+    wind: [],
+    par: 7,
+    ink: 1.0,
+    hint: 'Thread through the gap between buildings.'
+  });
+
+  // 4: Wind tunnel
+  lv.push({
+    name: 'Cross Wind',
+    spawn: [0.15, 0.05],
+    target: [0.85, 0.88, 0.07],
+    obstacles: [],
+    wind: [{ x: 0.0, y: 0.3, w: 1.0, h: 0.15, vx: 2.5, vy: 0 }],
+    par: 8,
+    ink: 1.0,
+    hint: 'Use the crosswind zone to your advantage!'
+  });
+
+  // 5: Zigzag obstacles
+  lv.push({
+    name: 'Slalom',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.9, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.0, y: 0.22, w: 0.55, h: 0.06 },
+      { type: 'rect', x: 0.45, y: 0.42, w: 0.55, h: 0.06 },
+      { type: 'rect', x: 0.0, y: 0.62, w: 0.55, h: 0.06 },
+    ],
+    wind: [],
+    par: 9,
+    ink: 1.2,
+    hint: 'Weave between the platforms.'
+  });
+
+  // 6: Moving platform
+  lv.push({
+    name: 'Moving Target',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.88, 0.07],
+    targetMove: { axis: 'x', speed: 0.15, min: 0.2, max: 0.8 },
+    obstacles: [],
+    wind: [],
+    par: 8,
+    ink: 1.0,
+    hint: 'The landing zone moves! Time your drop.'
+  });
+
+  // 7: Narrow canyon
+  lv.push({
+    name: 'The Canyon',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.9, 0.05],
+    obstacles: [
+      { type: 'rect', x: 0.0, y: 0.15, w: 0.42, h: 0.75 },
+      { type: 'rect', x: 0.58, y: 0.15, w: 0.42, h: 0.75 },
+    ],
+    wind: [],
+    par: 7,
+    ink: 0.8,
+    hint: 'Guide through the narrow canyon. Less ink!'
+  });
+
+  // 8: Updraft
+  lv.push({
+    name: 'Updraft',
+    spawn: [0.15, 0.05],
+    target: [0.85, 0.3, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.55, y: 0.45, w: 0.45, h: 0.06 },
+    ],
+    wind: [{ x: 0.6, y: 0.5, w: 0.35, h: 0.5, vx: 0, vy: -3 }],
+    par: 10,
+    ink: 1.2,
+    hint: 'Use the updraft zone to reach the high platform!'
+  });
+
+  // 9: Scattered obstacles
+  lv.push({
+    name: 'Minefield',
+    spawn: [0.1, 0.05],
+    target: [0.9, 0.88, 0.06],
+    obstacles: [
+      { type: 'circle', cx: 0.3, cy: 0.25, r: 0.06 },
+      { type: 'circle', cx: 0.55, cy: 0.4, r: 0.07 },
+      { type: 'circle', cx: 0.4, cy: 0.6, r: 0.05 },
+      { type: 'circle', cx: 0.7, cy: 0.55, r: 0.06 },
+      { type: 'circle', cx: 0.2, cy: 0.75, r: 0.05 },
+      { type: 'circle', cx: 0.6, cy: 0.78, r: 0.04 },
+    ],
+    wind: [],
+    par: 10,
+    ink: 1.5,
+    hint: 'Navigate around the obstacles!'
+  });
+
+  // 10: Double wind
+  lv.push({
+    name: 'Jet Stream',
+    spawn: [0.5, 0.05],
+    target: [0.15, 0.88, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.0, y: 0.55, w: 0.08, h: 0.35 },
+    ],
+    wind: [
+      { x: 0.0, y: 0.2, w: 1.0, h: 0.1, vx: 3, vy: 0 },
+      { x: 0.0, y: 0.5, w: 1.0, h: 0.1, vx: -3, vy: 0 },
+    ],
+    par: 9,
+    ink: 1.0,
+    hint: 'Two opposing jet streams — use them wisely!'
+  });
+
+  // 11: Tight squeeze
+  lv.push({
+    name: 'Needle Eye',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.9, 0.05],
+    obstacles: [
+      { type: 'rect', x: 0.0, y: 0.44, w: 0.44, h: 0.12 },
+      { type: 'rect', x: 0.56, y: 0.44, w: 0.44, h: 0.12 },
+      { type: 'rect', x: 0.0, y: 0.68, w: 0.35, h: 0.32 },
+      { type: 'rect', x: 0.65, y: 0.68, w: 0.35, h: 0.32 },
+    ],
+    wind: [],
+    par: 8,
+    ink: 0.9,
+    hint: 'Thread through both gaps!'
+  });
+
+  // 12: Spiral descent
+  lv.push({
+    name: 'Whirlwind',
+    spawn: [0.5, 0.05],
+    target: [0.5, 0.88, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.35, y: 0.25, w: 0.3, h: 0.04 },
+      { type: 'rect', x: 0.2, y: 0.45, w: 0.3, h: 0.04 },
+      { type: 'rect', x: 0.5, y: 0.65, w: 0.3, h: 0.04 },
+    ],
+    wind: [
+      { x: 0.0, y: 0.2, w: 1.0, h: 0.15, vx: 2, vy: 0 },
+      { x: 0.0, y: 0.5, w: 1.0, h: 0.15, vx: -2, vy: 0 },
+    ],
+    par: 10,
+    ink: 1.3,
+    hint: 'Alternate winds make a spiral path.'
+  });
+
+  // 13: Limited ink
+  lv.push({
+    name: 'Ink Drought',
+    spawn: [0.15, 0.05],
+    target: [0.85, 0.88, 0.06],
+    obstacles: [
+      { type: 'circle', cx: 0.5, cy: 0.5, r: 0.12 },
+    ],
+    wind: [],
+    par: 8,
+    ink: 0.4,
+    hint: 'Very little ink — make every stroke count!'
+  });
+
+  // 14: Multi-wind chaos
+  lv.push({
+    name: 'Storm Front',
+    spawn: [0.8, 0.05],
+    target: [0.2, 0.88, 0.06],
+    obstacles: [
+      { type: 'rect', x: 0.15, y: 0.6, w: 0.12, h: 0.25 },
+    ],
+    wind: [
+      { x: 0.0, y: 0.15, w: 0.5, h: 0.12, vx: -2, vy: 1 },
+      { x: 0.5, y: 0.35, w: 0.5, h: 0.12, vx: 2, vy: 1 },
+      { x: 0.0, y: 0.55, w: 1.0, h: 0.1, vx: -3, vy: 0 },
+    ],
+    par: 11,
+    ink: 1.3,
+    hint: 'Multiple wind zones — plan your route!'
+  });
+
+  // 15: Final challenge
+  lv.push({
+    name: 'The Gauntlet',
+    spawn: [0.1, 0.05],
+    target: [0.9, 0.88, 0.05],
+    targetMove: { axis: 'x', speed: 0.1, min: 0.7, max: 0.95 },
+    obstacles: [
+      { type: 'rect', x: 0.25, y: 0.2, w: 0.06, h: 0.3 },
+      { type: 'rect', x: 0.5, y: 0.35, w: 0.06, h: 0.3 },
+      { type: 'rect', x: 0.75, y: 0.15, w: 0.06, h: 0.35 },
+      { type: 'circle', cx: 0.4, cy: 0.7, r: 0.06 },
+      { type: 'circle', cx: 0.6, cy: 0.8, r: 0.05 },
+    ],
+    wind: [
+      { x: 0.0, y: 0.55, w: 1.0, h: 0.1, vx: 2, vy: 0 },
+    ],
+    par: 12,
+    ink: 1.0,
+    hint: 'Everything at once. Good luck!'
+  });
+
+  return lv;
+}
+
+// ==================== GAME STATE ====================
+const G = {
+  levels: [],
+  current: 0,
+  phase: 'draw', // draw | watch | win | fail
+  bestStars: [], // per level [0-3]
+  unlocked: 1,
+
+  // Parachutist
+  px: 0, py: 0, vx: 0, vy: 0,
+  alive: true,
+  landed: false,
+  trail: [],
+
+  // Drawing
+  lines: [],       // Array of strokes, each stroke = [{x,y,strength}...]
+  currentStroke: null,
+  inkUsed: 0,
+  maxInk: 800,     // pixels of drawing allowed (scaled by level.ink)
+  lastDrawPt: null,
+
+  // Timing
+  elapsed: 0,
+  gravity: 0.12,
+  maxVel: 6,
+  windInfluence: 0.08,
+  dragCoeff: 0.992,
+
+  // Particles
+  particles: [],
+  windParticles: [],
+
+  // Parachute
+  chuteOpen: true,
+  chuteAngle: 0,
+
+  init() {
+    this.levels = makeLevels();
+    // Load progress
+    try {
+      const saved = JSON.parse(localStorage.getItem('gp_progress'));
+      if (saved) {
+        this.bestStars = saved.stars || [];
+        this.unlocked = saved.unlocked || 1;
+      }
+    } catch(e) {}
+    this.bestStars.length = this.levels.length;
+    for (let i = 0; i < this.levels.length; i++) {
+      if (this.bestStars[i] === undefined) this.bestStars[i] = 0;
+    }
+    this.updateTotalStars();
+
+    // Input
+    cvs.addEventListener('mousedown', e => this.onDown(e));
+    cvs.addEventListener('mousemove', e => this.onMove(e));
+    cvs.addEventListener('mouseup', e => this.onUp(e));
+    cvs.addEventListener('touchstart', e => this.onTouchDown(e), {passive:false});
+    cvs.addEventListener('touchmove', e => this.onTouchMove(e), {passive:false});
+    cvs.addEventListener('touchend', e => this.onUp(e));
+    document.addEventListener('keydown', e => this.onKey(e));
+
+    this.loop();
+  },
+
+  save() {
+    localStorage.setItem('gp_progress', JSON.stringify({
+      stars: this.bestStars,
+      unlocked: this.unlocked
+    }));
+    this.updateTotalStars();
+  },
+
+  updateTotalStars() {
+    const total = this.bestStars.reduce((a,b) => a + b, 0);
+    const max = this.levels.length * 3;
+    $('total-stars').textContent = total + ' / ' + max + ' stars';
+  },
+
+  // ==================== LEVEL MANAGEMENT ====================
+  loadLevel(idx) {
+    if (idx < 0 || idx >= this.levels.length) return;
+    this.current = idx;
+    const lv = this.levels[idx];
+
+    this.phase = 'draw';
+    this.lines = [];
+    this.currentStroke = null;
+    this.inkUsed = 0;
+    this.maxInk = 800 * (lv.ink || 1.0);
+    this.lastDrawPt = null;
+    this.elapsed = 0;
+    this.particles = [];
+    this.trail = [];
+    this.alive = true;
+    this.landed = false;
+    this.chuteOpen = true;
+    this.chuteAngle = 0;
+
+    // Spawn position
+    this.px = lv.spawn[0] * W;
+    this.py = lv.spawn[1] * H;
+    this.vx = 0;
+    this.vy = 0;
+
+    // Init wind particles
+    this.initWindParticles();
+
+    // UI
+    $('hud-level').textContent = 'Level ' + (idx + 1) + ': ' + lv.name;
+    this.updateInkHUD();
+    this.updateStarsHUD();
+    const btn = $('action-btn');
+    btn.textContent = 'Launch';
+    btn.className = '';
+    btn.style.display = 'block';
+    btn.onclick = () => this.launch();
+    cvs.className = '';
+
+    this.hideOverlays();
+    if (lv.hint) {
+      $('hud-stars').textContent = lv.hint;
+      setTimeout(() => this.updateStarsHUD(), 3000);
+    }
+  },
+
+  launch() {
+    if (this.phase !== 'draw') return;
+    this.phase = 'watch';
+    cvs.className = 'phase-watch';
+    const btn = $('action-btn');
+    btn.textContent = 'Retry';
+    btn.className = 'retry';
+    btn.onclick = () => this.retry();
+  },
+
+  retry() {
+    this.loadLevel(this.current);
+  },
+
+  nextLevel() {
+    if (this.current + 1 < this.levels.length) {
+      this.loadLevel(this.current + 1);
+    } else {
+      this.showLevels();
+    }
+  },
+
+  showLevels() {
+    this.hideOverlays();
+    $('level-overlay').classList.remove('hidden');
+    const grid = $('level-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < this.levels.length; i++) {
+      const btn = document.createElement('div');
+      btn.className = 'level-btn' + (i >= this.unlocked ? ' locked' : '') + (i === this.current ? ' current' : '');
+      const stars = this.bestStars[i];
+      btn.innerHTML = (i+1) + '<span class="lb-stars">' +
+        (i < this.unlocked ? (stars >= 1 ? '★' : '☆') + (stars >= 2 ? '★' : '☆') + (stars >= 3 ? '★' : '☆') : '🔒') +
+        '</span>';
+      if (i < this.unlocked) {
+        btn.onclick = () => { this.loadLevel(i); };
+      }
+      grid.appendChild(btn);
+    }
+  },
+
+  hideOverlays() {
+    ['start-overlay','level-overlay','win-overlay','fail-overlay'].forEach(id => {
+      $(id).classList.add('hidden');
+    });
+  },
+
+  winLevel(stars) {
+    this.phase = 'win';
+    if (stars > this.bestStars[this.current]) {
+      this.bestStars[this.current] = stars;
+    }
+    if (this.current + 1 > this.unlocked - 1) {
+      this.unlocked = Math.min(this.current + 2, this.levels.length);
+    }
+    this.save();
+
+    $('win-stars').textContent = (stars >= 1 ? '★' : '☆') + ' ' + (stars >= 2 ? '★' : '☆') + ' ' + (stars >= 3 ? '★' : '☆');
+    const msgs = ['Made it!', 'Nice landing!', 'Perfect glide!'];
+    $('win-msg').textContent = msgs[Math.min(stars-1, 2)];
+    $('win-overlay').classList.remove('hidden');
+    $('action-btn').style.display = 'none';
+
+    if (this.current + 1 >= this.levels.length) {
+      $('btn-next').textContent = 'All Levels';
+      $('btn-next').onclick = () => this.showLevels();
+    } else {
+      $('btn-next').textContent = 'Next Level';
+      $('btn-next').onclick = () => this.nextLevel();
+    }
+  },
+
+  failLevel(reason) {
+    this.phase = 'fail';
+    $('fail-msg').textContent = reason || 'Your parachutist missed the target!';
+    $('fail-overlay').classList.remove('hidden');
+    $('action-btn').style.display = 'none';
+  },
+
+  // ==================== INPUT ====================
+  getPos(e) {
+    const r = cvs.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  },
+
+  onDown(e) {
+    if (this.phase !== 'draw') return;
+    const p = this.getPos(e);
+    this.currentStroke = [{ x: p.x, y: p.y, strength: 1 }];
+    this.lastDrawPt = p;
+  },
+
+  onMove(e) {
+    if (!this.currentStroke || this.phase !== 'draw') return;
+    const p = this.getPos(e);
+    const dx = p.x - this.lastDrawPt.x;
+    const dy = p.y - this.lastDrawPt.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 4) return;
+
+    // Check ink
+    if (this.inkUsed + dist > this.maxInk) return;
+    this.inkUsed += dist;
+
+    // Strength based on draw speed (faster = stronger wind)
+    const strength = Math.min(dist / 15, 3);
+    this.currentStroke.push({ x: p.x, y: p.y, strength });
+    this.lastDrawPt = p;
+    this.updateInkHUD();
+  },
+
+  onUp(e) {
+    if (this.currentStroke && this.currentStroke.length >= 2) {
+      this.lines.push(this.currentStroke);
+    }
+    this.currentStroke = null;
+    this.lastDrawPt = null;
+  },
+
+  onTouchDown(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      this.onDown({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    }
+  },
+  onTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      this.onMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    }
+  },
+
+  onKey(e) {
+    if (e.key === 'r' || e.key === 'R') this.retry();
+    if (e.key === 'c' || e.key === 'C') {
+      if (this.phase === 'draw') {
+        this.lines = [];
+        this.inkUsed = 0;
+        this.updateInkHUD();
+      }
+    }
+    if (e.key === ' ' && this.phase === 'draw') {
+      e.preventDefault();
+      this.launch();
+    }
+  },
+
+  updateInkHUD() {
+    const pct = Math.max(0, Math.round((1 - this.inkUsed / this.maxInk) * 100));
+    $('hud-ink').textContent = 'Ink: ' + pct + '%';
+    $('hud-ink').style.color = pct < 20 ? '#f87171' : pct < 50 ? '#fbbf24' : '#a78bfa';
+  },
+
+  updateStarsHUD() {
+    const best = this.bestStars[this.current] || 0;
+    $('hud-stars').textContent = (best >= 1 ? '★' : '☆') + (best >= 2 ? '★' : '☆') + (best >= 3 ? '★' : '☆');
+  },
+
+  // ==================== PHYSICS ====================
+  update(dt) {
+    if (this.phase !== 'watch') return;
+    const lv = this.levels[this.current];
+    this.elapsed += dt;
+
+    // Gravity
+    this.vy += this.gravity;
+
+    // Drag (parachute)
+    if (this.chuteOpen) {
+      this.vx *= this.dragCoeff;
+      this.vy *= 0.985; // more vertical drag from chute
+    }
+
+    // Wind zones
+    if (lv.wind) {
+      for (const w of lv.wind) {
+        const wx = w.x * W, wy = w.y * H, ww = w.w * W, wh = w.h * H;
+        if (this.px >= wx && this.px <= wx + ww && this.py >= wy && this.py <= wy + wh) {
+          this.vx += (w.vx || 0) * 0.05;
+          this.vy += (w.vy || 0) * 0.05;
+        }
+      }
+    }
+
+    // Player-drawn wind lines
+    for (const stroke of this.lines) {
+      for (let i = 0; i < stroke.length - 1; i++) {
+        const a = stroke[i], b = stroke[i+1];
+        // Distance from player to line segment
+        const d = this.distToSegment(this.px, this.py, a.x, a.y, b.x, b.y);
+        if (d < 30) {
+          const influence = (1 - d / 30) * this.windInfluence * (a.strength + b.strength) / 2;
+          // Direction along the stroke
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const len = Math.sqrt(dx*dx + dy*dy) || 1;
+          this.vx += (dx / len) * influence;
+          this.vy += (dy / len) * influence;
+        }
+      }
+    }
+
+    // Clamp velocity
+    const spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (spd > this.maxVel) {
+      this.vx = (this.vx / spd) * this.maxVel;
+      this.vy = (this.vy / spd) * this.maxVel;
+    }
+
+    // Move
+    this.px += this.vx;
+    this.py += this.vy;
+
+    // Chute angle (visual)
+    this.chuteAngle = Math.atan2(this.vx, -this.vy) * 0.3;
+
+    // Trail
+    this.trail.push({ x: this.px, y: this.py, age: 0 });
+    if (this.trail.length > 200) this.trail.shift();
+
+    // Moving target
+    if (lv.targetMove) {
+      const tm = lv.targetMove;
+      if (tm.axis === 'x') {
+        lv.target[0] += tm.speed * dt;
+        if (lv.target[0] > tm.max || lv.target[0] < tm.min) tm.speed *= -1;
+        lv.target[0] = Math.max(tm.min, Math.min(tm.max, lv.target[0]));
+      }
+    }
+
+    // Collision with obstacles
+    for (const ob of lv.obstacles) {
+      if (this.hitObstacle(ob)) {
+        this.alive = false;
+        this.spawnExplosion(this.px, this.py);
+        this.failLevel('Hit an obstacle!');
+        return;
+      }
+    }
+
+    // Out of bounds
+    if (this.px < -20 || this.px > W + 20 || this.py > H + 40) {
+      this.failLevel('Drifted out of bounds!');
+      return;
+    }
+
+    // Landing check
+    const tx = lv.target[0] * W;
+    const ty = lv.target[1] * H;
+    const tr = lv.target[2] * W;
+    const dist = Math.sqrt((this.px - tx)**2 + (this.py - ty)**2);
+    if (dist < tr + 8 && this.vy > 0) {
+      // Landed!
+      this.landed = true;
+      this.px = tx;
+      this.py = ty;
+
+      // Score based on accuracy and time
+      const accuracy = 1 - dist / (tr + 8);
+      const timeFactor = Math.max(0, 1 - (this.elapsed - lv.par) / lv.par);
+      const score = accuracy * 0.6 + timeFactor * 0.4;
+
+      let stars = 1;
+      if (score > 0.5) stars = 2;
+      if (score > 0.75) stars = 3;
+
+      this.spawnCelebration(tx, ty);
+      setTimeout(() => this.winLevel(stars), 800);
+      return;
+    }
+  },
+
+  distToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx*dx + dy*dy;
+    if (len2 === 0) return Math.sqrt((px-ax)**2 + (py-ay)**2);
+    let t = ((px-ax)*dx + (py-ay)*dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * dx, cy = ay + t * dy;
+    return Math.sqrt((px-cx)**2 + (py-cy)**2);
+  },
+
+  hitObstacle(ob) {
+    if (ob.type === 'rect') {
+      const rx = ob.x * W, ry = ob.y * H, rw = ob.w * W, rh = ob.h * H;
+      return this.px > rx && this.px < rx + rw && this.py > ry && this.py < ry + rh;
+    }
+    if (ob.type === 'circle') {
+      const cx = ob.cx * W, cy = ob.cy * H, r = ob.r * Math.min(W, H);
+      return Math.sqrt((this.px - cx)**2 + (this.py - cy)**2) < r + 6;
+    }
+    return false;
+  },
+
+  // ==================== PARTICLES ====================
+  spawnExplosion(x, y) {
+    for (let i = 0; i < 30; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 1 + Math.random() * 3;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 1,
+        color: ['#f87171','#fbbf24','#fb923c'][Math.floor(Math.random()*3)],
+        size: 2 + Math.random() * 3
+      });
+    }
+  },
+
+  spawnCelebration(x, y) {
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 1 + Math.random() * 4;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s - 2,
+        life: 1,
+        color: ['#fbbf24','#22c55e','#3b82f6','#a78bfa','#f472b6'][Math.floor(Math.random()*5)],
+        size: 2 + Math.random() * 4
+      });
+    }
+  },
+
+  updateParticles(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05;
+      p.life -= dt * 1.5;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+    // Trail aging
+    for (const t of this.trail) t.age += dt;
+  },
+
+  initWindParticles() {
+    this.windParticles = [];
+    const lv = this.levels[this.current];
+    if (!lv.wind) return;
+    for (const w of lv.wind) {
+      for (let i = 0; i < 15; i++) {
+        this.windParticles.push({
+          x: (w.x + Math.random() * w.w) * W,
+          y: (w.y + Math.random() * w.h) * H,
+          zone: w,
+          life: Math.random()
+        });
+      }
+    }
+  },
+
+  updateWindParticles(dt) {
+    for (const p of this.windParticles) {
+      const w = p.zone;
+      p.x += (w.vx || 0) * 30 * dt;
+      p.y += (w.vy || 0) * 30 * dt;
+      p.life -= dt * 0.5;
+      if (p.life <= 0 || p.x < w.x * W || p.x > (w.x + w.w) * W || p.y < w.y * H || p.y > (w.y + w.h) * H) {
+        p.x = (w.x + Math.random() * w.w) * W;
+        p.y = (w.y + Math.random() * w.h) * H;
+        p.life = 1;
+      }
+    }
+  },
+
+  // ==================== RENDERING ====================
+  draw() {
+    ctx.clearRect(0, 0, W, H);
+    const lv = this.levels[this.current];
+    if (!lv) return;
+
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0a0a2e');
+    sky.addColorStop(0.5, '#0f1a3a');
+    sky.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars (background)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for (let i = 0; i < 50; i++) {
+      const sx = (i * 137.5 + 50) % W;
+      const sy = (i * 97.3 + 30) % (H * 0.6);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.5 + (i % 3) * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Wind zones
+    if (lv.wind) {
+      for (const w of lv.wind) {
+        const wx = w.x * W, wy = w.y * H, ww = w.w * W, wh = w.h * H;
+        ctx.fillStyle = 'rgba(59,130,246,0.08)';
+        ctx.fillRect(wx, wy, ww, wh);
+        // Border
+        ctx.strokeStyle = 'rgba(59,130,246,0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(wx, wy, ww, wh);
+        ctx.setLineDash([]);
+
+        // Direction arrows
+        const arrowCount = 5;
+        ctx.fillStyle = 'rgba(59,130,246,0.25)';
+        for (let i = 0; i < arrowCount; i++) {
+          const ax = wx + (i + 0.5) / arrowCount * ww;
+          const ay = wy + wh / 2;
+          ctx.save();
+          ctx.translate(ax, ay);
+          ctx.rotate(Math.atan2(w.vy || 0, w.vx || 0));
+          ctx.beginPath();
+          ctx.moveTo(8, 0);
+          ctx.lineTo(-4, -5);
+          ctx.lineTo(-4, 5);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
+    // Wind particles
+    for (const p of this.windParticles) {
+      ctx.globalAlpha = p.life * 0.5;
+      ctx.fillStyle = '#60a5fa';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Obstacles
+    for (const ob of lv.obstacles) {
+      if (ob.type === 'rect') {
+        const rx = ob.x * W, ry = ob.y * H, rw = ob.w * W, rh = ob.h * H;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(rx, ry, rw, rh);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rx, ry, rw, rh);
+        // Window details
+        const cols = Math.floor(rw / 30);
+        const rows = Math.floor(rh / 25);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const wx = rx + 8 + c * (rw / cols);
+            const wy = ry + 8 + r * (rh / rows);
+            ctx.fillStyle = Math.random() > 0.6 ? 'rgba(251,191,36,0.15)' : 'rgba(100,150,200,0.06)';
+            ctx.fillRect(wx, wy, 10, 8);
+          }
+        }
+      }
+      if (ob.type === 'circle') {
+        const cx = ob.cx * W, cy = ob.cy * H, r = ob.r * Math.min(W, H);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Danger X
+        ctx.strokeStyle = 'rgba(239,68,68,0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - r*0.4, cy - r*0.4);
+        ctx.lineTo(cx + r*0.4, cy + r*0.4);
+        ctx.moveTo(cx + r*0.4, cy - r*0.4);
+        ctx.lineTo(cx - r*0.4, cy + r*0.4);
+        ctx.stroke();
+      }
+    }
+
+    // Target landing zone
+    const tx = lv.target[0] * W;
+    const ty = lv.target[1] * H;
+    const tr = lv.target[2] * W;
+
+    // Target glow
+    const tGlow = ctx.createRadialGradient(tx, ty, 0, tx, ty, tr * 2);
+    tGlow.addColorStop(0, 'rgba(34,197,94,0.2)');
+    tGlow.addColorStop(1, 'rgba(34,197,94,0)');
+    ctx.fillStyle = tGlow;
+    ctx.beginPath();
+    ctx.arc(tx, ty, tr * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Target circle
+    ctx.beginPath();
+    ctx.arc(tx, ty, tr, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(34,197,94,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Target crosshair
+    ctx.strokeStyle = 'rgba(34,197,94,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx - tr * 0.6, ty);
+    ctx.lineTo(tx + tr * 0.6, ty);
+    ctx.moveTo(tx, ty - tr * 0.6);
+    ctx.lineTo(tx, ty + tr * 0.6);
+    ctx.stroke();
+
+    // Player-drawn wind lines
+    for (const stroke of this.lines) {
+      this.drawStroke(stroke, 'rgba(167,139,250,0.6)', 3);
+    }
+    if (this.currentStroke && this.currentStroke.length >= 2) {
+      this.drawStroke(this.currentStroke, 'rgba(167,139,250,0.8)', 3);
+    }
+
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = Math.max(0, 0.3 - t.age * 0.15);
+      ctx.fillStyle = `rgba(147,197,253,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Parachutist
+    if (this.alive && !this.landed) {
+      this.drawParachutist(this.px, this.py);
+    }
+    if (this.landed) {
+      // Grounded character
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(this.px, this.py - 6, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(this.px - 4, this.py - 1, 8, 10);
+    }
+
+    // Particles
+    for (const p of this.particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  drawStroke(stroke, color, width) {
+    if (stroke.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i].x, stroke[i].y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Draw wind direction arrows along stroke
+    for (let i = 0; i < stroke.length - 1; i += 6) {
+      const a = stroke[i], b = stroke[Math.min(i + 3, stroke.length - 1)];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 5) continue;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const angle = Math.atan2(dy, dx);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(5, 0);
+      ctx.lineTo(-3, -3);
+      ctx.lineTo(-3, 3);
+      ctx.fill();
+      ctx.restore();
+    }
+  },
+
+  drawParachutist(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    if (this.chuteOpen) {
+      // Parachute canopy
+      ctx.save();
+      ctx.rotate(this.chuteAngle);
+      // Canopy
+      const cw = 24, ch = 14;
+      ctx.beginPath();
+      ctx.ellipse(0, -28, cw, ch, 0, Math.PI, 0);
+      const cGrad = ctx.createLinearGradient(-cw, -42, cw, -28);
+      cGrad.addColorStop(0, '#ef4444');
+      cGrad.addColorStop(0.5, '#fff');
+      cGrad.addColorStop(1, '#ef4444');
+      ctx.fillStyle = cGrad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Strings
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-cw, -28); ctx.lineTo(-3, -4);
+      ctx.moveTo(0, -28 - ch); ctx.lineTo(0, -4);
+      ctx.moveTo(cw, -28); ctx.lineTo(3, -4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Body
+    ctx.fillStyle = '#fbbf24'; // head
+    ctx.beginPath();
+    ctx.arc(0, -2, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#3b82f6'; // torso
+    ctx.fillRect(-3, 2, 6, 8);
+
+    // Legs
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-2, 10); ctx.lineTo(-4, 16);
+    ctx.moveTo(2, 10); ctx.lineTo(4, 16);
+    ctx.stroke();
+
+    // Arms
+    ctx.beginPath();
+    ctx.moveTo(-3, 4); ctx.lineTo(-8, 8);
+    ctx.moveTo(3, 4); ctx.lineTo(8, 8);
+    ctx.stroke();
+
+    ctx.restore();
+  },
+
+  // ==================== MAIN LOOP ====================
+  lastTime: 0,
+  loop() {
+    const now = performance.now();
+    const dt = Math.min((now - (this.lastTime || now)) / 1000, 0.05);
+    this.lastTime = now;
+
+    this.update(dt);
+    this.updateParticles(dt);
+    this.updateWindParticles(dt);
+    this.draw();
+
+    requestAnimationFrame(() => this.loop());
+  }
+};
+
+window.G = G;
+G.init();
+</script>
+</body>
+</html>
