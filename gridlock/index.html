@@ -84,7 +84,7 @@ function spawnAmbient(){
   for(var i=0;i<ambientCars.length;i++){
     if(ambientCars[i].x+ambientCars[i].len*CELL>W*0.15)return;
   }
-  var spd=0.6+Math.random()*0.8;
+  var spd=1.5+Math.random()*1.0;
   ambientCars.push({
     x:-CELL*2.5,
     speed:spd,
