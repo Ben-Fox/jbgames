@@ -78,22 +78,29 @@ var animating=false,solved=false,bestMoves={};
 /* ═══ AMBIENT TRAFFIC ═══ */
 var ambientCars=[];
 var AMB_COLORS=['#1565c0','#2e7d32','#f57f17','#6a1b9a','#c62828','#00838f','#e65100','#ad1457','#283593','#4e342e'];
+var ambientTimer=0;
 function spawnAmbient(){
-  var spd=0.8+Math.random()*1.2;
+  // Don't spawn if any car is still in the left third (prevent overlap)
+  for(var i=0;i<ambientCars.length;i++){
+    if(ambientCars[i].x+ambientCars[i].len*CELL>W*0.15)return;
+  }
+  var spd=0.6+Math.random()*0.8;
   ambientCars.push({
     x:-CELL*2.5,
-    dir:1,
     speed:spd,
     color:AMB_COLORS[Math.floor(Math.random()*AMB_COLORS.length)],
     len:Math.random()<0.2?3:2
   });
+  ambientTimer=0;
 }
 function updateAmbient(){
   for(var i=ambientCars.length-1;i>=0;i--){
     ambientCars[i].x+=ambientCars[i].speed;
     if(ambientCars[i].x>W+CELL*3)ambientCars.splice(i,1);
   }
-  if(ambientCars.length<2&&Math.random()<0.008)spawnAmbient();
+  ambientTimer++;
+  // Only try to spawn every ~8 seconds (480 frames at 60fps), max 1 on screen
+  if(ambientCars.length===0&&ambientTimer>480&&Math.random()<0.02)spawnAmbient();
 }
 
 var COLORS=[
