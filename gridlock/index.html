@@ -74,15 +74,22 @@ var GRID=6,CELL,PAD_TOP,PAD_SIDE,ROAD_H,W,H,EXIT_ROW=2;
 var levels=[],level=0,vehicles=[],moves=0,history=[];
 var dragId=-1,dragStart=0,dragOrig=0,dragMin=0,dragMax=0;
 var animating=false,solved=false,bestMoves={};
+var grassDots=[],asphaltDots=[],asphaltLight=[];
+function genStaticDots(){
+  grassDots=[];asphaltDots=[];asphaltLight=[];
+  for(var i=0;i<16;i++)grassDots.push({x:Math.random(),y:Math.random(),w:Math.random()*30+10});
+  for(var i=0;i<60;i++)asphaltDots.push({x:Math.random(),y:Math.random()});
+  for(var i=0;i<40;i++)asphaltLight.push({x:Math.random(),y:Math.random()});
+}
 
 /* ═══ AMBIENT TRAFFIC ═══ */
 var ambientCars=[];
 var AMB_COLORS=['#1565c0','#2e7d32','#f57f17','#6a1b9a','#c62828','#00838f','#e65100','#ad1457','#283593','#4e342e'];
 var ambientTimer=0;
 function spawnAmbient(){
-  // Don't spawn if any car is still in the left third (prevent overlap)
+  // Don't spawn if any car hasn't fully entered yet
   for(var i=0;i<ambientCars.length;i++){
-    if(ambientCars[i].x+ambientCars[i].len*CELL>W*0.15)return;
+    if(ambientCars[i].x<CELL*3)return;
   }
   var spd=1.5+Math.random()*1.0;
   ambientCars.push({
@@ -139,6 +146,7 @@ function resize(){
   H=PAD_TOP+CELL*GRID+12+ROAD_H+14;
   canvas.width=W;canvas.height=H;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
+  genStaticDots();
 }
 
 function loadLevel(n){
@@ -148,7 +156,7 @@ function loadLevel(n){
     vehicles.push({id:i,x:d[0],y:d[1],len:d[2],dir:d[3],color:COLORS[i%COLORS.length]});
   }
   vehicles[0].color=COLORS[0];
-  moves=0;history=[];solved=false;ambientCars=[];
+  moves=0;history=[];solved=false;ambientCars=[];ambientTimer=0;
   updateHud();draw();
 }
 
@@ -208,8 +216,8 @@ function drawScene(){
   ctx.fillRect(0,oy-10,W,gh+22+12);
   // Grass highlights
   ctx.fillStyle='#6abf4b';
-  for(var i=0;i<16;i++){
-    ctx.fillRect(Math.random()*W,oy-8+Math.random()*(gh+28),Math.random()*30+10,3);
+  for(var i=0;i<grassDots.length;i++){
+    ctx.fillRect(grassDots[i].x*W,oy-8+grassDots[i].y*(gh+28),grassDots[i].w,3);
   }
 
   // ── SIDEWALKS on all sides ──
@@ -245,9 +253,9 @@ function drawScene(){
 
   // Asphalt speckle
   ctx.fillStyle='rgba(0,0,0,0.04)';
-  for(var i=0;i<60;i++)ctx.fillRect(ox+Math.random()*gw,oy+Math.random()*gh,2,2);
+  for(var i=0;i<asphaltDots.length;i++)ctx.fillRect(ox+asphaltDots[i].x*gw,oy+asphaltDots[i].y*gh,2,2);
   ctx.fillStyle='rgba(255,255,255,0.03)';
-  for(var i=0;i<40;i++)ctx.fillRect(ox+Math.random()*gw,oy+Math.random()*gh,2,2);
+  for(var i=0;i<asphaltLight.length;i++)ctx.fillRect(ox+asphaltLight[i].x*gw,oy+asphaltLight[i].y*gh,2,2);
 
   // ── PARKING LINES (white) ──
   ctx.strokeStyle='rgba(255,255,255,0.75)';ctx.lineWidth=2;
@@ -337,7 +345,7 @@ function drawScene(){
   ctx.fillStyle='#5daa3a';
   ctx.fillRect(0,roadY+ROAD_H,W,20);
   ctx.fillStyle='#6abf4b';
-  for(var i=0;i<8;i++)ctx.fillRect(Math.random()*W,roadY+ROAD_H+Math.random()*10,20,2);
+  for(var i=0;i<8;i++)ctx.fillRect(grassDots[i].x*W,roadY+ROAD_H+grassDots[i].y*10,20,2);
 }
 
 function drawCloud(cx,cy,size){
