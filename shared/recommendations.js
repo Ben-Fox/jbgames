@@ -30,6 +30,12 @@
       thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><text x="40" y="28" text-anchor="middle" font-size="22" fill="rgba(167,139,250,.3)" font-weight="700">%</text><rect x="12" y="35" width="8" height="14" rx="1.5" fill="rgba(167,139,250,.4)"/><rect x="24" y="28" width="8" height="21" rx="1.5" fill="rgba(167,139,250,.5)"/><rect x="36" y="22" width="8" height="27" rx="1.5" fill="rgba(167,139,250,.6)"/><rect x="48" y="32" width="8" height="17" rx="1.5" fill="rgba(167,139,250,.45)"/><rect x="60" y="38" width="8" height="11" rx="1.5" fill="rgba(167,139,250,.35)"/></svg>'
     },
     {
+      name: 'GridLock', path: '/gridlock/',
+      gradient: 'linear-gradient(160deg,#0a1628 0%,#162d50 40%,#0a1628 100%)',
+      border: 'rgba(59,130,246,.25)',
+      thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><rect x="8" y="5" width="54" height="54" rx="3" fill="rgba(59,130,246,.08)" stroke="rgba(59,130,246,.15)" stroke-width=".5"/><rect x="10" y="22" width="18" height="8" rx="2.5" fill="rgba(229,57,53,.7)" stroke="#ef4444" stroke-width="1"/><text x="19" y="28" text-anchor="middle" font-size="5" fill="rgba(255,255,255,.7)" font-weight="bold">★</text><rect x="35" y="14" width="8" height="18" rx="2.5" fill="rgba(59,130,246,.6)" stroke="rgba(59,130,246,.8)" stroke-width=".8"/><rect x="44" y="32" width="16" height="8" rx="2.5" fill="rgba(142,36,170,.5)" stroke="rgba(142,36,170,.7)" stroke-width=".8"/><polygon points="66,24 74,27 66,30" fill="rgba(34,197,94,.5)"/></svg>'
+    },
+    {
       name: 'Fivefold', path: '/fivefold/', textColor: '#1a1814',
       gradient: 'linear-gradient(160deg,#f5f0e8 0%,#ede8db 40%,#e4ddd0 100%)',
       border: 'rgba(184,134,11,.3)',
