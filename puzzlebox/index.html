@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Puzzle Box — BrainSmacks</title>
+<meta name="description" content="Slide wooden panels in the right sequence to unlock beautiful puzzle boxes. Inspired by Japanese Himitsu-Bako.">
+<link rel="canonical" href="https://brainsmacks.com/puzzlebox/">
+<meta property="og:title" content="Puzzle Box — BrainSmacks">
+<meta property="og:description" content="Slide wooden panels in the right sequence to unlock beautiful puzzle boxes.">
+<meta property="og:url" content="https://brainsmacks.com/puzzlebox/">
+<meta property="og:type" content="website">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1008;color:#e8dcc8;font-family:'Segoe UI',Roboto,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+#wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+#hud{display:flex;gap:24px;align-items:center;margin-bottom:10px;height:32px}
+#hud span{font-size:13px;color:#a09080}
+#hud .val{color:#d4a854;font-weight:700}
+#actions{display:flex;gap:10px;margin-top:12px}
+.btn{background:#8b6914;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;transition:all .2s;box-shadow:0 3px 0 #6b4f0e}
+.btn:hover{background:#a07a1a;transform:translateY(-1px)}
+.btn.sm{background:#3a2a14;color:#d4a854;box-shadow:0 2px 0 #2a1a0a;padding:7px 16px;font-size:12px}
+.btn.sm:hover{background:#4a3a24}
+canvas{display:block;cursor:pointer}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(26,16,8,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;border-radius:8px}
+#overlay.hidden{display:none}
+#overlay h1{font-size:42px;color:#d4a854;margin-bottom:4px;letter-spacing:1px}
+#overlay h2{font-size:22px;color:#d4a854;margin-bottom:10px}
+#overlay .sub{color:#a09080;font-size:14px;margin-bottom:20px;text-align:center;max-width:360px;line-height:1.6}
+#lvlSelect{display:flex;gap:12px;margin-top:14px}
+#lvlSelect .lbtn{width:120px;padding:14px 10px;background:#2a1a0a;border:2px solid #4a3a24;border-radius:12px;color:#d4a854;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s}
+#lvlSelect .lbtn:hover{border-color:#d4a854;background:#3a2a14;transform:translateY(-2px)}
+#lvlSelect .lbtn.done{border-color:#6abf4b}
+#lvlSelect .lbtn.locked{opacity:.35;cursor:default}
+#lvlSelect .lbtn .steps{font-size:11px;color:#807060;font-weight:400}
+#lvlSelect .lbtn .best{font-size:10px;color:#6abf4b}
+#homeBtn{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,.5);color:#d4a854;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;opacity:.7;transition:opacity .2s}
+#homeBtn:hover{opacity:1}
+.rec-wrap{margin-top:16px;text-align:center}
+.rec-wrap h3{font-size:12px;color:#807060;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.rec-cards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.rec-card{width:130px;border-radius:12px;overflow:hidden;text-decoration:none;color:#fff;transition:transform .2s;cursor:pointer;display:flex;flex-direction:column}
+.rec-card:hover{transform:translateY(-3px)}
+.rec-card .rc-thumb{height:60px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rec-card .rc-body{padding:6px 8px;background:rgba(0,0,0,.15)}
+.rec-card .rc-title{font-size:12px;font-weight:700;margin-bottom:1px}
+.rec-card .rc-desc{font-size:9px;opacity:.7;line-height:1.3}
+</style>
+</head>
+<body>
+<a href="../" id="homeBtn"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+<div id="wrap">
+  <div id="hud">
+    <span>Moves: <span class="val" id="moveCount">0</span></span>
+    <span>Steps needed: <span class="val" id="stepsNeeded">—</span></span>
+  </div>
+  <canvas id="c"></canvas>
+  <div id="actions">
+    <button class="btn sm" onclick="Game.undo()">Undo</button>
+    <button class="btn sm" onclick="Game.restart()">Restart</button>
+    <button class="btn sm" onclick="Game.showMenu()">Levels</button>
+  </div>
+  <div id="overlay"><h1>Puzzle Box</h1></div>
+</div>
+
+<script>
+var Game=(function(){
+var canvas=document.getElementById('c');
+var ctx=canvas.getContext('2d');
+var W,H,level=0,moveCount=0,history=[];
+var panels=[],solved=false,animating=false,bestMoves={};
+
+// ══════ ISOMETRIC HELPERS ══════
+// We show the box in isometric view: top, front, right faces visible
+// Box is a cube of side S centered on canvas
+var S,OX,OY;
+// Isometric projection: x-right tilts down-right, y-up tilts up, z-depth tilts down-left
+function isoX(x,y,z){return OX + (x-z)*0.866*S/6}
+function isoY(x,y,z){return OY - y*S/6 + (x+z)*0.5*S/6}
+
+// Face coordinate systems (each face is a 6x6 grid for panel placement)
+// face='front': x=right(0-6), y=up(0-6), z=0
+// face='right': x=6, y=up(0-6), z=right(0-6)
+// face='top':   x=right(0-6), y=6, z=up(0-6)
+
+function faceCorners(face){
+  if(face==='front')return[[0,0,0],[6,0,0],[6,6,0],[0,6,0]];
+  if(face==='right')return[[6,0,0],[6,0,6],[6,6,6],[6,6,0]];
+  if(face==='top')return[[0,6,0],[6,6,0],[6,6,6],[0,6,6]];
+}
+
+function facePanelPos(face,col,row,w,h){
+  // Returns 4 corners of a panel in 3D, then project to 2D
+  var pts=[];
+  if(face==='front'){
+    pts=[[col,row,0],[col+w,row,0],[col+w,row+h,0],[col,row+h,0]];
+  }else if(face==='right'){
+    pts=[[6,row,col],[6,row,col+w],[6,row+h,col+w],[6,row+h,col]];
+  }else if(face==='top'){
+    pts=[[col,6,row],[col+w,6,row],[col+w,6,row+h],[col,6,row+h]];
+  }
+  return pts.map(function(p){return[isoX(p[0],p[1],p[2]),isoY(p[0],p[1],p[2])]});
+}
+
+// ══════ LEVEL DATA ══════
+// Each panel: {face, col, row, w, h, axis('h'|'v'), pos(current offset), target(offset to solve), 
+//              requires:[panelIndex,...], color, pattern, solved}
+// axis='h': slides along col; axis='v': slides along row
+// pos starts at 0, target is how much it needs to move to be "solved"
+
+function buildLevels(){
+  return[
+    // ── Level 1: Starter Box (5 steps) ──
+    // Front face only, 4 panels, simple chain
+    {name:'Starter Box',steps:5,panels:[
+      // Panel 0: bottom-left horizontal bar, must slide right 2
+      {face:'front',col:0,row:0,w:3,h:1.5,axis:'h',pos:0,target:2,requires:[],color:'#b8860b',pat:0},
+      // Panel 1: right vertical bar, must slide down 1.5 (but blocked by panel 0 in starting pos)
+      {face:'front',col:4,row:1.5,w:1.5,h:3,axis:'v',pos:0,target:-1.5,requires:[0],color:'#8b6914',pat:1},
+      // Panel 2: top horizontal bar, must slide left 2 (requires panel 1 moved)
+      {face:'front',col:2,row:4,w:3,h:1.5,axis:'h',pos:0,target:-2,requires:[1],color:'#a07828',pat:2},
+      // Panel 3: center small piece, slides up 1 (requires panel 2)
+      {face:'front',col:2,row:2,w:2,h:1.5,axis:'v',pos:0,target:1.5,requires:[2],color:'#c49632',pat:3},
+      // Panel 4: lid latch, slides right (requires panel 3) — opens the box
+      {face:'front',col:0,row:3,w:2,h:2,axis:'h',pos:0,target:1,requires:[3],color:'#d4a854',pat:0},
+    ]},
+    // ── Level 2: Craftsman Box (12 steps) ──
+    // Front + Right faces
+    {name:'Craftsman Box',steps:12,panels:[
+      // Front face
+      {face:'front',col:0,row:0,w:3,h:1.2,axis:'h',pos:0,target:1.5,requires:[],color:'#8b6914',pat:0},
+      {face:'front',col:3.5,row:0,w:1.5,h:2.5,axis:'v',pos:0,target:1,requires:[0],color:'#a07828',pat:1},
+      {face:'front',col:0,row:2,w:2,h:2,axis:'h',pos:0,target:2,requires:[],color:'#b8860b',pat:2},
+      {face:'front',col:3,row:3,w:2.5,h:1.5,axis:'h',pos:0,target:-1.5,requires:[1,2],color:'#c49632',pat:3},
+      {face:'front',col:1,row:4.5,w:4,h:1.5,axis:'h',pos:0,target:-1,requires:[3],color:'#d4a854',pat:0},
+      // Right face
+      {face:'right',col:0,row:0,w:3,h:1.5,axis:'h',pos:0,target:2,requires:[],color:'#96782a',pat:1},
+      {face:'right',col:4,row:0,w:2,h:3,axis:'v',pos:0,target:1.5,requires:[5],color:'#b8960b',pat:2},
+      {face:'right',col:0,row:2,w:2.5,h:2,axis:'h',pos:0,target:1.5,requires:[6],color:'#a08828',pat:3},
+      {face:'right',col:2,row:4,w:3,h:1.5,axis:'h',pos:0,target:-2,requires:[7],color:'#c4a632',pat:0},
+      // Cross-face: front panel 4 also requires right panel 8
+      // We'll add this dependency after creation
+    ]},
+    // ── Level 3: Master Box (20 steps) ──
+    // All 3 faces
+    {name:'Master Box',steps:20,panels:[
+      // Front face (0-4)
+      {face:'front',col:0,row:0,w:2.5,h:1.5,axis:'h',pos:0,target:2,requires:[],color:'#8b6914',pat:0},
+      {face:'front',col:4,row:0,w:2,h:2.5,axis:'v',pos:0,target:1.5,requires:[0],color:'#a07828',pat:1},
+      {face:'front',col:0,row:2,w:3,h:1.5,axis:'h',pos:0,target:1.5,requires:[],color:'#b8860b',pat:2},
+      {face:'front',col:2,row:3.5,w:2.5,h:1.2,axis:'h',pos:0,target:-2,requires:[1,2],color:'#c49632',pat:3},
+      {face:'front',col:0,row:4.5,w:2,h:1.5,axis:'v',pos:0,target:-1,requires:[3],color:'#d4a854',pat:0},
+      // Right face (5-9)
+      {face:'right',col:0,row:0,w:3,h:1.2,axis:'h',pos:0,target:1.5,requires:[],color:'#96782a',pat:1},
+      {face:'right',col:4,row:0,w:2,h:2.5,axis:'v',pos:0,target:2,requires:[5],color:'#b8960b',pat:2},
+      {face:'right',col:0,row:2,w:2,h:2,axis:'v',pos:0,target:1.5,requires:[6],color:'#a08828',pat:3},
+      {face:'right',col:2.5,row:3,w:3,h:1.5,axis:'h',pos:0,target:-2,requires:[7],color:'#c4a632',pat:0},
+      {face:'right',col:0,row:4.5,w:2.5,h:1.5,axis:'h',pos:0,target:2,requires:[8],color:'#8b7020',pat:1},
+      // Top face (10-14)
+      {face:'top',col:0,row:0,w:2,h:3,axis:'h',pos:0,target:2,requires:[4],color:'#b09028',pat:2},
+      {face:'top',col:3,row:0,w:1.5,h:2.5,axis:'v',pos:0,target:2,requires:[10],color:'#a08030',pat:3},
+      {face:'top',col:4.5,row:1,w:1.5,h:2.5,axis:'v',pos:0,target:-1,requires:[9,11],color:'#c4b040',pat:0},
+      {face:'top',col:0,row:3.5,w:3,h:1.5,axis:'h',pos:0,target:1.5,requires:[12],color:'#d4a854',pat:1},
+      {face:'top',col:3,row:4,w:2.5,h:2,axis:'v',pos:0,target:-1.5,requires:[13],color:'#8b6914',pat:2},
+    ]},
+  ];
+}
+var LEVELS;
+
+function resize(){
+  var maxW=Math.min(window.innerWidth-20,600);
+  var maxH=Math.min(window.innerHeight-130,500);
+  W=Math.min(maxW,maxH*1.2);H=W/1.2;
+  canvas.width=W;canvas.height=H;
+  S=Math.min(W,H)*0.7;
+  OX=W*0.42;OY=H*0.62;
+}
+
+function loadLevel(n){
+  level=n;
+  LEVELS=buildLevels();
+  var lv=LEVELS[n];
+  panels=[];
+  for(var i=0;i<lv.panels.length;i++){
+    var p=lv.panels[i];
+    panels.push({face:p.face,col:p.col,row:p.row,w:p.w,h:p.h,axis:p.axis,
+      pos:0,target:p.target,requires:p.requires.slice(),color:p.color,pat:p.pat,solved:false});
+  }
+  // Level 2: add cross-face dependency (front panel 4 requires right panel 8)
+  if(n===1&&panels.length>8){panels[4].requires.push(8);}
+  moveCount=0;history=[];solved=false;
+  updateHud();draw();
+}
+
+function canMove(idx){
+  var p=panels[idx];
+  if(p.solved)return false;
+  for(var i=0;i<p.requires.length;i++){
+    if(!panels[p.requires[i]].solved)return false;
+  }
+  return true;
+}
+
+function tryMove(idx){
+  if(!canMove(idx)||solved||animating)return;
+  animating=true;
+  var p=panels[idx];
+  var startPos=p.pos;
+  var endPos=p.target;
+  var t0=performance.now();
+  history.push({idx:idx,from:startPos});
+  moveCount++;updateHud();
+
+  function tick(ts){
+    var t=Math.min(1,(ts-t0)/350);
+    t=t<0.5?2*t*t:(1-Math.pow(-2*t+2,2)/2); // easeInOutQuad
+    p.pos=startPos+(endPos-startPos)*t;
+    draw();
+    if(t<1){requestAnimationFrame(tick);}
+    else{p.pos=endPos;p.solved=true;animating=false;draw();checkWin();}
+  }
+  requestAnimationFrame(tick);
+}
+
+function checkWin(){
+  for(var i=0;i<panels.length;i++)if(!panels[i].solved)return;
+  solved=true;
+  saveBest(level,moveCount);
+  setTimeout(function(){showWin();},400);
+}
+
+// ══════ DRAWING ══════
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  // Draw faces back-to-front: top, right, front (painter's algorithm for isometric)
+  drawFace('top');
+  drawFace('right');
+  drawFace('front');
+  // Draw box edges
+  drawBoxEdges();
+}
+
+function drawBackground(){
+  var g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7);
+  g.addColorStop(0,'#2a1a0a');g.addColorStop(1,'#1a1008');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // subtle wood table texture
+  ctx.strokeStyle='rgba(180,140,80,0.03)';ctx.lineWidth=1;
+  for(var i=0;i<20;i++){
+    var y=i*(H/20);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+}
+
+function drawFace(face){
+  var corners=faceCorners(face);
+  var pts=corners.map(function(c){return[isoX(c[0],c[1],c[2]),isoY(c[0],c[1],c[2])]});
+  
+  // Face background (wood)
+  var baseColor=face==='front'?'#6b4a1e':face==='right'?'#5a3e18':'#7a5828';
+  ctx.fillStyle=baseColor;
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(var i=1;i<4;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();ctx.fill();
+
+  // Wood grain lines
+  ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;
+  for(var i=1;i<6;i++){
+    var t=i/6;
+    var a=lerp2d(pts[0],pts[3],t);
+    var b=lerp2d(pts[1],pts[2],t);
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+  }
+
+  // Draw panels on this face
+  for(var i=0;i<panels.length;i++){
+    if(panels[i].face===face)drawPanel(i);
+  }
+}
+
+function drawPanel(idx){
+  var p=panels[idx];
+  var col=p.col+(p.axis==='h'?p.pos:0);
+  var row=p.row+(p.axis==='v'?p.pos:0);
+  var pts=facePanelPos(p.face,col,row,p.w,p.h);
+
+  // Panel shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath();ctx.moveTo(pts[0][0]+2,pts[0][1]+2);
+  for(var i=1;i<4;i++)ctx.lineTo(pts[i][0]+2,pts[i][1]+2);
+  ctx.closePath();ctx.fill();
+
+  // Panel body
+  var grad=ctx.createLinearGradient(pts[0][0],pts[0][1],pts[2][0],pts[2][1]);
+  grad.addColorStop(0,lighten(p.color,20));
+  grad.addColorStop(0.5,p.color);
+  grad.addColorStop(1,darken(p.color,20));
+  ctx.fillStyle=grad;
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(var i=1;i<4;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();ctx.fill();
+
+  // Yosegi-inspired pattern
+  drawPattern(pts,p.pat,p.color);
+
+  // Panel border
+  ctx.strokeStyle=p.solved?'rgba(106,191,75,0.7)':'rgba(0,0,0,0.4)';
+  ctx.lineWidth=p.solved?2:1.5;
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(var i=1;i<4;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();ctx.stroke();
+
+  // Solved glow
+  if(p.solved){
+    ctx.fillStyle='rgba(106,191,75,0.08)';
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+    for(var i=1;i<4;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.closePath();ctx.fill();
+  }
+
+  // Movable indicator (subtle arrow/dot)
+  if(!p.solved&&canMove(idx)){
+    var cx=(pts[0][0]+pts[2][0])/2,cy=(pts[0][1]+pts[2][1])/2;
+    var pulse=0.4+Math.sin(Date.now()*0.004)*0.3;
+    ctx.fillStyle='rgba(212,168,84,'+pulse+')';
+    ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();
+  }
+}
+
+function drawPattern(pts,pat,baseColor){
+  ctx.save();ctx.globalAlpha=0.15;
+  var cx=(pts[0][0]+pts[2][0])/2,cy=(pts[0][1]+pts[2][1])/2;
+  ctx.strokeStyle=lighten(baseColor,40);ctx.lineWidth=1;
+  if(pat===0){
+    // Diamond grid
+    for(var i=-3;i<=3;i++){
+      var dx=(pts[1][0]-pts[0][0])/6*i,dy=(pts[1][1]-pts[0][1])/6*i;
+      ctx.beginPath();ctx.moveTo(pts[0][0]+dx,pts[0][1]+dy);ctx.lineTo(pts[3][0]+dx,pts[3][1]+dy);ctx.stroke();
+    }
+  }else if(pat===1){
+    // Horizontal lines
+    for(var i=1;i<4;i++){
+      var a=lerp2d(pts[0],pts[3],i/4),b=lerp2d(pts[1],pts[2],i/4);
+      ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    }
+  }else if(pat===2){
+    // Cross
+    ctx.beginPath();ctx.moveTo((pts[0][0]+pts[1][0])/2,(pts[0][1]+pts[1][1])/2);
+    ctx.lineTo((pts[2][0]+pts[3][0])/2,(pts[2][1]+pts[3][1])/2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo((pts[0][0]+pts[3][0])/2,(pts[0][1]+pts[3][1])/2);
+    ctx.lineTo((pts[1][0]+pts[2][0])/2,(pts[1][1]+pts[2][1])/2);ctx.stroke();
+  }else{
+    // Dot pattern
+    for(var r=0;r<3;r++)for(var c=0;c<3;c++){
+      var t1=(c+0.5)/3,t2=(r+0.5)/3;
+      var top=lerp2d(pts[0],pts[1],t1),bot=lerp2d(pts[3],pts[2],t1);
+      var pt=lerp2d(top,bot,t2);
+      ctx.beginPath();ctx.arc(pt[0],pt[1],2,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawBoxEdges(){
+  ctx.strokeStyle='rgba(60,40,15,0.8)';ctx.lineWidth=2;
+  // Front edges
+  var c=[[0,0,0],[6,0,0],[6,6,0],[0,6,0],[0,0,6],[6,0,6],[6,6,6],[0,6,6]];
+  var edges=[[0,1],[1,2],[2,3],[3,0],[1,5],[5,6],[6,2],[3,7],[7,6],[0,4],[4,7],[4,5]];
+  // Only draw visible edges
+  var visible=[[0,1],[1,2],[2,3],[3,0],[1,5],[5,6],[6,2],[3,7],[7,6]];
+  for(var i=0;i<visible.length;i++){
+    var a=c[visible[i][0]],b=c[visible[i][1]];
+    ctx.beginPath();
+    ctx.moveTo(isoX(a[0],a[1],a[2]),isoY(a[0],a[1],a[2]));
+    ctx.lineTo(isoX(b[0],b[1],b[2]),isoY(b[0],b[1],b[2]));
+    ctx.stroke();
+  }
+}
+
+function lerp2d(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+function lighten(hex,amt){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgb('+Math.min(255,r+amt)+','+Math.min(255,g+amt)+','+Math.min(255,b+amt)+')';}
+function darken(hex,amt){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgb('+Math.max(0,r-amt)+','+Math.max(0,g-amt)+','+Math.max(0,b-amt)+')';}
+
+// ══════ HIT TESTING ══════
+function hitTest(mx,my){
+  // Test panels front-to-back (front face first since it's drawn last / on top)
+  var order=['front','right','top'];
+  for(var f=0;f<order.length;f++){
+    for(var i=panels.length-1;i>=0;i--){
+      if(panels[i].face!==order[f])continue;
+      var p=panels[i];
+      var col=p.col+(p.axis==='h'?p.pos:0);
+      var row=p.row+(p.axis==='v'?p.pos:0);
+      var pts=facePanelPos(p.face,col,row,p.w,p.h);
+      if(pointInQuad(mx,my,pts))return i;
+    }
+  }
+  return-1;
+}
+
+function pointInQuad(px,py,pts){
+  // Check if point is inside a convex quadrilateral using cross products
+  var inside=true;
+  for(var i=0;i<4;i++){
+    var a=pts[i],b=pts[(i+1)%4];
+    var cross=(b[0]-a[0])*(py-a[1])-(b[1]-a[1])*(px-a[0]);
+    if(cross<0){inside=false;break;}
+  }
+  if(inside)return true;
+  // Try other winding
+  inside=true;
+  for(var i=0;i<4;i++){
+    var a=pts[i],b=pts[(i+1)%4];
+    var cross=(b[0]-a[0])*(py-a[1])-(b[1]-a[1])*(px-a[0]);
+    if(cross>0){inside=false;break;}
+  }
+  return inside;
+}
+
+// ══════ INPUT ══════
+canvas.addEventListener('click',function(e){
+  if(solved||animating)return;
+  var rect=canvas.getBoundingClientRect();
+  var mx=(e.clientX-rect.left)*(canvas.width/rect.width);
+  var my=(e.clientY-rect.top)*(canvas.height/rect.height);
+  var hit=hitTest(mx,my);
+  if(hit>=0)tryMove(hit);
+});
+canvas.addEventListener('touchend',function(e){
+  if(solved||animating)return;
+  e.preventDefault();
+  var rect=canvas.getBoundingClientRect();
+  var touch=e.changedTouches[0];
+  var mx=(touch.clientX-rect.left)*(canvas.width/rect.width);
+  var my=(touch.clientY-rect.top)*(canvas.height/rect.height);
+  var hit=hitTest(mx,my);
+  if(hit>=0)tryMove(hit);
+},{passive:false});
+
+// ══════ UI ══════
+function updateHud(){
+  document.getElementById('moveCount').textContent=moveCount;
+  document.getElementById('stepsNeeded').textContent=LEVELS?LEVELS[level].steps:'—';
+}
+
+function showWin(){
+  var lv=LEVELS[level];
+  var perfect=moveCount<=lv.steps;
+  var ov=document.getElementById('overlay');ov.className='';
+  ov.innerHTML='<h2>Box Opened!</h2>'+
+    '<div style="font-size:48px;margin:8px 0">'+(level===0?'🪙':level===1?'💎':'👑')+'</div>'+
+    '<div style="color:#a09080;font-size:13px;margin-bottom:4px">Moves: '+moveCount+' / '+lv.steps+' steps</div>'+
+    (perfect?'<div style="color:#6abf4b;font-size:13px;margin-bottom:8px">Perfect solve!</div>':
+    '<div style="color:#a09080;font-size:12px;margin-bottom:8px">Can you do it in '+lv.steps+'?</div>')+
+    (level<2?'<button class="btn" onclick="Game.play('+(level+1)+')" style="margin-top:10px">Next Box</button>':
+    '<div class="sub" style="margin-top:6px">You mastered every box!</div>'+recHTML())+
+    '<button class="btn sm" onclick="Game.showMenu()" style="margin-top:8px">Level Select</button>';
+}
+
+function recHTML(){
+  return '<div class="rec-wrap"><h3>Play Next</h3><div class="rec-cards">'+
+    '<a href="../gridlock/" class="rec-card" style="background:linear-gradient(160deg,#0a1628,#162d50)">'+
+      '<div class="rc-thumb">🅿️</div><div class="rc-body"><div class="rc-title" style="color:#93c5fd">GridLock</div><div class="rc-desc">Free the red car</div></div></a>'+
+    '<a href="../circle/" class="rec-card" style="background:linear-gradient(160deg,#1e293b,#334155)">'+
+      '<div class="rc-thumb">◎</div><div class="rc-body"><div class="rc-title" style="color:#e2e8f0">Circle</div><div class="rc-desc">Draw a perfect circle</div></div></a>'+
+    '<a href="../likelihood/" class="rec-card" style="background:linear-gradient(160deg,#1a0a2e,#2e1065)">'+
+      '<div class="rc-thumb" style="color:#c4b5fd">%</div><div class="rc-body"><div class="rc-title" style="color:#c4b5fd">Likelihood</div><div class="rc-desc">Guess the probability</div></div></a>'+
+    '</div></div>';
+}
+
+function saveBest(lvl,m){
+  try{bestMoves=JSON.parse(localStorage.getItem('puzzlebox_best'))||{};}catch(e){}
+  if(!bestMoves[lvl]||m<bestMoves[lvl])bestMoves[lvl]=m;
+  localStorage.setItem('puzzlebox_best',JSON.stringify(bestMoves));
+}
+
+function animLoop(){draw();requestAnimationFrame(animLoop);}
+
+return{
+  play:function(n){document.getElementById('overlay').className='hidden';loadLevel(n);},
+  undo:function(){
+    if(!history.length||solved||animating)return;
+    var h=history.pop();
+    panels[h.idx].pos=h.from;
+    panels[h.idx].solved=false;
+    moveCount--;updateHud();draw();
+  },
+  restart:function(){loadLevel(level);},
+  showMenu:function(){
+    try{bestMoves=JSON.parse(localStorage.getItem('puzzlebox_best'))||{};}catch(e){bestMoves={};}
+    LEVELS=buildLevels();
+    var ov=document.getElementById('overlay');ov.className='';
+    var html='<h1>Puzzle Box</h1><div class="sub">Slide the wooden panels in the right sequence to unlock each box.<br>Inspired by Japanese Himitsu-Bako.</div><div id="lvlSelect">';
+    for(var i=0;i<LEVELS.length;i++){
+      var done=bestMoves[i]!==undefined;
+      var unlocked=i===0||bestMoves[i-1]!==undefined;
+      var cls=done?'lbtn done':unlocked?'lbtn':'lbtn locked';
+      if(unlocked){
+        html+='<div class="'+cls+'" onclick="Game.play('+i+')">'+LEVELS[i].name;
+        html+='<span class="steps">'+LEVELS[i].steps+' steps</span>';
+        if(done)html+='<span class="best">Best: '+bestMoves[i]+'</span>';
+        html+='</div>';
+      }else html+='<div class="'+cls+'">'+LEVELS[i].name+'<span class="steps">'+LEVELS[i].steps+' steps</span></div>';
+    }
+    html+='</div>';ov.innerHTML=html;
+  },
+  init:function(){
+    LEVELS=buildLevels();resize();
+    window.addEventListener('resize',function(){resize();draw();});
+    try{bestMoves=JSON.parse(localStorage.getItem('puzzlebox_best'))||{};}catch(e){bestMoves={};}
+    this.showMenu();animLoop();
+  }
+};
+})();
+Game.init();
+</script>
+</body>
+</html>
