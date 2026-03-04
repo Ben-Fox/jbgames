@@ -133,6 +133,7 @@ a{text-decoration:none;color:inherit}
 
 /* Emoji badge */
 .card-badge{position:absolute;top:14px;right:14px;font-size:1.6rem;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.card-tag{position:absolute;top:12px;right:12px;z-index:2;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1)}
 .card-hot{position:absolute;top:14px;left:14px;z-index:2;background:#ef4444;color:#fff;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
 
 .thumb{height:220px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -435,6 +436,7 @@ footer p+p{margin-top:.3rem}
   <!-- Heavy Eye -->
   <a href="/heavyeye/" class="card card--heavyeye">
     <span class="card-hot">HOT</span>
+    <span class="card-tag">Arcade</span>
     <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Base (static, doesn't rock) -->
@@ -472,7 +474,8 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- Circle -->
-  <a href="/circle/" class="card card--circle">    <div class="thumb">
+  <a href="/circle/" class="card card--circle">    <span class="card-tag">Skill</span>
+    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Chalkboard grid dots -->
         <circle class="chalk-dot" cx="30" cy="30" r="1.5" fill="rgba(226,232,240,.3)"/>
@@ -498,7 +501,8 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- BreakPoint -->
-  <a href="/breakpoint/" class="card card--breakpoint">    <div class="thumb">
+  <a href="/breakpoint/" class="card card--breakpoint">    <span class="card-tag">Strategy</span>
+    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <g transform="translate(80,70)">
           <!-- Card 1 - red -->
@@ -535,6 +539,7 @@ footer p+p{margin-top:.3rem}
 
   <!-- GridLock -->
   <a href="/gridlock/" class="card card--gridlock">
+    <span class="card-tag">Puzzle</span>
     <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- 6x6 grid -->
@@ -579,7 +584,8 @@ footer p+p{margin-top:.3rem}
   </a>
 
   <!-- Likelihood -->
-  <a href="/likelihood/" class="card card--likelihood">    <div class="thumb">
+  <a href="/likelihood/" class="card card--likelihood">    <span class="card-tag">Trivia</span>
+    <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Big percentage -->
         <text x="80" y="50" text-anchor="middle" font-size="42" fill="#c4b5fd" font-family="'Space Grotesk',sans-serif" font-weight="700" class="pct-counter">73%</text>
