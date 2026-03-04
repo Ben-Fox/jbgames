@@ -94,144 +94,183 @@ function initClouds(){
 
 /* ── Obstacle types ── */
 // Each obstacle: {type, x, y, w, h, ...extras}
-// Types: building, fence, bird, plane, tree, crane, balloon, powerline
+// Types: building, fence, bird, plane, tree, crane, balloon
 // x,y,w,h in normalized 0-1 coords. Moving objects get vx,vy.
+//
+// GROUND LINE = 0.86 (grass top). All grounded objects: y + h = 0.86
+// Proportions relative to parachutist (~30px ≈ 6ft person):
+//   Fence: 4-6ft  → h: 0.03-0.04, grounded
+//   Tree:  25-40ft → h: 0.18-0.25, grounded (canopy is top ~60%)
+//   Small bldg (2-story): h: 0.15-0.18, grounded
+//   Med bldg (4-story):   h: 0.25-0.35, grounded
+//   Tall bldg (6-story):  h: 0.40-0.50, grounded
+//   Crane: 80ft+  → h: 0.45-0.55, grounded (arm at top)
+//   Balloon: floating, h: 0.08-0.10
+//   Bird: flying, h: 0.015, moving
+//   Plane: flying, h: 0.025, moving
+//
+// DIFFICULTY gauge (approx solution paths):
+//   Lv1 ≈1000, Lv2 ≈600, Lv3 ≈350, Lv4 ≈200, Lv5 ≈120
+//   Lv6 ≈80,   Lv7 ≈40,  Lv8 ≈20,  Lv9 ≈10,  Lv10 ≈5
+// Based on: landing zone width × open airspace % ÷ moving obstacles ÷ path complexity
 
 function buildLevels(){
   levels=[];
+  var G=0.86; // ground line
 
-  // Lv1: Gentle intro — open sky, one tree
+  // ─── Lv1: Open Field ─── (~1000 solutions)
+  // Wide open sky, one small tree off to the side, huge landing zone.
+  // Almost impossible to fail — teaches drawing + launching.
   levels.push({
     spawn:{x:0.5,y:0.08},
-    land:{x:0.5,y:0.88,w:0.14},
+    land:{x:0.5,y:G,w:0.14},
     obstacles:[
-      {type:'tree',x:0.25,y:0.72,w:0.04,h:0.16}
+      {type:'tree', x:0.18, y:G-0.22, w:0.05, h:0.22}  // 22% tall, grounded
     ],
     theme:'day'
   });
 
-  // Lv2: Suburban — offset landing, small house + fence
+  // ─── Lv2: Backyard ─── (~600 solutions)
+  // Small house in the middle, short fence on ground to the left.
+  // Must arc over/around the house to reach right-side landing.
   levels.push({
     spawn:{x:0.15,y:0.08},
-    land:{x:0.78,y:0.88,w:0.12},
+    land:{x:0.80,y:G,w:0.12},
     obstacles:[
-      {type:'building',x:0.40,y:0.65,w:0.08,h:0.23,floors:2,color:'#8b6f5c'},
-      {type:'fence',x:0.55,y:0.82,w:0.18,h:0.02}
+      {type:'building', x:0.40, y:G-0.18, w:0.10, h:0.18, floors:2, color:'#8b6f5c'},
+      {type:'fence',    x:0.08, y:G-0.035, w:0.28, h:0.035}  // short fence, grounded
     ],
     theme:'day'
   });
 
-  // Lv3: Park — trees + birds
+  // ─── Lv3: Park ─── (~350 solutions)
+  // Three trees spaced across, one bird gliding through.
+  // Trees block direct vertical paths — need lateral wind.
   levels.push({
-    spawn:{x:0.5,y:0.08},
-    land:{x:0.80,y:0.88,w:0.10},
+    spawn:{x:0.50,y:0.08},
+    land:{x:0.82,y:G,w:0.10},
     obstacles:[
-      {type:'tree',x:0.15,y:0.60,w:0.05,h:0.28},
-      {type:'tree',x:0.35,y:0.65,w:0.04,h:0.23},
-      {type:'tree',x:0.55,y:0.58,w:0.05,h:0.30},
-      {type:'bird',x:0.30,y:0.30,w:0.03,h:0.015,vx:0.04,vy:0.005}
+      {type:'tree', x:0.12, y:G-0.22, w:0.05, h:0.22},
+      {type:'tree', x:0.38, y:G-0.25, w:0.06, h:0.25},   // taller middle tree
+      {type:'tree', x:0.60, y:G-0.20, w:0.05, h:0.20},
+      {type:'bird', x:0.20, y:0.30, w:0.03, h:0.015, vx:0.04, vy:0.005}
     ],
     theme:'day'
   });
 
-  // Lv4: City outskirts — buildings + fence gap
+  // ─── Lv4: Suburban Street ─── (~200 solutions)
+  // Two buildings create a gap. Fence on ground with a clear opening.
+  // Must navigate between buildings and through the fence gap.
   levels.push({
     spawn:{x:0.12,y:0.08},
-    land:{x:0.88,y:0.88,w:0.09},
+    land:{x:0.87,y:G,w:0.09},
     obstacles:[
-      {type:'building',x:0.25,y:0.50,w:0.10,h:0.38,floors:4,color:'#5a6a7a'},
-      {type:'building',x:0.60,y:0.60,w:0.08,h:0.28,floors:3,color:'#6a5a5a'},
-      {type:'fence',x:0.00,y:0.78,w:0.22,h:0.02},
-      {type:'fence',x:0.38,y:0.78,w:0.50,h:0.02}
+      {type:'building', x:0.25, y:G-0.30, w:0.10, h:0.30, floors:3, color:'#5a6a7a'},
+      {type:'building', x:0.55, y:G-0.25, w:0.08, h:0.25, floors:2, color:'#6a5a5a'},
+      {type:'fence',    x:0.00, y:G-0.035, w:0.22, h:0.035},   // left fence, grounded
+      {type:'fence',    x:0.40, y:G-0.035, w:0.38, h:0.035}    // right fence, grounded (gap 0.22-0.40, ends at 0.78)
     ],
     theme:'day'
   });
 
-  // Lv5: Downtown — tall buildings, narrow corridor
+  // ─── Lv5: Downtown ─── (~120 solutions)
+  // Tall buildings form a canyon. Must thread through the corridor.
+  // One bird patrols the gap. Sunset theme.
   levels.push({
     spawn:{x:0.08,y:0.08},
-    land:{x:0.50,y:0.88,w:0.08},
+    land:{x:0.50,y:G,w:0.08},
     obstacles:[
-      {type:'building',x:0.20,y:0.25,w:0.12,h:0.63,floors:7,color:'#4a5568'},
-      {type:'building',x:0.68,y:0.30,w:0.10,h:0.58,floors:6,color:'#5a5a6a'},
-      {type:'building',x:0.42,y:0.55,w:0.06,h:0.33,floors:3,color:'#6b6b7b'},
-      {type:'bird',x:0.10,y:0.20,w:0.03,h:0.015,vx:0.05,vy:0.0}
+      {type:'building', x:0.18, y:G-0.50, w:0.12, h:0.50, floors:6, color:'#4a5568'},
+      {type:'building', x:0.68, y:G-0.45, w:0.10, h:0.45, floors:5, color:'#5a5a6a'},
+      {type:'building', x:0.40, y:G-0.22, w:0.07, h:0.22, floors:2, color:'#6b6b7b'},
+      {type:'bird',     x:0.10, y:0.20, w:0.03, h:0.015, vx:0.05, vy:0.0}
     ],
     theme:'sunset'
   });
 
-  // Lv6: Airport approach — planes!
+  // ─── Lv6: Airport Approach ─── (~80 solutions)
+  // Two planes crossing at different heights — timing matters.
+  // Ground fences with gap, small control tower grounded.
   levels.push({
     spawn:{x:0.50,y:0.08},
-    land:{x:0.50,y:0.88,w:0.10},
+    land:{x:0.50,y:G,w:0.10},
     obstacles:[
-      {type:'plane',x:0.0,y:0.25,w:0.08,h:0.025,vx:0.06,vy:0.0},
-      {type:'plane',x:1.0,y:0.50,w:0.08,h:0.025,vx:-0.05,vy:0.0},
-      {type:'fence',x:0.00,y:0.70,w:0.38,h:0.02},
-      {type:'fence',x:0.62,y:0.70,w:0.38,h:0.02},
-      {type:'building',x:0.00,y:0.75,w:0.06,h:0.13,floors:1,color:'#4a5568'}
+      {type:'plane',    x:-0.10, y:0.25, w:0.08, h:0.025, vx:0.06, vy:0.0},
+      {type:'plane',    x:1.10,  y:0.50, w:0.08, h:0.025, vx:-0.05, vy:0.0},
+      {type:'fence',    x:0.00,  y:G-0.035, w:0.36, h:0.035},   // left fence, grounded
+      {type:'fence',    x:0.64,  y:G-0.035, w:0.36, h:0.035},   // right fence, grounded (gap 0.36-0.64)
+      {type:'building', x:0.00,  y:G-0.15, w:0.07, h:0.15, floors:1, color:'#4a5568'} // control tower, grounded
     ],
     theme:'day'
   });
 
-  // Lv7: Construction zone — cranes + buildings
+  // ─── Lv7: Construction Zone ─── (~40 solutions)
+  // Crane with arm blocking upper path. Buildings grounded.
+  // Must weave between crane arm and buildings. Bird patrol.
   levels.push({
     spawn:{x:0.88,y:0.08},
-    land:{x:0.12,y:0.88,w:0.08},
+    land:{x:0.12,y:G,w:0.08},
     obstacles:[
-      {type:'crane',x:0.55,y:0.10,w:0.03,h:0.55,armLen:0.20},
-      {type:'building',x:0.25,y:0.50,w:0.12,h:0.38,floors:4,color:'#7a6a5a'},
-      {type:'building',x:0.70,y:0.65,w:0.08,h:0.23,floors:2,color:'#5a6a5a'},
-      {type:'fence',x:0.20,y:0.47,w:0.25,h:0.02},
-      {type:'bird',x:0.05,y:0.35,w:0.025,h:0.012,vx:0.03,vy:0.008}
+      {type:'crane',    x:0.54, y:G-0.55, w:0.03, h:0.55, armLen:0.20},  // tall crane, grounded
+      {type:'building', x:0.25, y:G-0.30, w:0.12, h:0.30, floors:3, color:'#7a6a5a'},
+      {type:'building', x:0.72, y:G-0.18, w:0.08, h:0.18, floors:2, color:'#5a6a5a'},
+      {type:'tree',     x:0.02, y:G-0.20, w:0.05, h:0.20},  // tree near landing, grounded
+      {type:'bird',     x:0.05, y:0.35, w:0.025, h:0.012, vx:0.03, vy:0.008}
     ],
     theme:'sunset'
   });
 
-  // Lv8: City maze — dense buildings + balloon
+  // ─── Lv8: City Maze ─── (~20 solutions)
+  // Dense buildings on both sides + center gap. Balloon mid-air.
+  // Very narrow corridor to thread through.
   levels.push({
     spawn:{x:0.50,y:0.08},
-    land:{x:0.50,y:0.88,w:0.07},
+    land:{x:0.50,y:G,w:0.07},
     obstacles:[
-      {type:'building',x:0.15,y:0.22,w:0.10,h:0.35,floors:4,color:'#5a5a6a'},
-      {type:'building',x:0.75,y:0.22,w:0.10,h:0.35,floors:4,color:'#6a5a5a'},
-      {type:'building',x:0.35,y:0.50,w:0.08,h:0.38,floors:4,color:'#4a6a5a'},
-      {type:'building',x:0.58,y:0.50,w:0.08,h:0.38,floors:4,color:'#5a4a6a'},
-      {type:'balloon',x:0.45,y:0.20,w:0.04,h:0.07},
-      {type:'bird',x:0.90,y:0.15,w:0.025,h:0.012,vx:-0.04,vy:0.003}
+      {type:'building', x:0.10, y:G-0.45, w:0.12, h:0.45, floors:5, color:'#5a5a6a'},
+      {type:'building', x:0.78, y:G-0.45, w:0.12, h:0.45, floors:5, color:'#6a5a5a'},
+      {type:'building', x:0.30, y:G-0.30, w:0.08, h:0.30, floors:3, color:'#4a6a5a'},
+      {type:'building', x:0.62, y:G-0.30, w:0.08, h:0.30, floors:3, color:'#5a4a6a'},
+      {type:'balloon',  x:0.44, y:0.18, w:0.05, h:0.09},   // floating, blocks upper center
+      {type:'bird',     x:0.90, y:0.15, w:0.025, h:0.012, vx:-0.04, vy:0.003}
     ],
     theme:'sunset'
   });
 
-  // Lv9: Updraft challenge — spawn low, land high
+  // ─── Lv9: Updraft Challenge ─── (~10 solutions)
+  // Spawn BELOW, land ABOVE. Must create strong upward wind.
+  // Building wall with gap blocks horizontal path. Plane patrol.
   levels.push({
     spawn:{x:0.10,y:0.78},
     land:{x:0.85,y:0.12,w:0.09},
     obstacles:[
-      {type:'building',x:0.38,y:0.00,w:0.08,h:0.50,floors:6,color:'#4a5a6a'},
-      {type:'building',x:0.38,y:0.62,w:0.08,h:0.26,floors:3,color:'#4a5a6a'},
-      {type:'tree',x:0.60,y:0.55,w:0.05,h:0.33},
-      {type:'plane',x:0.0,y:0.35,w:0.07,h:0.02,vx:0.04,vy:0.0},
-      {type:'bird',x:0.70,y:0.10,w:0.025,h:0.012,vx:-0.03,vy:0.005}
+      {type:'building', x:0.38, y:0.00, w:0.08, h:0.45, floors:5, color:'#4a5a6a'},   // top wall
+      {type:'building', x:0.38, y:G-0.25, w:0.08, h:0.25, floors:3, color:'#4a5a6a'},  // bottom wall, grounded
+      // gap between walls: y 0.45 to 0.61 — must fly through
+      {type:'tree',     x:0.62, y:G-0.22, w:0.05, h:0.22},  // grounded right side
+      {type:'plane',    x:-0.10, y:0.35, w:0.07, h:0.02, vx:0.04, vy:0.0},
+      {type:'bird',     x:0.70, y:0.10, w:0.025, h:0.012, vx:-0.03, vy:0.005}
     ],
     theme:'day'
   });
 
-  // Lv10: The gauntlet — everything
+  // ─── Lv10: The Gauntlet ─── (~5 solutions)
+  // Everything: buildings, crane, planes, birds, balloon, tree.
+  // Tiny landing zone. Must navigate a precise path through chaos.
   levels.push({
     spawn:{x:0.05,y:0.08},
-    land:{x:0.92,y:0.88,w:0.06},
+    land:{x:0.92,y:G,w:0.06},
     obstacles:[
-      {type:'building',x:0.18,y:0.15,w:0.10,h:0.50,floors:6,color:'#4a4a5a'},
-      {type:'crane',x:0.32,y:0.05,w:0.025,h:0.45,armLen:0.15},
-      {type:'building',x:0.50,y:0.45,w:0.08,h:0.43,floors:5,color:'#5a5a4a'},
-      {type:'fence',x:0.35,y:0.42,w:0.13,h:0.02},
-      {type:'plane',x:0.0,y:0.20,w:0.07,h:0.02,vx:0.05,vy:0.0},
-      {type:'plane',x:1.0,y:0.60,w:0.07,h:0.02,vx:-0.04,vy:0.0},
-      {type:'bird',x:0.60,y:0.25,w:0.03,h:0.015,vx:-0.06,vy:0.004},
-      {type:'bird',x:0.20,y:0.55,w:0.025,h:0.012,vx:0.04,vy:-0.003},
-      {type:'balloon',x:0.75,y:0.30,w:0.04,h:0.07},
-      {type:'tree',x:0.70,y:0.68,w:0.04,h:0.20}
+      {type:'building', x:0.16, y:G-0.50, w:0.10, h:0.50, floors:6, color:'#4a4a5a'},  // tall left
+      {type:'crane',    x:0.30, y:G-0.50, w:0.025, h:0.50, armLen:0.15},                // crane, grounded
+      {type:'building', x:0.50, y:G-0.40, w:0.08, h:0.40, floors:4, color:'#5a5a4a'},   // center
+      {type:'tree',     x:0.78, y:G-0.20, w:0.05, h:0.20},                              // tree near landing
+      {type:'plane',    x:-0.10, y:0.18, w:0.07, h:0.02, vx:0.05, vy:0.0},              // high plane →
+      {type:'plane',    x:1.10,  y:0.55, w:0.07, h:0.02, vx:-0.04, vy:0.0},             // mid plane ←
+      {type:'bird',     x:0.60, y:0.22, w:0.03, h:0.015, vx:-0.06, vy:0.004},
+      {type:'bird',     x:0.20, y:0.50, w:0.025, h:0.012, vx:0.04, vy:-0.003},
+      {type:'balloon',  x:0.68, y:0.28, w:0.05, h:0.09},   // floating, blocks right path
+      {type:'fence',    x:0.72, y:G-0.035, w:0.14, h:0.035} // fence before landing, grounded (ends at 0.86, landing starts 0.89)
     ],
     theme:'night'
   });
@@ -393,8 +432,10 @@ function drawSky(theme){
   ctx.fillRect(0,0,W,H);
 }
 
+var GROUND=0.86; // normalized ground line — all grounded objects sit here
+
 function drawGrass(){
-  var groundY=H*0.86;
+  var groundY=H*GROUND;
   // grass base
   ctx.fillStyle='#2d6b2d';
   ctx.fillRect(0,groundY,W,H-groundY);
