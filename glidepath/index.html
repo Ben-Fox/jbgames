@@ -198,8 +198,7 @@ var Game = (function(){
       vy: 0,
       radius: 10,
       gravity: 45,
-      drag: 0.985,
-      deployed: true
+      drag: 0.985
     };
   }
 
@@ -343,7 +342,6 @@ var Game = (function(){
     var canopyW = 32, canopyH = 20;
     var canopyY = y - 38;
     var panels = 7;
-    var panelW = canopyW * 2 / panels;
 
     // canopy outer shape (wide dome)
     ctx.beginPath();
@@ -483,7 +481,7 @@ var Game = (function(){
       windMotes.push({
         x: pt.x + (Math.random()-0.5)*40,
         y: pt.y + (Math.random()-0.5)*40,
-        vx: 0, vy: 0, life: 1, maxLife: 1
+        vx: 0, vy: 0, life: 1
       });
     }
     for(var i = windMotes.length - 1; i >= 0; i--){
@@ -546,57 +544,65 @@ var Game = (function(){
     updateWindMotes(dt);
 
     if(state === 'fly' && chute){
-      dt *= speed;
-      // gravity
-      chute.vy += chute.gravity * dt;
-      // wind forces
-      var totalFx = 0, totalFy = 0;
-      for(var w = 0; w < winds.length; w++){
-        var f = windForceAt(chute.x, chute.y, winds[w]);
-        if(f){ totalFx += f.fx; totalFy += f.fy; }
-      }
-      chute.vx += totalFx * dt;
-      chute.vy += totalFy * dt;
-      // drag
-      chute.vx *= chute.drag;
-      chute.vy *= chute.drag;
-      chute.x += chute.vx * dt;
-      chute.y += chute.vy * dt;
+      // sub-step physics to prevent tunneling at high speed
+      var steps = speed;
+      var sdt = dt;
+      for(var s = 0; s < steps && state === 'fly'; s++){
+        // gravity
+        chute.vy += chute.gravity * sdt;
+        // wind forces
+        var totalFx = 0, totalFy = 0;
+        for(var w = 0; w < winds.length; w++){
+          var f = windForceAt(chute.x, chute.y, winds[w]);
+          if(f){ totalFx += f.fx; totalFy += f.fy; }
+        }
+        chute.vx += totalFx * sdt;
+        chute.vy += totalFy * sdt;
+        // drag
+        chute.vx *= chute.drag;
+        chute.vy *= chute.drag;
+        chute.x += chute.vx * sdt;
+        chute.y += chute.vy * sdt;
 
-      // trail
-      trail.push({x: chute.x, y: chute.y, life: 1});
-
-      // check landing zone
-      var lx = (lv.land.x - lv.land.w/2) * W;
-      var ly = lv.land.y * H;
-      var lw = lv.land.w * W;
-      if(chute.y >= ly && chute.x >= lx && chute.x <= lx + lw){
-        // landed!
-        state = 'landed';
-        var center = lv.land.x * W;
-        var dist = Math.abs(chute.x - center);
-        var maxDist = lw / 2;
-        var accuracy = Math.max(0, 1 - dist / maxDist);
-        var stars = accuracy > 0.85 ? 3 : accuracy > 0.5 ? 2 : 1;
-        landResult = {accuracy: accuracy, stars: stars, strokes: winds.length};
-        spawnParticles(chute.x, chute.y, '#22c55e', 30);
-        saveBest(level, stars);
-        setTimeout(showResult, 600);
-      }
-      // check obstacle collision
-      for(var i = 0; i < lv.obstacles.length; i++){
-        if(rectHit(chute.x, chute.y, chute.radius, lv.obstacles[i])){
+        // check landing zone
+        var lx = (lv.land.x - lv.land.w/2) * W;
+        var ly = lv.land.y * H;
+        var lw = lv.land.w * W;
+        if(chute.y >= ly && chute.x >= lx && chute.x <= lx + lw){
+          state = 'landed';
+          var center = lv.land.x * W;
+          var dist = Math.abs(chute.x - center);
+          var maxDist = lw / 2;
+          var accuracy = Math.max(0, 1 - dist / maxDist);
+          var stars = accuracy > 0.85 ? 3 : accuracy > 0.5 ? 2 : 1;
+          landResult = {accuracy: accuracy, stars: stars, strokes: winds.length};
+          spawnParticles(chute.x, chute.y, '#22c55e', 30);
+          saveBest(level, stars);
+          setTimeout(showResult, 600);
+          break;
+        }
+        // check obstacle collision
+        var hit = false;
+        for(var i = 0; i < lv.obstacles.length; i++){
+          if(rectHit(chute.x, chute.y, chute.radius, lv.obstacles[i])){
+            state = 'crashed';
+            spawnParticles(chute.x, chute.y, '#ef4444', 25);
+            setTimeout(function(){ showCrash(); }, 600);
+            hit = true;
+            break;
+          }
+        }
+        if(hit) break;
+        // check out of bounds
+        if(chute.x < -20 || chute.x > W+20 || chute.y > H+20 || chute.y < -50){
           state = 'crashed';
-          spawnParticles(chute.x, chute.y, '#ef4444', 25);
-          setTimeout(function(){ showCrash(); }, 600);
+          setTimeout(function(){ showCrash(); }, 300);
           break;
         }
       }
-      // check out of bounds
-      if(chute.x < -20 || chute.x > W+20 || chute.y > H+20 || chute.y < -50){
-        state = 'crashed';
-        setTimeout(function(){ showCrash(); }, 300);
-      }
+      // trail (capped at 150 entries)
+      trail.push({x: chute.x, y: chute.y, life: 1});
+      if(trail.length > 150) trail.shift();
     }
 
     // --- Draw ---
@@ -743,7 +749,6 @@ var Game = (function(){
       level = 0;
       try { bestScores = JSON.parse(localStorage.getItem('glidepath_best')) || {}; } catch(e){ bestScores = {}; }
       resize();
-      window.addEventListener('resize', resize);
       document.getElementById('overlay').className = 'hidden';
       state = 'draw';
       winds = [];
@@ -802,6 +807,7 @@ var Game = (function(){
     init: function(){
       buildLevels();
       resize();
+      window.addEventListener('resize', resize);
     }
   };
 })();
