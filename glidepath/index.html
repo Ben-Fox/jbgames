@@ -193,7 +193,7 @@ var Game = (function(){
       y: lv.spawn.y * H,
       vx: 0,
       vy: 0,
-      radius: 8,
+      radius: 10,
       gravity: 45,
       drag: 0.985,
       deployed: true
@@ -335,22 +335,115 @@ var Game = (function(){
   function drawChute(){
     if(!chute) return;
     var x = chute.x, y = chute.y;
-    // parachute canopy
+
+    // --- Big billowing canopy with panels ---
+    var canopyW = 32, canopyH = 20;
+    var canopyY = y - 38;
+    var panels = 7;
+    var panelW = canopyW * 2 / panels;
+
+    // canopy outer shape (wide dome)
+    ctx.beginPath();
+    ctx.moveTo(x - canopyW, canopyY + canopyH);
+    ctx.quadraticCurveTo(x - canopyW, canopyY - 6, x, canopyY - 8);
+    ctx.quadraticCurveTo(x + canopyW, canopyY - 6, x + canopyW, canopyY + canopyH);
+    ctx.closePath();
     ctx.fillStyle = 'rgba(192,132,252,0.85)';
-    ctx.beginPath();
-    ctx.arc(x, y - 18, 14, Math.PI, 0);
     ctx.fill();
-    // lines
-    ctx.strokeStyle = 'rgba(192,132,252,0.5)';
+    ctx.strokeStyle = 'rgba(160,100,220,0.9)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // panel lines (vertical ribs on canopy)
+    ctx.strokeStyle = 'rgba(140,80,200,0.6)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x-12, y-14); ctx.lineTo(x-3, y-2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x+12, y-14); ctx.lineTo(x+3, y-2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x, y-18); ctx.lineTo(x, y-2); ctx.stroke();
-    // body
-    ctx.fillStyle = '#e0e0e0';
+    for(var i = 1; i < panels; i++){
+      var t = i / panels;
+      var px = x - canopyW + t * canopyW * 2;
+      // curve the rib lines to follow the dome shape
+      var ribTopY = canopyY - 8 + Math.abs(t - 0.5) * 2 * 10;
+      var ribBotY = canopyY + canopyH;
+      ctx.beginPath();
+      ctx.moveTo(px, ribTopY);
+      ctx.quadraticCurveTo(px + (t < 0.5 ? -2 : 2), (ribTopY + ribBotY) / 2, px, ribBotY);
+      ctx.stroke();
+    }
+
+    // alternating panel shading for depth
+    for(var i = 0; i < panels; i++){
+      if(i % 2 === 0) continue;
+      var t1 = i / panels, t2 = (i+1) / panels;
+      var lx = x - canopyW + t1 * canopyW * 2;
+      var rx = x - canopyW + t2 * canopyW * 2;
+      ctx.fillStyle = 'rgba(160,100,240,0.15)';
+      ctx.beginPath();
+      ctx.moveTo(lx, canopyY + canopyH);
+      var ltop = canopyY - 8 + Math.abs(t1 - 0.5) * 2 * 10;
+      var rtop = canopyY - 8 + Math.abs(t2 - 0.5) * 2 * 10;
+      ctx.lineTo(lx, ltop);
+      ctx.quadraticCurveTo((lx+rx)/2, Math.min(ltop,rtop) - 3, rx, rtop);
+      ctx.lineTo(rx, canopyY + canopyH);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // --- Suspension lines (4 lines from canopy edge to harness) ---
+    var harnessY = y - 6;
+    ctx.strokeStyle = 'rgba(200,180,240,0.55)';
+    ctx.lineWidth = 1;
+    var lineAnchors = [-canopyW, -canopyW*0.4, canopyW*0.4, canopyW];
+    for(var i = 0; i < lineAnchors.length; i++){
+      ctx.beginPath();
+      ctx.moveTo(x + lineAnchors[i], canopyY + canopyH);
+      ctx.lineTo(x + (i < 2 ? -3 : 3), harnessY);
+      ctx.stroke();
+    }
+
+    // --- Stick figure ---
+    var headR = 4;
+    var headY = y - 2;
+    var bodyTop = headY + headR;
+    var bodyBot = bodyTop + 12;
+
+    // head
+    ctx.fillStyle = '#f0d8b8';
+    ctx.strokeStyle = '#c8a882';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.arc(x, headY, headR, 0, Math.PI*2);
     ctx.fill();
+    ctx.stroke();
+
+    // body
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, bodyTop);
+    ctx.lineTo(x, bodyBot);
+    ctx.stroke();
+
+    // arms (spread out holding lines)
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 8, bodyTop + 2);
+    ctx.lineTo(x, bodyTop + 5);
+    ctx.lineTo(x + 8, bodyTop + 2);
+    ctx.stroke();
+
+    // legs (dangling, slightly spread)
+    ctx.beginPath();
+    ctx.moveTo(x, bodyBot);
+    ctx.lineTo(x - 5, bodyBot + 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, bodyBot);
+    ctx.lineTo(x + 5, bodyBot + 8);
+    ctx.stroke();
+
+    // little boots
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x - 7, bodyBot + 6, 4, 3);
+    ctx.fillRect(x + 3, bodyBot + 6, 4, 3);
   }
 
   function drawTrail(){
@@ -510,15 +603,21 @@ var Game = (function(){
     drawWindMotes();
     drawTrail();
     if(state === 'draw'){
-      // draw spawn indicator
-      ctx.fillStyle = 'rgba(192,132,252,0.3)';
+      // draw spawn indicator — pulsing glow
+      var pulse = 0.3 + Math.sin(Date.now() * 0.004) * 0.15;
+      ctx.fillStyle = 'rgba(192,132,252,' + pulse + ')';
       ctx.beginPath();
-      ctx.arc(lv.spawn.x * W, lv.spawn.y * H, 12, 0, Math.PI*2);
+      ctx.arc(lv.spawn.x * W, lv.spawn.y * H, 18, 0, Math.PI*2);
       ctx.fill();
+      // mini stick figure preview
+      var sx = lv.spawn.x * W, sy = lv.spawn.y * H;
       ctx.fillStyle = '#c084fc';
-      ctx.beginPath();
-      ctx.arc(lv.spawn.x * W, lv.spawn.y * H, 5, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(sx, sy - 2, 3, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(sx, sy+1); ctx.lineTo(sx, sy+8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx-4,sy+3); ctx.lineTo(sx,sy+4); ctx.lineTo(sx+4,sy+3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx,sy+8); ctx.lineTo(sx-3,sy+12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx,sy+8); ctx.lineTo(sx+3,sy+12); ctx.stroke();
     }
     if(chute && (state === 'fly' || state === 'landed' || state === 'crashed')){
       drawChute();
