@@ -153,7 +153,7 @@ function buildLevels(){
       {type:'tree', x:0.12, y:G-0.22, w:0.05, h:0.22},
       {type:'tree', x:0.38, y:G-0.25, w:0.06, h:0.25},   // taller middle tree
       {type:'tree', x:0.60, y:G-0.20, w:0.05, h:0.20},
-      {type:'bird', x:0.20, y:0.30, w:0.03, h:0.015, vx:0.04, vy:0.005}
+      {type:'bird', x:0.20, y:0.30, w:0.03, h:0.015, vx:0.15, vy:0.02}
     ],
     theme:'day'
   });
@@ -183,7 +183,7 @@ function buildLevels(){
       {type:'building', x:0.18, y:G-0.50, w:0.12, h:0.50, floors:6, color:'#4a5568'},
       {type:'building', x:0.68, y:G-0.45, w:0.10, h:0.45, floors:5, color:'#5a5a6a'},
       {type:'building', x:0.40, y:G-0.22, w:0.07, h:0.22, floors:2, color:'#6b6b7b'},
-      {type:'bird',     x:0.10, y:0.20, w:0.03, h:0.015, vx:0.05, vy:0.0}
+      {type:'bird',     x:0.10, y:0.20, w:0.03, h:0.015, vx:0.18, vy:0.0}
     ],
     theme:'sunset'
   });
@@ -191,12 +191,14 @@ function buildLevels(){
   // ─── Lv6: Airport Approach ─── (~80 solutions)
   // Two planes crossing at different heights — timing matters.
   // Ground fences with gap, small control tower grounded.
+  // Planes start ON screen and move fast enough to be a real threat.
   levels.push({
     spawn:{x:0.50,y:0.08},
     land:{x:0.50,y:G,w:0.10},
     obstacles:[
-      {type:'plane',    x:-0.10, y:0.25, w:0.08, h:0.025, vx:0.06, vy:0.0},
-      {type:'plane',    x:1.10,  y:0.50, w:0.08, h:0.025, vx:-0.05, vy:0.0},
+      {type:'plane',    x:0.05,  y:0.28, w:0.08, h:0.025, vx:0.25, vy:0.0},   // fast right-mover
+      {type:'plane',    x:0.85,  y:0.52, w:0.08, h:0.025, vx:-0.20, vy:0.0},  // fast left-mover
+      {type:'plane',    x:0.45,  y:0.40, w:0.07, h:0.02,  vx:0.18, vy:0.0},   // third plane mid
       {type:'fence',    x:0.00,  y:G-0.035, w:0.36, h:0.035},   // left fence, grounded
       {type:'fence',    x:0.64,  y:G-0.035, w:0.36, h:0.035},   // right fence, grounded (gap 0.36-0.64)
       {type:'building', x:0.00,  y:G-0.15, w:0.07, h:0.15, floors:1, color:'#4a5568'} // control tower, grounded
@@ -215,24 +217,36 @@ function buildLevels(){
       {type:'building', x:0.25, y:G-0.30, w:0.12, h:0.30, floors:3, color:'#7a6a5a'},
       {type:'building', x:0.72, y:G-0.18, w:0.08, h:0.18, floors:2, color:'#5a6a5a'},
       {type:'tree',     x:0.02, y:G-0.20, w:0.05, h:0.20},  // tree near landing, grounded
-      {type:'bird',     x:0.05, y:0.35, w:0.025, h:0.012, vx:0.03, vy:0.008}
+      {type:'bird',     x:0.05, y:0.35, w:0.025, h:0.012, vx:0.12, vy:0.02}
     ],
     theme:'sunset'
   });
 
   // ─── Lv8: City Maze ─── (~20 solutions)
-  // Dense buildings on both sides + center gap. Balloon mid-air.
-  // Very narrow corridor to thread through.
+  // Dense buildings create a true maze with narrow corridors.
+  // Must zigzag through gaps between staggered buildings.
+  // Balloon blocks the obvious path, bird patrols corridor.
   levels.push({
     spawn:{x:0.50,y:0.08},
     land:{x:0.50,y:G,w:0.07},
     obstacles:[
-      {type:'building', x:0.10, y:G-0.45, w:0.12, h:0.45, floors:5, color:'#5a5a6a'},
-      {type:'building', x:0.78, y:G-0.45, w:0.12, h:0.45, floors:5, color:'#6a5a5a'},
-      {type:'building', x:0.30, y:G-0.30, w:0.08, h:0.30, floors:3, color:'#4a6a5a'},
-      {type:'building', x:0.62, y:G-0.30, w:0.08, h:0.30, floors:3, color:'#5a4a6a'},
-      {type:'balloon',  x:0.44, y:0.18, w:0.05, h:0.09},   // floating, blocks upper center
-      {type:'bird',     x:0.90, y:0.15, w:0.025, h:0.012, vx:-0.04, vy:0.003}
+      // Left wall — two buildings with gap between
+      {type:'building', x:0.00, y:G-0.50, w:0.14, h:0.50, floors:6, color:'#5a5a6a'},
+      {type:'building', x:0.00, y:0.00,   w:0.14, h:0.25, floors:3, color:'#4a4a5a'},
+      // Right wall — two buildings with gap between
+      {type:'building', x:0.86, y:G-0.50, w:0.14, h:0.50, floors:6, color:'#6a5a5a'},
+      {type:'building', x:0.86, y:0.00,   w:0.14, h:0.25, floors:3, color:'#5a4a5a'},
+      // Center-left block — forces right detour at top
+      {type:'building', x:0.28, y:0.08,   w:0.10, h:0.28, floors:3, color:'#4a6a5a'},
+      // Center-right block — forces left detour at mid
+      {type:'building', x:0.62, y:0.32,   w:0.10, h:0.28, floors:3, color:'#5a4a6a'},
+      // Lower center blocks — narrow corridor to landing
+      {type:'building', x:0.22, y:G-0.25, w:0.12, h:0.25, floors:2, color:'#5a5a5a'},
+      {type:'building', x:0.66, y:G-0.25, w:0.12, h:0.25, floors:2, color:'#5a5a5a'},
+      // Balloon blocks the middle shortcut
+      {type:'balloon',  x:0.44, y:0.20, w:0.05, h:0.09},
+      // Bird patrols the lower corridor
+      {type:'bird',     x:0.30, y:0.55, w:0.025, h:0.012, vx:0.15, vy:0.0}
     ],
     theme:'sunset'
   });
@@ -248,8 +262,8 @@ function buildLevels(){
       {type:'building', x:0.38, y:G-0.25, w:0.08, h:0.25, floors:3, color:'#4a5a6a'},  // bottom wall, grounded
       // gap between walls: y 0.45 to 0.61 — must fly through
       {type:'tree',     x:0.62, y:G-0.22, w:0.05, h:0.22},  // grounded right side
-      {type:'plane',    x:-0.10, y:0.35, w:0.07, h:0.02, vx:0.04, vy:0.0},
-      {type:'bird',     x:0.70, y:0.10, w:0.025, h:0.012, vx:-0.03, vy:0.005}
+      {type:'plane',    x:-0.10, y:0.35, w:0.07, h:0.02, vx:0.20, vy:0.0},
+      {type:'bird',     x:0.70, y:0.10, w:0.025, h:0.012, vx:-0.12, vy:0.015}
     ],
     theme:'day'
   });
@@ -265,10 +279,10 @@ function buildLevels(){
       {type:'crane',    x:0.30, y:G-0.50, w:0.025, h:0.50, armLen:0.15},                // crane, grounded
       {type:'building', x:0.50, y:G-0.40, w:0.08, h:0.40, floors:4, color:'#5a5a4a'},   // center
       {type:'tree',     x:0.78, y:G-0.20, w:0.05, h:0.20},                              // tree near landing
-      {type:'plane',    x:-0.10, y:0.18, w:0.07, h:0.02, vx:0.05, vy:0.0},              // high plane →
-      {type:'plane',    x:1.10,  y:0.55, w:0.07, h:0.02, vx:-0.04, vy:0.0},             // mid plane ←
-      {type:'bird',     x:0.60, y:0.22, w:0.03, h:0.015, vx:-0.06, vy:0.004},
-      {type:'bird',     x:0.20, y:0.50, w:0.025, h:0.012, vx:0.04, vy:-0.003},
+      {type:'plane',    x:0.05,  y:0.18, w:0.07, h:0.02, vx:0.22, vy:0.0},              // high plane →
+      {type:'plane',    x:0.90,  y:0.55, w:0.07, h:0.02, vx:-0.18, vy:0.0},             // mid plane ←
+      {type:'bird',     x:0.60, y:0.22, w:0.03, h:0.015, vx:-0.20, vy:0.01},
+      {type:'bird',     x:0.20, y:0.50, w:0.025, h:0.012, vx:0.15, vy:-0.008},
       {type:'balloon',  x:0.68, y:0.28, w:0.05, h:0.09},   // floating, blocks right path
       {type:'fence',    x:0.72, y:G-0.035, w:0.14, h:0.035} // fence before landing, grounded (ends at 0.86, landing starts 0.89)
     ],
