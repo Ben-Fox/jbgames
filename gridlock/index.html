@@ -204,12 +204,30 @@ function drawScene(){
     ctx.fillRect(Math.random()*W,oy-8+Math.random()*(gh+28),Math.random()*30+10,3);
   }
 
-  // ── SIDEWALK around lot ──
+  // ── SIDEWALKS on all sides ──
+  var sw=12;
   ctx.fillStyle='#cdc8bc';
-  roundRect(ctx,ox-8,oy-8,gw+16+exitW,gh+16,6);ctx.fill();
+  // top sidewalk
+  ctx.fillRect(ox-sw,oy-sw,gw+sw*2+exitW,sw);
+  // bottom sidewalk
+  ctx.fillRect(ox-sw,oy+gh,gw+sw*2+exitW,sw);
+  // left sidewalk
+  ctx.fillRect(ox-sw,oy,sw,gh);
+  // right sidewalk (with gap for exit driveway connecting to road)
+  ctx.fillRect(ox+gw,oy,exitW+sw,EXIT_ROW*CELL);
+  ctx.fillRect(ox+gw,oy+(EXIT_ROW+1)*CELL,exitW+sw,gh-(EXIT_ROW+1)*CELL);
+  // sidewalk cracks
   ctx.strokeStyle='#b5b0a3';ctx.lineWidth=1;
-  for(var i=1;i<=3;i++){
-    ctx.beginPath();ctx.moveTo(ox-8,oy+i*(gh/4));ctx.lineTo(ox+gw+8+exitW,oy+i*(gh/4));ctx.stroke();
+  // horizontal cracks on top/bottom
+  for(var i=0;i<Math.ceil((gw+sw*2+exitW)/40);i++){
+    var cx2=ox-sw+i*40;
+    ctx.beginPath();ctx.moveTo(cx2,oy-sw);ctx.lineTo(cx2,oy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx2,oy+gh);ctx.lineTo(cx2,oy+gh+sw);ctx.stroke();
+  }
+  // vertical cracks on left
+  for(var i=0;i<Math.ceil(gh/40);i++){
+    var cy2=oy+i*40;
+    ctx.beginPath();ctx.moveTo(ox-sw,cy2);ctx.lineTo(ox,cy2);ctx.stroke();
   }
 
   // ── PARKING LOT SURFACE ──
