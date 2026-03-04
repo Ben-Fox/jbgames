@@ -41,6 +41,7 @@ canvas{display:block;border-radius:8px}
     <button class="btn secondary" id="clearBtn" onclick="Game.clearWinds()">Clear</button>
     <button class="btn secondary" id="undoBtn" onclick="Game.undo()">Undo</button>
     <button class="btn secondary" id="resetBtn" onclick="Game.resetLevel()">Reset</button>
+    <button class="btn secondary" id="speedBtn" onclick="Game.toggleSpeed()">1x</button>
   </div>
 </div>
 <div id="overlay">
@@ -66,6 +67,8 @@ var Game = (function(){
   var landResult = null;
   var animFrame = null;
   var bestScores = {};
+  var speed = 1;
+  var speedLevels = [1, 2, 4];
 
   // --- Sizing ---
   function resize(){
@@ -543,6 +546,7 @@ var Game = (function(){
     updateWindMotes(dt);
 
     if(state === 'fly' && chute){
+      dt *= speed;
       // gravity
       chute.vy += chute.gravity * dt;
       // wind forces
@@ -777,6 +781,8 @@ var Game = (function(){
       windMotes = [];
       document.getElementById('overlay').className = 'hidden';
       document.getElementById('launchBtn').disabled = false;
+      speed = 1;
+      document.getElementById('speedBtn').textContent = '1x';
       updateHud();
     },
     nextLevel: function(){
@@ -787,6 +793,11 @@ var Game = (function(){
     goToLevel: function(n){
       level = n;
       this.resetLevel();
+    },
+    toggleSpeed: function(){
+      var idx = (speedLevels.indexOf(speed) + 1) % speedLevels.length;
+      speed = speedLevels[idx];
+      document.getElementById('speedBtn').textContent = speed + 'x';
     },
     init: function(){
       buildLevels();
