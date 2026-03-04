@@ -79,24 +79,21 @@ var animating=false,solved=false,bestMoves={};
 var ambientCars=[];
 var AMB_COLORS=['#1565c0','#2e7d32','#f57f17','#6a1b9a','#c62828','#00838f','#e65100','#ad1457','#283593','#4e342e'];
 function spawnAmbient(){
-  var dir=Math.random()<0.5?1:-1;
-  var lane=Math.random()<0.5?0:1;
-  var spd=1.2+Math.random()*1.8;
+  var spd=0.8+Math.random()*1.2;
   ambientCars.push({
-    x:dir>0?-60:W+60,
-    lane:lane,
-    dir:dir,
-    speed:spd*dir,
+    x:-CELL*2.5,
+    dir:1,
+    speed:spd,
     color:AMB_COLORS[Math.floor(Math.random()*AMB_COLORS.length)],
-    len:Math.random()<0.2?48:32
+    len:Math.random()<0.2?3:2
   });
 }
 function updateAmbient(){
   for(var i=ambientCars.length-1;i>=0;i--){
     ambientCars[i].x+=ambientCars[i].speed;
-    if(ambientCars[i].x<-80||ambientCars[i].x>W+80)ambientCars.splice(i,1);
+    if(ambientCars[i].x>W+CELL*3)ambientCars.splice(i,1);
   }
-  if(ambientCars.length<3&&Math.random()<0.015)spawnAmbient();
+  if(ambientCars.length<2&&Math.random()<0.008)spawnAmbient();
 }
 
 var COLORS=[
@@ -121,7 +118,7 @@ function buildLevels(){
 function resize(){
   var maxS=Math.min(window.innerWidth-20,window.innerHeight-140,500);
   CELL=Math.floor(maxS/GRID);
-  PAD_TOP=20;PAD_SIDE=20;ROAD_H=52;
+  PAD_TOP=20;PAD_SIDE=20;ROAD_H=CELL+8;
   var exitW=Math.floor(CELL*0.7);
   W=PAD_SIDE*2+CELL*GRID+exitW;
   H=PAD_TOP+CELL*GRID+12+ROAD_H+10;
@@ -286,25 +283,21 @@ function drawScene(){
   ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText('P',ox+gw/2,oy-1);
 
-  // ── ROAD (bottom) ──
+  // ── ROAD (bottom, single lane, same scale as puzzle) ──
   var roadY=oy+gh+12;
   // Road surface
   ctx.fillStyle='#555';
   ctx.fillRect(0,roadY,W,ROAD_H);
-  // Road edge lines
-  ctx.fillStyle='#f5d442';
+  // Road edge lines (white)
+  ctx.fillStyle='#fff';
   ctx.fillRect(0,roadY,W,3);
   ctx.fillRect(0,roadY+ROAD_H-3,W,3);
-  // Center dashed line
-  ctx.strokeStyle='#f5d442';ctx.lineWidth=2;ctx.setLineDash([14,10]);
-  ctx.beginPath();ctx.moveTo(0,roadY+ROAD_H/2);ctx.lineTo(W,roadY+ROAD_H/2);ctx.stroke();
-  ctx.setLineDash([]);
 
-  // ── AMBIENT CARS on road ──
+  // ── AMBIENT CARS on road (same scale as puzzle cars) ──
   for(var i=0;i<ambientCars.length;i++){
     var ac=ambientCars[i];
-    var cy=ac.lane===0?roadY+ROAD_H*0.25:roadY+ROAD_H*0.75;
-    drawAmbientCar(ac.x,cy,ac.color,ac.len,ac.dir);
+    var cy=roadY+ROAD_H/2;
+    drawAmbientCar(ac.x,cy,ac.color,ac.len);
   }
 
   // ── GREEN STRIP below road ──
@@ -338,31 +331,41 @@ function drawCone(cx,cy){
   ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+8,cy);ctx.lineTo(cx+4,cy-12);ctx.closePath();ctx.stroke();
 }
 
-function drawAmbientCar(ax,ay,color,len,dir){
-  var cw=len,ch=18,r=5;
-  var x=ax-cw/2,y=ay-ch/2;
-  // shadow
+function drawAmbientCar(ax,ay,color,cellLen){
+  // Draw using same style as puzzle vehicles, horizontal, CELL-scaled
+  var m=4,r=8;
+  var w=cellLen*CELL-m*2,h=CELL-m*2;
+  var x=ax+m,y=ay-CELL/2+m;
+
   ctx.fillStyle='rgba(0,0,0,0.2)';
-  roundRect(ctx,x+1,y+2,cw,ch,r);ctx.fill();
-  // body
+  roundRect(ctx,x+2,y+3,w,h,r);ctx.fill();
   ctx.fillStyle=color;
-  roundRect(ctx,x,y,cw,ch,r);ctx.fill();
-  // sheen
-  var sh=ctx.createLinearGradient(x,y,x,y+ch);
-  sh.addColorStop(0,'rgba(255,255,255,0.3)');sh.addColorStop(0.4,'rgba(255,255,255,0)');
-  ctx.fillStyle=sh;roundRect(ctx,x,y,cw,ch,r);ctx.fill();
-  // outline
-  ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1.5;
-  roundRect(ctx,x,y,cw,ch,r);ctx.stroke();
-  // windshield
-  ctx.fillStyle='rgba(135,206,235,0.6)';
-  var wx=dir>0?x+cw*0.6:x+cw*0.12;
-  roundRect(ctx,wx,y+2,cw*0.24,ch-4,3);ctx.fill();
+  roundRect(ctx,x,y,w,h,r);ctx.fill();
+  var shade=ctx.createLinearGradient(x,y,x,y+h);
+  shade.addColorStop(0,'rgba(255,255,255,0.35)');shade.addColorStop(0.35,'rgba(255,255,255,0.1)');
+  shade.addColorStop(0.65,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,0.15)');
+  ctx.fillStyle=shade;roundRect(ctx,x,y,w,h,r);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=2;
+  roundRect(ctx,x,y,w,h,r);ctx.stroke();
+  // window
+  ctx.fillStyle='rgba(135,206,235,0.65)';ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1.5;
+  var cabX=x+w*0.25,cabW=w*0.5,cabY=y+3,cabH=h-6;
+  roundRect(ctx,cabX,cabY,cabW,cabH,5);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cabX+cabW/2,cabY);ctx.lineTo(cabX+cabW/2,cabY+cabH);ctx.stroke();
   // headlights
-  ctx.fillStyle='rgba(255,255,200,0.6)';
-  var hx=dir>0?x+cw-3:x+1;
-  ctx.beginPath();ctx.arc(hx,y+4,2,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(hx,y+ch-4,2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff9c4';ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(x+w-7,y+8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(x+w-7,y+h-8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ff5252';
+  ctx.beginPath();ctx.arc(x+7,y+8,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+7,y+h-8,3,0,Math.PI*2);ctx.fill();
+  // wheels
+  ctx.fillStyle='#333';
+  var wh2=Math.min(7,CELL*0.09),woff3=w*0.18;
+  roundRect(ctx,x+woff3-2,y-2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+woff3-2,y+h-wh2+2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+w-woff3-7,y-2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+w-woff3-7,y+h-wh2+2,9,wh2,2);ctx.fill();
 }
 
 function drawVehicle(v,ox,oy){
