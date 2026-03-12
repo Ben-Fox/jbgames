@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Ember — BrainSmacks</title>
+<meta name="description" content="Keep your flame alive! Dodge water drops, collect fuel, and rise as high as you can in this addictive survival game.">
+<link rel="canonical" href="https://brainsmacks.com/ember/">
+<meta property="og:title" content="Ember — BrainSmacks">
+<meta property="og:description" content="Keep your flame alive! Dodge water drops and collect fuel to rise higher.">
+<meta property="og:url" content="https://brainsmacks.com/ember/">
+<meta property="og:type" content="website">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;overflow:hidden;height:100vh;height:100dvh;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Roboto,'Helvetica Neue',sans-serif}
+canvas{display:block;width:100%;height:100%}
+#homeBtn{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(255,255,255,.08);color:#ccc;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;opacity:.5;transition:opacity .2s}
+#homeBtn:hover{opacity:1}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;pointer-events:none}
+#ui.active{pointer-events:auto}
+#title{font-size:52px;font-weight:900;color:#ff6b2b;text-shadow:0 0 40px rgba(255,107,43,.5),0 0 80px rgba(255,60,0,.3);letter-spacing:-2px;margin-bottom:4px}
+#subtitle{color:#ff9a5c;font-size:14px;margin-bottom:24px;opacity:.7}
+.menu-btn{background:linear-gradient(135deg,#ff6b2b,#ff4500);color:#fff;border:none;padding:14px 40px;border-radius:30px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(255,69,0,.4);letter-spacing:.5px;margin:4px}
+.menu-btn:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(255,69,0,.6)}
+.menu-btn:active{transform:translateY(1px)}
+.menu-btn.sm{background:rgba(255,255,255,.08);box-shadow:none;padding:10px 24px;font-size:13px}
+.menu-btn.sm:hover{background:rgba(255,255,255,.15)}
+#score-display{position:fixed;top:14px;right:16px;z-index:20;text-align:right}
+#score-display .score{font-size:28px;font-weight:900;color:#ff9a5c;text-shadow:0 0 20px rgba(255,107,43,.3);line-height:1}
+#score-display .label{font-size:10px;color:rgba(255,154,92,.4);text-transform:uppercase;letter-spacing:2px}
+#fuel-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:20;width:120px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+#fuel-fill{width:100%;height:100%;background:linear-gradient(90deg,#ff4500,#ff6b2b,#ffaa00);border-radius:3px;transition:width .15s;box-shadow:0 0 8px rgba(255,69,0,.5)}
+#game-over{display:none;flex-direction:column;align-items:center}
+#game-over.show{display:flex}
+#go-score{font-size:64px;font-weight:900;color:#ff6b2b;text-shadow:0 0 40px rgba(255,107,43,.5);line-height:1;margin-bottom:0}
+#go-label{font-size:12px;color:rgba(255,154,92,.5);text-transform:uppercase;letter-spacing:3px;margin-bottom:4px}
+#go-best{font-size:14px;color:#ff9a5c;margin-bottom:4px;opacity:.6}
+#go-height{font-size:13px;color:rgba(255,154,92,.4);margin-bottom:20px}
+#go-new{font-size:13px;color:#ffaa00;font-weight:700;margin-bottom:8px;display:none}
+.stats-row{display:flex;gap:20px;margin-bottom:20px}
+.stat-box{text-align:center}
+.stat-box .sv{font-size:22px;font-weight:800;color:#ff9a5c}
+.stat-box .sl{font-size:10px;color:rgba(255,154,92,.4);text-transform:uppercase;letter-spacing:1px}
+#start-screen{display:flex;flex-direction:column;align-items:center}
+#instructions{color:rgba(255,154,92,.5);font-size:12px;margin-top:16px;text-align:center;line-height:1.8;max-width:260px}
+</style>
+</head>
+<body>
+<a id="homeBtn" href="/">← BrainSmacks</a>
+<canvas id="c"></canvas>
+<div id="fuel-bar" style="display:none"><div id="fuel-fill"></div></div>
+<div id="score-display" style="display:none">
+  <div class="label">Height</div>
+  <div class="score" id="live-score">0</div>
+</div>
+<div id="ui" class="active">
+  <div id="start-screen">
+    <div id="title">Ember</div>
+    <div id="subtitle">Keep the flame alive</div>
+    <button class="menu-btn" id="playBtn">Play</button>
+    <div id="instructions">
+      Tap left or right to dash<br>
+      Dodge 💧 water drops<br>
+      Collect 🪵 fuel to stay lit<br>
+      Rise as high as you can!
+    </div>
+  </div>
+  <div id="game-over">
+    <div id="go-label">Final Height</div>
+    <div id="go-score">0</div>
+    <div id="go-new">★ New Best! ★</div>
+    <div id="go-best">Best: 0</div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="sv" id="go-fuel">0</div><div class="sl">Fuel</div></div>
+      <div class="stat-box"><div class="sv" id="go-time">0s</div><div class="sl">Time</div></div>
+      <div class="stat-box"><div class="sv" id="go-dodged">0</div><div class="sl">Dodged</div></div>
+    </div>
+    <button class="menu-btn" id="retryBtn">Try Again</button>
+    <button class="menu-btn sm" id="menuBtn" style="margin-top:8px">Menu</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- Canvas setup ----
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var W, H, dpr;
+
+  function resize(){
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ---- Constants ----
+  var FLAME_SIZE = 18;
+  var DASH_SPEED = 8;
+  var DASH_DIST = 65;
+  var RISE_SPEED = 0.6;
+  var FUEL_MAX = 100;
+  var FUEL_DRAIN = 0.12; // per frame
+  var FUEL_GAIN = 25;
+  var WATER_BASE_SPEED = 1.5;
+  var WATER_SPAWN_BASE = 80; // frames between spawns (lower = more)
+  var FUEL_SPAWN_BASE = 120;
+  var GRAVITY = 0.15;
+
+  // ---- State ----
+  var state = 'menu'; // menu, play, dead
+  var flame = {x:0, y:0, vx:0, vy:0, fuel:FUEL_MAX, size:FLAME_SIZE, dashDir:0, dashT:0};
+  var particles = [];
+  var waters = [];
+  var fuels = [];
+  var sparks = [];
+  var bgStars = [];
+  var score = 0;
+  var height = 0;
+  var bestScore = 0;
+  var totalFuel = 0;
+  var totalDodged = 0;
+  var startTime = 0;
+  var frameCount = 0;
+  var screenShake = 0;
+  var deathFlash = 0;
+  var camY = 0;
+
+  // Load best
+  try { bestScore = parseInt(localStorage.getItem('ember_best')) || 0; } catch(e){}
+
+  // ---- Background stars ----
+  function initStars(){
+    bgStars = [];
+    for(var i=0;i<80;i++){
+      bgStars.push({
+        x: Math.random()*W,
+        y: Math.random()*H*3,
+        s: Math.random()*1.5+0.5,
+        a: Math.random()*0.3+0.05,
+        speed: Math.random()*0.3+0.1
+      });
+    }
+  }
+  initStars();
+
+  // ---- Particles ----
+  function spawnFlameParticle(){
+    var angle = Math.random()*Math.PI*2;
+    var speed = Math.random()*1.5+0.5;
+    var sz = Math.random()*6+3;
+    particles.push({
+      x: flame.x + (Math.random()-0.5)*flame.size*0.6,
+      y: flame.y + (Math.random()-0.5)*flame.size*0.3,
+      vx: Math.cos(angle)*speed*0.3 + flame.vx*0.2,
+      vy: -Math.random()*2 - 1,
+      size: sz,
+      life: 1,
+      decay: Math.random()*0.03+0.02,
+      type: 'flame'
+    });
+  }
+
+  function spawnSpark(x, y, color){
+    for(var i=0;i<8;i++){
+      var angle = Math.random()*Math.PI*2;
+      var speed = Math.random()*4+2;
+      sparks.push({
+        x:x, y:y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        life:1, decay:0.03+Math.random()*0.02,
+        color: color,
+        size: Math.random()*3+1
+      });
+    }
+  }
+
+  function spawnDeathParticles(){
+    for(var i=0;i<40;i++){
+      var angle = Math.random()*Math.PI*2;
+      var speed = Math.random()*5+1;
+      particles.push({
+        x: flame.x + (Math.random()-0.5)*20,
+        y: flame.y + (Math.random()-0.5)*20,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed - 2,
+        size: Math.random()*8+3,
+        life: 1,
+        decay: 0.015+Math.random()*0.01,
+        type: 'death'
+      });
+    }
+  }
+
+  // ---- Water drops ----
+  function spawnWater(){
+    var x = Math.random()*(W-40)+20;
+    var speed = WATER_BASE_SPEED + height*0.003 + Math.random()*0.5;
+    var sz = Math.random()*6+8;
+    waters.push({
+      x: x,
+      y: camY - 40,
+      vy: speed,
+      size: sz,
+      wobble: Math.random()*Math.PI*2,
+      wobbleSpeed: Math.random()*0.05+0.02
+    });
+  }
+
+  // ---- Fuel pickups ----
+  function spawnFuel(){
+    var x = Math.random()*(W-60)+30;
+    fuels.push({
+      x: x,
+      y: camY - 30 - Math.random()*60,
+      size: 10,
+      glow: 0,
+      bob: Math.random()*Math.PI*2
+    });
+  }
+
+  // ---- Game logic ----
+  function startGame(){
+    state = 'play';
+    flame.x = W/2;
+    flame.y = H*0.65;
+    flame.vx = 0;
+    flame.vy = 0;
+    flame.fuel = FUEL_MAX;
+    flame.size = FLAME_SIZE;
+    flame.dashDir = 0;
+    flame.dashT = 0;
+    particles = [];
+    waters = [];
+    fuels = [];
+    sparks = [];
+    score = 0;
+    height = 0;
+    totalFuel = 0;
+    totalDodged = 0;
+    frameCount = 0;
+    camY = 0;
+    screenShake = 0;
+    deathFlash = 0;
+    startTime = Date.now();
+
+    document.getElementById('ui').classList.remove('active');
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over').classList.remove('show');
+    document.getElementById('fuel-bar').style.display = '';
+    document.getElementById('score-display').style.display = '';
+  }
+
+  function die(reason){
+    if(state !== 'play') return;
+    state = 'dead';
+    spawnDeathParticles();
+    screenShake = 15;
+    deathFlash = 1;
+
+    var finalScore = Math.floor(height);
+    var isNew = finalScore > bestScore;
+    if(isNew){
+      bestScore = finalScore;
+      try { localStorage.setItem('ember_best', bestScore); } catch(e){}
+    }
+
+    var elapsed = ((Date.now()-startTime)/1000)|0;
+
+    setTimeout(function(){
+      document.getElementById('go-score').textContent = finalScore;
+      document.getElementById('go-best').textContent = 'Best: ' + bestScore;
+      document.getElementById('go-fuel').textContent = totalFuel;
+      document.getElementById('go-time').textContent = elapsed + 's';
+      document.getElementById('go-dodged').textContent = totalDodged;
+      document.getElementById('go-new').style.display = isNew ? '' : 'none';
+      document.getElementById('game-over').classList.add('show');
+      document.getElementById('ui').classList.add('active');
+      document.getElementById('fuel-bar').style.display = 'none';
+      document.getElementById('score-display').style.display = 'none';
+    }, 800);
+  }
+
+  function dash(dir){
+    if(state !== 'play') return;
+    flame.vx = dir * DASH_SPEED;
+    flame.dashDir = dir;
+    flame.dashT = DASH_DIST / DASH_SPEED;
+  }
+
+  // ---- Input ----
+  function onInput(x){
+    if(state === 'play'){
+      if(x < W/2) dash(-1);
+      else dash(1);
+    }
+  }
+
+  canvas.addEventListener('mousedown', function(e){ onInput(e.clientX); });
+  canvas.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    if(e.touches.length > 0) onInput(e.touches[0].clientX);
+  }, {passive:false});
+
+  document.getElementById('playBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', startGame);
+  document.getElementById('menuBtn').addEventListener('click', function(){
+    document.getElementById('game-over').classList.remove('show');
+    document.getElementById('start-screen').style.display = 'flex';
+  });
+
+  // ---- Update ----
+  function update(){
+    if(state !== 'play') return;
+    frameCount++;
+
+    // Rise
+    height += RISE_SPEED + height*0.0001;
+    camY -= RISE_SPEED - height*0.0001;
+
+    // Fuel drain (faster over time)
+    flame.fuel -= FUEL_DRAIN + height*0.00008;
+    flame.fuel = Math.max(0, flame.fuel);
+    flame.size = FLAME_SIZE * (0.4 + 0.6*(flame.fuel/FUEL_MAX));
+
+    if(flame.fuel <= 0) {
+      die('burnout');
+      return;
+    }
+
+    // Update fuel bar
+    document.getElementById('fuel-fill').style.width = flame.fuel + '%';
+
+    // Dash movement
+    if(flame.dashT > 0){
+      flame.x += flame.vx;
+      flame.dashT--;
+      if(flame.dashT <= 0){
+        flame.vx *= 0.2;
+      }
+    } else {
+      flame.vx *= 0.9;
+      flame.x += flame.vx;
+    }
+
+    // Gentle float
+    flame.y += Math.sin(frameCount*0.03)*0.3;
+
+    // Keep in bounds
+    if(flame.x < flame.size) { flame.x = flame.size; flame.vx = 0; }
+    if(flame.x > W-flame.size) { flame.x = W-flame.size; flame.vx = 0; }
+
+    // Spawn waters (more frequent as height increases)
+    var waterInterval = Math.max(15, WATER_SPAWN_BASE - height*0.15);
+    if(frameCount % Math.floor(waterInterval) === 0){
+      spawnWater();
+      // Extra water at higher heights
+      if(height > 50 && Math.random() < 0.3) spawnWater();
+      if(height > 150 && Math.random() < 0.3) spawnWater();
+    }
+
+    // Spawn fuel
+    var fuelInterval = Math.max(60, FUEL_SPAWN_BASE + height*0.05);
+    if(frameCount % Math.floor(fuelInterval) === 0){
+      spawnFuel();
+    }
+
+    // Update waters
+    var flameScreenY = flame.y;
+    for(var i=waters.length-1; i>=0; i--){
+      var w = waters[i];
+      w.y += w.vy;
+      w.wobble += w.wobbleSpeed;
+      w.x += Math.sin(w.wobble)*0.5;
+
+      // Off screen
+      if(w.y > H + 40){
+        totalDodged++;
+        waters.splice(i,1);
+        continue;
+      }
+
+      // Collision with flame
+      var dx = w.x - flame.x;
+      var dy = w.y - flameScreenY;
+      var dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist < flame.size*0.7 + w.size*0.5){
+        // HIT!
+        spawnSpark(flame.x, flameScreenY, '#4488ff');
+        screenShake = 8;
+        die('water');
+        return;
+      }
+    }
+
+    // Update fuels
+    for(var i=fuels.length-1; i>=0; i--){
+      var f = fuels[i];
+      f.bob += 0.04;
+      f.glow = (f.glow+0.05)%1;
+      var fy = f.y - camY + H*0.65;
+
+      // Off screen (below)
+      if(fy > H + 40){
+        fuels.splice(i,1);
+        continue;
+      }
+
+      // Collision
+      var dx = f.x - flame.x;
+      var dy = fy - flameScreenY;
+      var dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist < flame.size + f.size){
+        // Collected!
+        flame.fuel = Math.min(FUEL_MAX, flame.fuel + FUEL_GAIN);
+        totalFuel++;
+        spawnSpark(f.x, fy, '#ffaa00');
+        fuels.splice(i,1);
+        continue;
+      }
+    }
+
+    // Update score
+    score = Math.floor(height);
+    document.getElementById('live-score').textContent = score;
+
+    // Flame particles
+    if(frameCount % 2 === 0) spawnFlameParticle();
+    if(flame.fuel > 60 && frameCount % 3 === 0) spawnFlameParticle();
+  }
+
+  // ---- Draw ----
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // Shake
+    var sx=0, sy=0;
+    if(screenShake > 0){
+      sx = (Math.random()-0.5)*screenShake*2;
+      sy = (Math.random()-0.5)*screenShake*2;
+      screenShake *= 0.85;
+      if(screenShake < 0.5) screenShake = 0;
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // Background gradient (gets darker/more purple as you rise)
+    var progress = Math.min(1, height/300);
+    var r1 = Math.floor(10 - progress*5);
+    var g1 = Math.floor(10 - progress*8);
+    var b1 = Math.floor(15 + progress*20);
+    var grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, 'rgb('+r1+','+g1+','+b1+')');
+    grad.addColorStop(1, 'rgb('+(r1+5)+','+(g1+2)+','+(b1-5)+')');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+
+    // Stars
+    for(var i=0;i<bgStars.length;i++){
+      var s = bgStars[i];
+      var sy2 = ((s.y + height*s.speed*0.5) % (H*3)) - H;
+      ctx.globalAlpha = s.a * (0.5 + 0.5*Math.sin(frameCount*0.02+i));
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(s.x, sy2, s.s, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Fuel pickups
+    for(var i=0;i<fuels.length;i++){
+      var f = fuels[i];
+      var fy = f.y - camY + H*0.65;
+      var bobY = Math.sin(f.bob)*4;
+
+      // Glow
+      ctx.globalAlpha = 0.2 + 0.1*Math.sin(frameCount*0.08+i);
+      var fg = ctx.createRadialGradient(f.x, fy+bobY, 0, f.x, fy+bobY, 25);
+      fg.addColorStop(0, 'rgba(255,170,0,.4)');
+      fg.addColorStop(1, 'rgba(255,170,0,0)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(f.x-25, fy+bobY-25, 50, 50);
+
+      // Fuel icon (little wood chip)
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#c87533';
+      ctx.save();
+      ctx.translate(f.x, fy+bobY);
+      ctx.rotate(Math.sin(f.bob*0.7)*0.2);
+      roundRect(ctx, -7, -5, 14, 10, 2);
+      ctx.fill();
+      // Wood grain
+      ctx.strokeStyle = 'rgba(0,0,0,.2)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(-5, -2); ctx.lineTo(5, -2);
+      ctx.moveTo(-4, 1); ctx.lineTo(6, 1);
+      ctx.stroke();
+      // Glow outline
+      ctx.strokeStyle = '#ffaa00';
+      ctx.lineWidth = 1;
+      roundRect(ctx, -7, -5, 14, 10, 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Water drops
+    for(var i=0;i<waters.length;i++){
+      var w = waters[i];
+      // Drop shape
+      ctx.fillStyle = '#4488dd';
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      // Teardrop shape
+      var sz = w.size;
+      ctx.moveTo(w.x, w.y - sz*1.2);
+      ctx.quadraticCurveTo(w.x + sz*0.8, w.y, w.x, w.y + sz*0.5);
+      ctx.quadraticCurveTo(w.x - sz*0.8, w.y, w.x, w.y - sz*1.2);
+      ctx.fill();
+
+      // Highlight
+      ctx.fillStyle = 'rgba(150,200,255,.5)';
+      ctx.beginPath();
+      ctx.arc(w.x - sz*0.2, w.y - sz*0.3, sz*0.2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Particles
+    for(var i=particles.length-1;i>=0;i--){
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      if(p.life <= 0){ particles.splice(i,1); continue; }
+
+      if(p.type === 'flame'){
+        var t = 1-p.life;
+        var r = Math.floor(255);
+        var g = Math.floor(180 - t*140);
+        var b = Math.floor(50 - t*50);
+        ctx.globalAlpha = p.life * 0.7;
+        ctx.fillStyle = 'rgb('+r+','+g+','+Math.max(0,b)+')';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
+        ctx.fill();
+      } else if(p.type === 'death'){
+        var t = 1-p.life;
+        ctx.globalAlpha = p.life*0.8;
+        ctx.fillStyle = t < 0.3 ? '#ff6b2b' : t < 0.6 ? '#ff4500' : '#880000';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
+        ctx.fill();
+        p.vy += 0.05;
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Sparks
+    for(var i=sparks.length-1;i>=0;i--){
+      var s = sparks[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 0.1;
+      s.life -= s.decay;
+      if(s.life <= 0){ sparks.splice(i,1); continue; }
+      ctx.globalAlpha = s.life;
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size*s.life, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Flame (only if alive)
+    if(state === 'play'){
+      drawFlame(flame.x, flame.y, flame.size);
+    }
+
+    // Death flash
+    if(deathFlash > 0){
+      ctx.globalAlpha = deathFlash * 0.3;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha = 1;
+      deathFlash *= 0.9;
+      if(deathFlash < 0.01) deathFlash = 0;
+    }
+
+    // Menu flame animation
+    if(state === 'menu'){
+      var mx = W/2;
+      var my = H*0.35;
+      drawFlame(mx, my, 30 + Math.sin(frameCount*0.03)*3);
+      // Ambient particles
+      if(frameCount % 3 === 0){
+        var angle = Math.random()*Math.PI*2;
+        particles.push({
+          x: mx + (Math.random()-0.5)*20,
+          y: my + (Math.random()-0.5)*10,
+          vx: Math.cos(angle)*0.5,
+          vy: -Math.random()*2 - 1,
+          size: Math.random()*5+3,
+          life: 1,
+          decay: Math.random()*0.02+0.015,
+          type: 'flame'
+        });
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawFlame(x, y, size){
+    // Outer glow
+    var glow = ctx.createRadialGradient(x, y, 0, x, y, size*3);
+    glow.addColorStop(0, 'rgba(255,107,43,.15)');
+    glow.addColorStop(0.5, 'rgba(255,60,0,.05)');
+    glow.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x-size*3, y-size*3, size*6, size*6);
+
+    // Flame body (layered circles for organic shape)
+    var t = frameCount * 0.1;
+
+    // Core (white-yellow)
+    ctx.fillStyle = '#fff8e0';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(x, y, size*0.3, 0, Math.PI*2);
+    ctx.fill();
+
+    // Inner (bright orange)
+    ctx.fillStyle = '#ff8c00';
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.arc(x + Math.sin(t)*2, y - size*0.1, size*0.5, 0, Math.PI*2);
+    ctx.fill();
+
+    // Outer flame (red-orange, flickering)
+    ctx.fillStyle = '#ff4500';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(x + Math.sin(t*1.3)*3, y - size*0.3 + Math.sin(t*0.7)*2, size*0.7, 0, Math.PI*2);
+    ctx.fill();
+
+    // Tip (flickers up)
+    ctx.fillStyle = '#ff6b2b';
+    ctx.globalAlpha = 0.4 + Math.sin(t*2)*0.1;
+    ctx.beginPath();
+    ctx.arc(x + Math.sin(t*1.7)*2, y - size*0.7 + Math.sin(t)*3, size*0.35, 0, Math.PI*2);
+    ctx.fill();
+
+    // Small dancing tips
+    ctx.fillStyle = '#ff9a5c';
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(x + Math.sin(t*2.1)*4, y - size + Math.sin(t*1.3)*2, size*0.2, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+  }
+
+  // ---- Game loop ----
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+})();
+</script>
+</body>
+</html>
