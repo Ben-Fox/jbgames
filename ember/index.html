@@ -60,15 +60,15 @@ canvas{display:block;width:100%;height:100%}
     <button class="menu-btn" id="playBtn">Play</button>
     <div id="instructions">
       Tap left or right to dash<br>
-      Dodge 💧 water drops<br>
-      Collect 🪵 fuel to stay lit<br>
-      Rise as high as you can!
+      Dodge water drops<br>
+      Collect fuel to stay lit<br>
+      Rise as high as you can
     </div>
   </div>
   <div id="game-over">
     <div id="go-label">Final Height</div>
     <div id="go-score">0</div>
-    <div id="go-new">★ New Best! ★</div>
+    <div id="go-new">New Best!</div>
     <div id="go-best">Best: 0</div>
     <div class="stats-row">
       <div class="stat-box"><div class="sv" id="go-fuel">0</div><div class="sl">Fuel</div></div>
@@ -82,7 +82,6 @@ canvas{display:block;width:100%;height:100%}
 
 <script>
 (function(){
-  // ---- Canvas setup ----
   var canvas = document.getElementById('c');
   var ctx = canvas.getContext('2d');
   var W, H, dpr;
@@ -94,26 +93,29 @@ canvas{display:block;width:100%;height:100%}
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    initStars();
   }
   resize();
   window.addEventListener('resize', resize);
 
-  // ---- Constants ----
+  // Constants
   var FLAME_SIZE = 18;
   var DASH_SPEED = 8;
-  var DASH_DIST = 65;
-  var RISE_SPEED = 0.6;
+  var DASH_FRAMES = 8; // how many frames a dash lasts
   var FUEL_MAX = 100;
-  var FUEL_DRAIN = 0.12; // per frame
+  var FUEL_DRAIN = 0.12;
   var FUEL_GAIN = 25;
-  var WATER_BASE_SPEED = 1.5;
-  var WATER_SPAWN_BASE = 80; // frames between spawns (lower = more)
+  var WATER_BASE_SPEED = 2.5;
+  var WATER_SPAWN_BASE = 80;
   var FUEL_SPAWN_BASE = 120;
-  var GRAVITY = 0.15;
+  var MAX_PARTICLES = 80;
+  var MAX_SPARKS = 60;
+  var MAX_WATERS = 40;
+  var FLAME_Y_FRAC = 0.65; // flame sits at 65% of screen height
 
-  // ---- State ----
-  var state = 'menu'; // menu, play, dead
-  var flame = {x:0, y:0, vx:0, vy:0, fuel:FUEL_MAX, size:FLAME_SIZE, dashDir:0, dashT:0};
+  // State
+  var state = 'menu';
+  var flame = {x:0, y:0, vx:0, fuel:FUEL_MAX, size:FLAME_SIZE, dashT:0};
   var particles = [];
   var waters = [];
   var fuels = [];
@@ -128,37 +130,37 @@ canvas{display:block;width:100%;height:100%}
   var frameCount = 0;
   var screenShake = 0;
   var deathFlash = 0;
-  var camY = 0;
+  var worldY = 0; // how far we've risen in world coords
 
-  // Load best
   try { bestScore = parseInt(localStorage.getItem('ember_best')) || 0; } catch(e){}
 
-  // ---- Background stars ----
+  // Background stars
   function initStars(){
     bgStars = [];
     for(var i=0;i<80;i++){
       bgStars.push({
         x: Math.random()*W,
-        y: Math.random()*H*3,
+        y: Math.random()*H,
         s: Math.random()*1.5+0.5,
         a: Math.random()*0.3+0.05,
-        speed: Math.random()*0.3+0.1
+        twinkle: Math.random()*Math.PI*2
       });
     }
   }
-  initStars();
 
-  // ---- Particles ----
+  // Particles (capped)
+  function addParticle(p){
+    if(particles.length >= MAX_PARTICLES) particles.shift();
+    particles.push(p);
+  }
+
   function spawnFlameParticle(){
-    var angle = Math.random()*Math.PI*2;
-    var speed = Math.random()*1.5+0.5;
-    var sz = Math.random()*6+3;
-    particles.push({
+    addParticle({
       x: flame.x + (Math.random()-0.5)*flame.size*0.6,
       y: flame.y + (Math.random()-0.5)*flame.size*0.3,
-      vx: Math.cos(angle)*speed*0.3 + flame.vx*0.2,
+      vx: (Math.random()-0.5)*0.6 + flame.vx*0.15,
       vy: -Math.random()*2 - 1,
-      size: sz,
+      size: Math.random()*6+3,
       life: 1,
       decay: Math.random()*0.03+0.02,
       type: 'flame'
@@ -166,7 +168,8 @@ canvas{display:block;width:100%;height:100%}
   }
 
   function spawnSpark(x, y, color){
-    for(var i=0;i<8;i++){
+    var count = Math.min(8, MAX_SPARKS - sparks.length);
+    for(var i=0;i<count;i++){
       var angle = Math.random()*Math.PI*2;
       var speed = Math.random()*4+2;
       sparks.push({
@@ -181,10 +184,10 @@ canvas{display:block;width:100%;height:100%}
   }
 
   function spawnDeathParticles(){
-    for(var i=0;i<40;i++){
+    for(var i=0;i<30;i++){
       var angle = Math.random()*Math.PI*2;
       var speed = Math.random()*5+1;
-      particles.push({
+      addParticle({
         x: flame.x + (Math.random()-0.5)*20,
         y: flame.y + (Math.random()-0.5)*20,
         vx: Math.cos(angle)*speed,
@@ -197,43 +200,42 @@ canvas{display:block;width:100%;height:100%}
     }
   }
 
-  // ---- Water drops ----
+  // Water drops — all in SCREEN space (rain from top of screen)
   function spawnWater(){
-    var x = Math.random()*(W-40)+20;
-    var speed = WATER_BASE_SPEED + height*0.003 + Math.random()*0.5;
-    var sz = Math.random()*6+8;
+    if(waters.length >= MAX_WATERS) return;
+    var speed = WATER_BASE_SPEED + Math.min(height*0.004, 4) + Math.random()*0.8;
     waters.push({
-      x: x,
-      y: camY - 40,
+      x: Math.random()*(W-40)+20,
+      y: -20,
       vy: speed,
-      size: sz,
+      size: Math.random()*6+8,
       wobble: Math.random()*Math.PI*2,
-      wobbleSpeed: Math.random()*0.05+0.02
+      wobbleSpeed: Math.random()*0.04+0.015
     });
   }
 
-  // ---- Fuel pickups ----
+  // Fuel pickups — in WORLD space, converted to screen for rendering/collision
   function spawnFuel(){
-    var x = Math.random()*(W-60)+30;
     fuels.push({
-      x: x,
-      y: camY - 30 - Math.random()*60,
+      x: Math.random()*(W-60)+30,
+      wy: worldY + H*FLAME_Y_FRAC - H*0.3 - Math.random()*H*0.5, // spawn above flame in world coords
       size: 10,
-      glow: 0,
       bob: Math.random()*Math.PI*2
     });
   }
 
-  // ---- Game logic ----
+  function fuelScreenY(f){
+    return (f.wy - worldY) + H*FLAME_Y_FRAC;
+  }
+
+  // Game logic
   function startGame(){
     state = 'play';
     flame.x = W/2;
-    flame.y = H*0.65;
+    flame.y = H*FLAME_Y_FRAC;
     flame.vx = 0;
-    flame.vy = 0;
     flame.fuel = FUEL_MAX;
     flame.size = FLAME_SIZE;
-    flame.dashDir = 0;
     flame.dashT = 0;
     particles = [];
     waters = [];
@@ -244,7 +246,7 @@ canvas{display:block;width:100%;height:100%}
     totalFuel = 0;
     totalDodged = 0;
     frameCount = 0;
-    camY = 0;
+    worldY = 0;
     screenShake = 0;
     deathFlash = 0;
     startTime = Date.now();
@@ -256,7 +258,7 @@ canvas{display:block;width:100%;height:100%}
     document.getElementById('score-display').style.display = '';
   }
 
-  function die(reason){
+  function die(){
     if(state !== 'play') return;
     state = 'dead';
     spawnDeathParticles();
@@ -289,15 +291,13 @@ canvas{display:block;width:100%;height:100%}
   function dash(dir){
     if(state !== 'play') return;
     flame.vx = dir * DASH_SPEED;
-    flame.dashDir = dir;
-    flame.dashT = DASH_DIST / DASH_SPEED;
+    flame.dashT = DASH_FRAMES;
   }
 
-  // ---- Input ----
+  // Input
   function onInput(x){
     if(state === 'play'){
-      if(x < W/2) dash(-1);
-      else dash(1);
+      dash(x < W/2 ? -1 : 1);
     }
   }
 
@@ -314,72 +314,67 @@ canvas{display:block;width:100%;height:100%}
     document.getElementById('start-screen').style.display = 'flex';
   });
 
-  // ---- Update ----
+  // Update
   function update(){
     if(state !== 'play') return;
     frameCount++;
 
-    // Rise
-    height += RISE_SPEED + height*0.0001;
-    camY -= RISE_SPEED - height*0.0001;
+    // Rise (linear with gentle acceleration, capped)
+    var riseSpeed = 0.6 + Math.min(height*0.0001, 0.4);
+    height += riseSpeed;
+    worldY += riseSpeed;
 
-    // Fuel drain (faster over time)
-    flame.fuel -= FUEL_DRAIN + height*0.00008;
+    // Fuel drain (gentle increase over time, capped)
+    flame.fuel -= FUEL_DRAIN + Math.min(height*0.00008, 0.08);
     flame.fuel = Math.max(0, flame.fuel);
     flame.size = FLAME_SIZE * (0.4 + 0.6*(flame.fuel/FUEL_MAX));
 
-    if(flame.fuel <= 0) {
-      die('burnout');
+    if(flame.fuel <= 0){
+      die();
       return;
     }
 
-    // Update fuel bar
     document.getElementById('fuel-fill').style.width = flame.fuel + '%';
 
     // Dash movement
     if(flame.dashT > 0){
       flame.x += flame.vx;
       flame.dashT--;
-      if(flame.dashT <= 0){
-        flame.vx *= 0.2;
-      }
+      if(flame.dashT <= 0) flame.vx *= 0.15;
     } else {
-      flame.vx *= 0.9;
+      flame.vx *= 0.88;
+      if(Math.abs(flame.vx) < 0.1) flame.vx = 0;
       flame.x += flame.vx;
     }
 
-    // Gentle float
-    flame.y += Math.sin(frameCount*0.03)*0.3;
+    // Gentle bob
+    flame.y = H*FLAME_Y_FRAC + Math.sin(frameCount*0.03)*3;
 
-    // Keep in bounds
-    if(flame.x < flame.size) { flame.x = flame.size; flame.vx = 0; }
-    if(flame.x > W-flame.size) { flame.x = W-flame.size; flame.vx = 0; }
+    // Bounds
+    if(flame.x < flame.size){ flame.x = flame.size; flame.vx = 0; }
+    if(flame.x > W-flame.size){ flame.x = W-flame.size; flame.vx = 0; }
 
-    // Spawn waters (more frequent as height increases)
-    var waterInterval = Math.max(15, WATER_SPAWN_BASE - height*0.15);
-    if(frameCount % Math.floor(waterInterval) === 0){
+    // Spawn water (screen-space rain, frequency increases with height)
+    var waterInterval = Math.max(12, Math.floor(WATER_SPAWN_BASE - height*0.12));
+    if(frameCount % waterInterval === 0){
       spawnWater();
-      // Extra water at higher heights
-      if(height > 50 && Math.random() < 0.3) spawnWater();
-      if(height > 150 && Math.random() < 0.3) spawnWater();
+      if(height > 80 && Math.random() < 0.3) spawnWater();
+      if(height > 200 && Math.random() < 0.25) spawnWater();
+      if(height > 400 && Math.random() < 0.2) spawnWater();
     }
 
-    // Spawn fuel
-    var fuelInterval = Math.max(60, FUEL_SPAWN_BASE + height*0.05);
-    if(frameCount % Math.floor(fuelInterval) === 0){
-      spawnFuel();
-    }
+    // Spawn fuel (world-space)
+    var fuelInterval = Math.max(50, Math.floor(FUEL_SPAWN_BASE - height*0.02));
+    if(frameCount % fuelInterval === 0) spawnFuel();
 
-    // Update waters
-    var flameScreenY = flame.y;
+    // Update waters (screen-space: fall from top to bottom)
     for(var i=waters.length-1; i>=0; i--){
       var w = waters[i];
       w.y += w.vy;
       w.wobble += w.wobbleSpeed;
       w.x += Math.sin(w.wobble)*0.5;
 
-      // Off screen
-      if(w.y > H + 40){
+      if(w.y > H + 30){
         totalDodged++;
         waters.splice(i,1);
         continue;
@@ -387,36 +382,33 @@ canvas{display:block;width:100%;height:100%}
 
       // Collision with flame
       var dx = w.x - flame.x;
-      var dy = w.y - flameScreenY;
+      var dy = w.y - flame.y;
       var dist = Math.sqrt(dx*dx+dy*dy);
       if(dist < flame.size*0.7 + w.size*0.5){
-        // HIT!
-        spawnSpark(flame.x, flameScreenY, '#4488ff');
-        screenShake = 8;
-        die('water');
+        spawnSpark(flame.x, flame.y, '#4488ff');
+        screenShake = 10;
+        die();
         return;
       }
     }
 
-    // Update fuels
+    // Update fuels (world-space, convert to screen for collision)
     for(var i=fuels.length-1; i>=0; i--){
       var f = fuels[i];
       f.bob += 0.04;
-      f.glow = (f.glow+0.05)%1;
-      var fy = f.y - camY + H*0.65;
+      var fy = fuelScreenY(f);
 
-      // Off screen (below)
-      if(fy > H + 40){
+      // Off screen below (scrolled past)
+      if(fy > H + 50){
         fuels.splice(i,1);
         continue;
       }
 
       // Collision
       var dx = f.x - flame.x;
-      var dy = fy - flameScreenY;
+      var dy = fy - flame.y;
       var dist = Math.sqrt(dx*dx+dy*dy);
       if(dist < flame.size + f.size){
-        // Collected!
         flame.fuel = Math.min(FUEL_MAX, flame.fuel + FUEL_GAIN);
         totalFuel++;
         spawnSpark(f.x, fy, '#ffaa00');
@@ -425,7 +417,7 @@ canvas{display:block;width:100%;height:100%}
       }
     }
 
-    // Update score
+    // Score
     score = Math.floor(height);
     document.getElementById('live-score').textContent = score;
 
@@ -434,11 +426,10 @@ canvas{display:block;width:100%;height:100%}
     if(flame.fuel > 60 && frameCount % 3 === 0) spawnFlameParticle();
   }
 
-  // ---- Draw ----
+  // Draw
   function draw(){
     ctx.clearRect(0,0,W,H);
 
-    // Shake
     var sx=0, sy=0;
     if(screenShake > 0){
       sx = (Math.random()-0.5)*screenShake*2;
@@ -449,7 +440,7 @@ canvas{display:block;width:100%;height:100%}
     ctx.save();
     ctx.translate(sx, sy);
 
-    // Background gradient (gets darker/more purple as you rise)
+    // Background
     var progress = Math.min(1, height/300);
     var r1 = Math.floor(10 - progress*5);
     var g1 = Math.floor(10 - progress*8);
@@ -460,14 +451,14 @@ canvas{display:block;width:100%;height:100%}
     ctx.fillStyle = grad;
     ctx.fillRect(0,0,W,H);
 
-    // Stars
+    // Stars (parallax scroll with height)
     for(var i=0;i<bgStars.length;i++){
       var s = bgStars[i];
-      var sy2 = ((s.y + height*s.speed*0.5) % (H*3)) - H;
-      ctx.globalAlpha = s.a * (0.5 + 0.5*Math.sin(frameCount*0.02+i));
+      var starY = ((s.y + height*0.05) % H + H) % H;
+      ctx.globalAlpha = s.a * (0.5 + 0.5*Math.sin(frameCount*0.02 + s.twinkle));
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(s.x, sy2, s.s, 0, Math.PI*2);
+      ctx.arc(s.x, starY, s.s, 0, Math.PI*2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -475,7 +466,8 @@ canvas{display:block;width:100%;height:100%}
     // Fuel pickups
     for(var i=0;i<fuels.length;i++){
       var f = fuels[i];
-      var fy = f.y - camY + H*0.65;
+      var fy = fuelScreenY(f);
+      if(fy < -30 || fy > H+30) continue; // skip off-screen
       var bobY = Math.sin(f.bob)*4;
 
       // Glow
@@ -486,7 +478,6 @@ canvas{display:block;width:100%;height:100%}
       ctx.fillStyle = fg;
       ctx.fillRect(f.x-25, fy+bobY-25, 50, 50);
 
-      // Fuel icon (little wood chip)
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#c87533';
       ctx.save();
@@ -494,14 +485,12 @@ canvas{display:block;width:100%;height:100%}
       ctx.rotate(Math.sin(f.bob*0.7)*0.2);
       roundRect(ctx, -7, -5, 14, 10, 2);
       ctx.fill();
-      // Wood grain
       ctx.strokeStyle = 'rgba(0,0,0,.2)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(-5, -2); ctx.lineTo(5, -2);
       ctx.moveTo(-4, 1); ctx.lineTo(6, 1);
       ctx.stroke();
-      // Glow outline
       ctx.strokeStyle = '#ffaa00';
       ctx.lineWidth = 1;
       roundRect(ctx, -7, -5, 14, 10, 2);
@@ -512,18 +501,14 @@ canvas{display:block;width:100%;height:100%}
     // Water drops
     for(var i=0;i<waters.length;i++){
       var w = waters[i];
-      // Drop shape
       ctx.fillStyle = '#4488dd';
       ctx.globalAlpha = 0.8;
       ctx.beginPath();
-      // Teardrop shape
       var sz = w.size;
       ctx.moveTo(w.x, w.y - sz*1.2);
       ctx.quadraticCurveTo(w.x + sz*0.8, w.y, w.x, w.y + sz*0.5);
       ctx.quadraticCurveTo(w.x - sz*0.8, w.y, w.x, w.y - sz*1.2);
       ctx.fill();
-
-      // Highlight
       ctx.fillStyle = 'rgba(150,200,255,.5)';
       ctx.beginPath();
       ctx.arc(w.x - sz*0.2, w.y - sz*0.3, sz*0.2, 0, Math.PI*2);
@@ -541,11 +526,8 @@ canvas{display:block;width:100%;height:100%}
 
       if(p.type === 'flame'){
         var t = 1-p.life;
-        var r = Math.floor(255);
-        var g = Math.floor(180 - t*140);
-        var b = Math.floor(50 - t*50);
         ctx.globalAlpha = p.life * 0.7;
-        ctx.fillStyle = 'rgb('+r+','+g+','+Math.max(0,b)+')';
+        ctx.fillStyle = 'rgb(255,'+Math.floor(180-t*140)+','+Math.max(0,Math.floor(50-t*50))+')';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
         ctx.fill();
@@ -577,7 +559,7 @@ canvas{display:block;width:100%;height:100%}
     }
     ctx.globalAlpha = 1;
 
-    // Flame (only if alive)
+    // Flame
     if(state === 'play'){
       drawFlame(flame.x, flame.y, flame.size);
     }
@@ -592,18 +574,16 @@ canvas{display:block;width:100%;height:100%}
       if(deathFlash < 0.01) deathFlash = 0;
     }
 
-    // Menu flame animation
+    // Menu flame
     if(state === 'menu'){
       var mx = W/2;
       var my = H*0.35;
       drawFlame(mx, my, 30 + Math.sin(frameCount*0.03)*3);
-      // Ambient particles
       if(frameCount % 3 === 0){
-        var angle = Math.random()*Math.PI*2;
-        particles.push({
+        addParticle({
           x: mx + (Math.random()-0.5)*20,
           y: my + (Math.random()-0.5)*10,
-          vx: Math.cos(angle)*0.5,
+          vx: (Math.random()-0.5)*0.5,
           vy: -Math.random()*2 - 1,
           size: Math.random()*5+3,
           life: 1,
@@ -617,7 +597,6 @@ canvas{display:block;width:100%;height:100%}
   }
 
   function drawFlame(x, y, size){
-    // Outer glow
     var glow = ctx.createRadialGradient(x, y, 0, x, y, size*3);
     glow.addColorStop(0, 'rgba(255,107,43,.15)');
     glow.addColorStop(0.5, 'rgba(255,60,0,.05)');
@@ -625,38 +604,32 @@ canvas{display:block;width:100%;height:100%}
     ctx.fillStyle = glow;
     ctx.fillRect(x-size*3, y-size*3, size*6, size*6);
 
-    // Flame body (layered circles for organic shape)
     var t = frameCount * 0.1;
 
-    // Core (white-yellow)
     ctx.fillStyle = '#fff8e0';
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.arc(x, y, size*0.3, 0, Math.PI*2);
     ctx.fill();
 
-    // Inner (bright orange)
     ctx.fillStyle = '#ff8c00';
     ctx.globalAlpha = 0.8;
     ctx.beginPath();
     ctx.arc(x + Math.sin(t)*2, y - size*0.1, size*0.5, 0, Math.PI*2);
     ctx.fill();
 
-    // Outer flame (red-orange, flickering)
     ctx.fillStyle = '#ff4500';
     ctx.globalAlpha = 0.6;
     ctx.beginPath();
     ctx.arc(x + Math.sin(t*1.3)*3, y - size*0.3 + Math.sin(t*0.7)*2, size*0.7, 0, Math.PI*2);
     ctx.fill();
 
-    // Tip (flickers up)
     ctx.fillStyle = '#ff6b2b';
     ctx.globalAlpha = 0.4 + Math.sin(t*2)*0.1;
     ctx.beginPath();
     ctx.arc(x + Math.sin(t*1.7)*2, y - size*0.7 + Math.sin(t)*3, size*0.35, 0, Math.PI*2);
     ctx.fill();
 
-    // Small dancing tips
     ctx.fillStyle = '#ff9a5c';
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
@@ -680,14 +653,12 @@ canvas{display:block;width:100%;height:100%}
     ctx.closePath();
   }
 
-  // ---- Game loop ----
   function loop(){
     update();
     draw();
     requestAnimationFrame(loop);
   }
   loop();
-
 })();
 </script>
 </body>
