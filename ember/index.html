@@ -272,7 +272,7 @@ canvas{display:block;width:100%;height:100%}
     platforms = [];
     pyres = [];
 
-    // Player
+    // Player (starts on first platform)
     player = {
       x: 100, // world x
       y: groundY - PLAYER_H,
@@ -280,7 +280,8 @@ canvas{display:block;width:100%;height:100%}
       vy: 0,
       onGround: true,
       fuel: FUEL_MAX,
-      size: 1
+      size: 1,
+      lastGroundY: groundY // track last platform surface for safety
     };
 
     // Wind Spirit
@@ -408,19 +409,33 @@ canvas{display:block;width:100%;height:100%}
     player.vy += GRAVITY;
     player.y += player.vy;
 
-    // Platform collision
+    // Platform collision (check all, pick highest valid landing)
     player.onGround = false;
+    var bestLandY = Infinity;
     for(var i=0; i<platforms.length; i++){
       var p = platforms[i];
-      if(player.x + PLAYER_W/2 > p.x && player.x - PLAYER_W/2 < p.x + p.w){
-        // Landing on top
-        if(player.vy >= 0 && player.y + PLAYER_H >= p.y && player.y + PLAYER_H <= p.y + p.h + player.vy + 2){
-          player.y = p.y - PLAYER_H;
-          player.vy = 0;
-          player.onGround = true;
-          break;
+      // Horizontal overlap check (player center must be on platform)
+      if(player.x > p.x && player.x < p.x + p.w){
+        var playerBottom = player.y + PLAYER_H;
+        var prevBottom = playerBottom - player.vy; // where we were last frame
+        // Landing: falling downward, crossed the platform surface this frame
+        if(player.vy >= 0 && prevBottom <= p.y + 4 && playerBottom >= p.y - 2){
+          if(p.y < bestLandY){
+            bestLandY = p.y;
+          }
+        }
+        // Already resting on platform (within tolerance)
+        if(Math.abs(playerBottom - p.y) < 3 && player.vy >= 0){
+          if(p.y < bestLandY){
+            bestLandY = p.y;
+          }
         }
       }
+    }
+    if(bestLandY < Infinity){
+      player.y = bestLandY - PLAYER_H;
+      player.vy = 0;
+      player.onGround = true;
     }
 
     // Fall death (below screen)
@@ -554,21 +569,18 @@ canvas{display:block;width:100%;height:100%}
     // Distant mountains (parallax)
     drawMountains();
 
-    // Ground
-    ctx.fillStyle = '#1a1210';
-    ctx.fillRect(0, groundY, W, H-groundY);
-    // Ground top edge
-    ctx.fillStyle = '#2a1e18';
-    ctx.fillRect(0, groundY-2, W, 4);
+    // Void/pit below platform level
+    ctx.fillStyle = '#050308';
+    ctx.fillRect(0, groundY-2, W, H-groundY+2);
 
-    // Platforms
+    // Platforms (drawn as solid ground chunks — gaps are visible pits)
     for(var i=0;i<platforms.length;i++){
       var p = platforms[i];
       var px = p.x - camX;
       if(px + p.w < -20 || px > W+20) continue;
 
       if(p.elevated){
-        // Elevated platform: stone/wood look
+        // Elevated platform
         ctx.fillStyle = '#3d2e22';
         ctx.fillRect(px, p.y, p.w, p.h);
         ctx.fillStyle = '#4a3828';
@@ -577,12 +589,32 @@ canvas{display:block;width:100%;height:100%}
         ctx.fillStyle = '#2a1e15';
         ctx.fillRect(px+10, p.y+p.h, 6, groundY-p.y-p.h);
         ctx.fillRect(px+p.w-16, p.y+p.h, 6, groundY-p.y-p.h);
-      } else {
-        // Ground platform: just the ground surface
+        // Ground beneath supports
+        ctx.fillStyle = '#1a1210';
+        ctx.fillRect(px, groundY, p.w, H-groundY);
         ctx.fillStyle = '#2a1e18';
-        ctx.fillRect(px, p.y-2, p.w, 4);
+        ctx.fillRect(px, groundY-1, p.w, 3);
+      } else {
+        // Ground-level platform: solid earth
+        ctx.fillStyle = '#1a1210';
+        ctx.fillRect(px, p.y, p.w, H-p.y);
+        // Top surface
+        ctx.fillStyle = '#2a1e18';
+        ctx.fillRect(px, p.y-1, p.w, 4);
+        // Dirt texture
+        ctx.fillStyle = '#1e1510';
+        ctx.fillRect(px, p.y+8, p.w, 2);
+        ctx.fillStyle = '#161010';
+        ctx.fillRect(px, p.y+20, p.w, 1);
       }
+
+      // Edge shading (left/right sides of platform)
+      ctx.fillStyle = 'rgba(0,0,0,.3)';
+      ctx.fillRect(px, p.y, 2, H-p.y);
+      ctx.fillRect(px+p.w-2, p.y, 2, H-p.y);
     }
+
+    // (gaps visible as dark pits between platforms)
 
     // Pyres
     for(var i=0;i<pyres.length;i++){
