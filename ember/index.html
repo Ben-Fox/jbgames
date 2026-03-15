@@ -52,7 +52,7 @@ canvas{display:block;width:100%;height:100%}
 <a id="homeBtn" href="/">← BrainSmacks</a>
 <canvas id="c"></canvas>
 <div id="hud" style="display:none">
-  <div class="hud-item"><div class="hl">Pyres</div><div class="hv" id="hud-pyres">0</div></div>
+  <div class="hud-item"><div class="hl">Score</div><div class="hv" id="hud-pyres">0</div></div>
   <div class="hud-item"><div class="hl">Fuel</div><div id="fuel-wrap"><div id="fuel-fill"></div></div></div>
   <div class="hud-item"><div class="hl">Distance</div><div class="hv" id="hud-dist">0</div></div>
 </div>
@@ -73,7 +73,7 @@ canvas{display:block;width:100%;height:100%}
     </div>
   </div>
   <div id="game-over">
-    <div id="go-label">Pyres Lit</div>
+    <div id="go-label">Score</div>
     <div id="go-score">0</div>
     <div id="go-new">New Best!</div>
     <div id="go-best">Best: 0</div>
@@ -105,24 +105,28 @@ canvas{display:block;width:100%;height:100%}
 
   // ---- Constants ----
   var GROUND_FRAC = 0.82;
-  var PH = 18;
-  var PLAT_H = 16;
-  var BASE_SPEED = 3.0;
+  var PH = 16;
+  var PW = 8;
+  var PLAT_H = 12;
+  var BASE_SPEED = 2.8;
   var JUMP_VEL = -10;
   var GRAV = 0.42;
   var FUEL_MAX = 100;
-  var FUEL_DRAIN = 0.05;
-  var FUEL_PER_PYRE = 28;
-  var WIND_START = -350;
-  var WIND_SPEED = 2.4;
-  var MAX_P = 200;
-  var PLAT_MIN_W = 120;
-  var PLAT_MAX_W = 320;
+  var FUEL_DRAIN = 0.04;
+  var FUEL_PER_PYRE = 25;
+  var WIND_START = -400;
+  var WIND_BASE_SPEED = 1.2;
+  var MAX_P = 250;
   var COYOTE_FRAMES = 6;
   var DASH_SPEED = 12;
   var DASH_DURATION = 6;
   var DASH_INVULN = 4;
   var SLIDE_DURATION = 20;
+
+  // Platform tier heights above ground
+  var TIER_LOW = 40;
+  var TIER_MED = 80;
+  var TIER_HIGH = 120;
 
   // ---- State ----
   var state = 'menu';
@@ -135,16 +139,15 @@ canvas{display:block;width:100%;height:100%}
   var combo = 0, bestCombo = 0, comboTimer = 0;
   var totalSparks = 0;
   var startTime = 0, frame = 0, shake = 0;
-  var lastPlatEnd = 0;
+  var nextPlatX = 0, nextHouseX = 0;
   var keys = {}, tL = false, tR = false, tJ = false;
   var popupTimer = 0;
   var shieldTimer = 0;
   var blazeTimer = 0;
   var hitFreezeFrames = 0;
 
-  // New mechanic state
   var coyoteTimer = 0;
-  var wallSlideDir = 0; // -1 left wall, 1 right wall, 0 none
+  var wallSlideDir = 0;
   var airDashUsed = false;
   var dashTimer = 0;
   var dashDir = 0;
@@ -156,13 +159,12 @@ canvas{display:block;width:100%;height:100%}
   var speedLines = [];
   var snowflakes = [];
 
-  // Touch gesture tracking
   var touchStartX = 0, touchStartY = 0, touchSwiped = false;
   var tSlide = false, tDash = false;
 
   var clouds = [];
 
-  try { bestScore = parseInt(localStorage.getItem('ember3_best'))||0; } catch(e){}
+  try { bestScore = parseInt(localStorage.getItem('ember4_best'))||0; } catch(e){}
 
   // ---- Helpers ----
   function addP(p){ if(particles.length>=MAX_P)particles.shift(); particles.push(p); }
@@ -173,46 +175,48 @@ canvas{display:block;width:100%;height:100%}
     el.querySelector('.pop-sub').textContent=sub||'';
     el.style.opacity='1'; popupTimer=90;
   }
-  function seededRng(seed){
-    var s = seed;
-    return function(){ s=(s*9301+49297)%233280; return s/233280; };
-  }
   function lerp(a,b,t){ return a+(b-a)*Math.max(0,Math.min(1,t)); }
-  function lerpColor(r1,g1,b1,r2,g2,b2,t){
-    return 'rgb('+Math.floor(lerp(r1,r2,t))+','+Math.floor(lerp(g1,g2,t))+','+Math.floor(lerp(b1,b2,t))+')';
+
+  // Difficulty factor 0-1 based on distance
+  function diff(){
+    if(distance<200) return 0;
+    if(distance<500) return (distance-200)/300*0.25;
+    if(distance<1000) return 0.25+(distance-500)/500*0.25;
+    if(distance<2000) return 0.5+(distance-1000)/1000*0.25;
+    return Math.min(1, 0.75+(distance-2000)/2000*0.25);
   }
 
   // Biome: 0=forest, 1=cave, 2=snow
   function getBiome(d){
-    if(d<250) return {biome:0, t:0};
-    if(d<300) return {biome:0, t:(d-250)/50}; // forest->cave transition
-    if(d<550) return {biome:1, t:0};
-    if(d<600) return {biome:1, t:(d-550)/50}; // cave->snow transition
-    return {biome:2, t:0};
+    var cycle = d % 900;
+    if(cycle<250) return {biome:0, t:0};
+    if(cycle<300) return {biome:0, t:(cycle-250)/50};
+    if(cycle<550) return {biome:1, t:0};
+    if(cycle<600) return {biome:1, t:(cycle-550)/50};
+    if(cycle<850) return {biome:2, t:0};
+    return {biome:2, t:(cycle-850)/50};
   }
   function getBiomeBlend(d){
-    // Returns blended color multipliers for sky/ground
     var b = getBiome(d);
-    if(b.biome===0 && b.t===0) return {sky:[15,12,35], skyB:[30,18,45], ground:[26,30,24], groundTop:[42,30,24]};
-    if(b.biome===0) { // transitioning to cave
+    if(b.biome===0 && b.t===0) return {sky:[15,12,35], skyB:[30,18,45], ground:[60,45,30], groundTop:[45,75,30]};
+    if(b.biome===0) {
       return {
         sky:[Math.floor(lerp(15,10,b.t)),Math.floor(lerp(12,8,b.t)),Math.floor(lerp(35,50,b.t))],
         skyB:[Math.floor(lerp(30,15,b.t)),Math.floor(lerp(18,10,b.t)),Math.floor(lerp(45,55,b.t))],
-        ground:[Math.floor(lerp(26,20,b.t)),Math.floor(lerp(30,18,b.t)),Math.floor(lerp(24,30,b.t))],
-        groundTop:[Math.floor(lerp(42,35,b.t)),Math.floor(lerp(30,22,b.t)),Math.floor(lerp(24,35,b.t))]
+        ground:[Math.floor(lerp(60,50,b.t)),Math.floor(lerp(45,35,b.t)),Math.floor(lerp(30,40,b.t))],
+        groundTop:[Math.floor(lerp(45,35,b.t)),Math.floor(lerp(75,50,b.t)),Math.floor(lerp(30,35,b.t))]
       };
     }
-    if(b.biome===1 && b.t===0) return {sky:[10,8,50], skyB:[15,10,55], ground:[20,18,30], groundTop:[35,22,35]};
-    if(b.biome===1) { // transitioning to snow
+    if(b.biome===1 && b.t===0) return {sky:[10,8,50], skyB:[15,10,55], ground:[50,35,40], groundTop:[35,30,45]};
+    if(b.biome===1) {
       return {
         sky:[Math.floor(lerp(10,25,b.t)),Math.floor(lerp(8,22,b.t)),Math.floor(lerp(50,50,b.t))],
         skyB:[Math.floor(lerp(15,35,b.t)),Math.floor(lerp(10,28,b.t)),Math.floor(lerp(55,50,b.t))],
-        ground:[Math.floor(lerp(20,40,b.t)),Math.floor(lerp(18,38,b.t)),Math.floor(lerp(30,42,b.t))],
-        groundTop:[Math.floor(lerp(35,55,b.t)),Math.floor(lerp(22,52,b.t)),Math.floor(lerp(35,55,b.t))]
+        ground:[Math.floor(lerp(50,55,b.t)),Math.floor(lerp(35,50,b.t)),Math.floor(lerp(40,55,b.t))],
+        groundTop:[Math.floor(lerp(35,55,b.t)),Math.floor(lerp(30,55,b.t)),Math.floor(lerp(45,60,b.t))]
       };
     }
-    // snow
-    return {sky:[25,22,50], skyB:[35,28,50], ground:[40,38,42], groundTop:[55,52,55]};
+    return {sky:[25,22,50], skyB:[35,28,50], ground:[55,50,55], groundTop:[70,75,70]};
   }
 
   // ---- Particles ----
@@ -223,19 +227,19 @@ canvas{display:block;width:100%;height:100%}
       sz:rng(3,7),life:1,dec:rng(.025,.04),t:'f'});
   }
   function pyreP(px,py){
-    for(var i=0;i<10;i++) addP({x:px+(Math.random()-.5)*14,y:py+Math.random()*4,
+    for(var i=0;i<12;i++) addP({x:px+(Math.random()-.5)*14,y:py+Math.random()*4,
       vx:(Math.random()-.5)*2,vy:-rng(2,5),sz:rng(3,8),life:1,dec:rng(.015,.025),t:'pl'});
   }
   function chimneyP(px,py){
-    for(var i=0;i<18;i++) addP({x:px+(Math.random()-.5)*12,y:py+Math.random()*3,
-      vx:(Math.random()-.5)*3,vy:-rng(3,7),sz:rng(3,9),life:1,dec:rng(.012,.022),t:'pl'});
+    for(var i=0;i<22;i++) addP({x:px+(Math.random()-.5)*16,y:py+Math.random()*3,
+      vx:(Math.random()-.5)*4,vy:-rng(3,8),sz:rng(3,10),life:1,dec:rng(.01,.02),t:'pl'});
   }
   function windP(){
     addP({x:wind.sx+rng(15,35),y:wind.y+(Math.random()-.5)*35,
       vx:rng(2,4),vy:(Math.random()-.5)*.8,sz:rng(2,5),life:1,dec:rng(.03,.05),t:'w'});
   }
   function deathP(){
-    for(var i=0;i<20;i++){var a=Math.random()*Math.PI*2,s=rng(1,5);
+    for(var i=0;i<25;i++){var a=Math.random()*Math.PI*2,s=rng(1,5);
       addP({x:pl.x-camX+(Math.random()-.5)*14,y:pl.y+(Math.random()-.5)*14,
         vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,sz:rng(3,8),life:1,dec:rng(.015,.025),t:'d'});}
   }
@@ -279,157 +283,236 @@ canvas{display:block;width:100%;height:100%}
     }
   }
 
-  // ---- Max jumpable gap calculation ----
-  function maxJump(){
-    var airtime = 2*Math.abs(JUMP_VEL)/GRAV;
-    var speed = BASE_SPEED + Math.min(distance*0.0008, 2.5);
-    return airtime * speed * 0.8;
-  }
+  // ---- World generation ----
+  // The ground is ALWAYS continuous. We generate elevated platforms, houses, hazards, pickups above it.
 
-  // ---- Generate decor for a platform ----
-  function genDecor(p){
-    var sr = seededRng(Math.floor(p.x*7+p.w*13));
-    var b = getBiome(p.x/10);
-    p.dirtPatches = [];
-    for(var i=0;i<Math.floor(sr()*4)+2;i++){
-      p.dirtPatches.push({rx: sr()*p.w, rw: 8+sr()*15, dark: sr()*0.08+0.02});
-    }
-    // Trees: forest only, bare trees in snow, none in cave
-    if(!p.elevated){
-      if(b.biome===0 && sr()<0.3){
-        var treeCount = Math.floor(sr()*3)+1;
-        for(var i=0;i<treeCount;i++){
-          decor.push({type:'tree', x:p.x+20+sr()*(p.w-40), y:p.y,
-            h:20+sr()*25, w:8+sr()*6, platX:p.x});
-        }
-      } else if(b.biome===2 && sr()<0.25){
-        var treeCount = Math.floor(sr()*2)+1;
-        for(var i=0;i<treeCount;i++){
-          decor.push({type:'bare_tree', x:p.x+20+sr()*(p.w-40), y:p.y,
-            h:20+sr()*20, platX:p.x});
-        }
-      }
-      // Stalactites in cave
-      if(b.biome===1 && sr()<0.5){
-        var sc = Math.floor(sr()*3)+1;
-        for(var i=0;i<sc;i++){
-          decor.push({type:'stalactite', x:p.x+15+sr()*(p.w-30), y:p.y-rng(80,130), platX:p.x,
-            h:10+sr()*15});
-        }
-      }
-    }
-    // Grass tufts
-    var grassCount = Math.floor(sr()*3)+3;
-    for(var i=0;i<grassCount;i++){
-      decor.push({type:'grass', x:p.x+10+sr()*(p.w-20), y:p.y, platX:p.x,
-        blades: Math.floor(sr()*3)+2, h:3+sr()*4});
-    }
-    // Rocks
-    if(sr()<0.4){
-      var rc = Math.floor(sr()*2)+1;
-      for(var i=0;i<rc;i++){
-        decor.push({type:'rock', x:p.x+15+sr()*(p.w-30), y:p.y, platX:p.x,
-          w:4+sr()*5, h:3+sr()*3});
-      }
-    }
-  }
+  function generateChunk(startX, endX){
+    var d = startX / 10; // approximate distance
+    var df = diff();
 
-  // ---- Platform generation ----
-  function genPlatform(startX){
-    var w = rng(PLAT_MIN_W, PLAT_MAX_W);
-    w = Math.max(80, w - Math.min(distance*0.03, 80));
-    var elevated = Math.random()<0.25 && distance>300;
-    var yOff = elevated ? -(rng(30,60)) : 0;
-    var moving = !elevated && Math.random()<0.15 && distance>500;
-    var p = {x:startX, y:groundY+yOff, w:w, elevated:elevated,
-             moving:moving, moveRange:moving?rng(30,60):0, movePhase:Math.random()*Math.PI*2,
-             dirtPatches:[]};
-    platforms.push(p);
-    genDecor(p);
+    // Elevated platforms
+    var x = startX;
+    while(x < endX){
+      var spacing = rng(80, 200) - df*60;
+      x += Math.max(50, spacing);
+      if(x >= endX) break;
 
-    // Pyre
-    if(Math.random()<0.65 || platforms.length<=2){
-      var b = getBiome(startX/10);
-      if(b.biome===1){
-        // Cave: crystal pickups instead of some sparks
-        pyres.push({x:p.x+30+Math.random()*(p.w-60), y:p.y, lit:false, h:20});
+      // Decide tier
+      var tierRoll = Math.random();
+      var tier, tierH, minW, maxW;
+      if(d < 200){
+        // Tutorial: only low platforms
+        tier = 'low'; tierH = TIER_LOW; minW = 140; maxW = 220;
+      } else if(tierRoll < 0.45){
+        tier = 'low'; tierH = TIER_LOW; minW = 100; maxW = 200;
+      } else if(tierRoll < 0.8){
+        tier = 'med'; tierH = TIER_MED; minW = 80; maxW = 160;
       } else {
-        pyres.push({x:p.x+30+Math.random()*(p.w-60), y:p.y, lit:false, h:20});
+        tier = 'high'; tierH = TIER_HIGH; minW = 60; maxW = 120;
       }
+
+      var pw = rng(minW, maxW);
+      var py = groundY - tierH;
+
+      // Platform type
+      var ptype = 'normal';
+      if(d > 500 && Math.random() < 0.15 * df) ptype = 'crumble';
+      if(d > 1000 && Math.random() < 0.12 * df && tier !== 'low') ptype = 'thorny';
+
+      var p = {x:x, y:py, w:pw, tier:tier, type:ptype,
+               crumbleTimer:-1, crumbleMax:60, crumbled:false};
+      platforms.push(p);
+
+      // Decor on platform
+      genPlatDecor(p);
+
+      // Pyre on ground-level and low platforms (strategic placement)
+      if(tier === 'low' && Math.random() < (d<200 ? 0.7 : 0.35 - df*0.15)){
+        pyres.push({x:p.x+rng(20,p.w-20), y:p.y, lit:false, h:18});
+      }
+
+      // Sparks on medium/high platforms
+      if(tier !== 'low' && Math.random() < 0.5){
+        var sparkCount = Math.floor(rng(2,5));
+        var bio = getBiome(d);
+        for(var i=0;i<sparkCount;i++){
+          pickups.push({type: bio.biome===1?'crystal':'spark',
+            x:p.x+rng(10,p.w-10), y:p.y-rng(10,25), collected:false});
+        }
+      }
+
+      // Fuel canisters on high platforms
+      if(tier === 'high' && Math.random() < 0.25){
+        pickups.push({type:'fuel', x:p.x+p.w/2, y:p.y-15, collected:false});
+      }
+
+      // Power-ups on highest platforms (rare)
+      if(tier === 'high' && Math.random() < 0.06 + df*0.02){
+        var types = ['shield','blaze','djump'];
+        pickups.push({type:types[Math.floor(Math.random()*types.length)],
+          x:p.x+rng(15,p.w-15), y:p.y-20, collected:false});
+      }
+
+      // Enemies on ground and low platforms
+      if(tier === 'low' && d > 200 && Math.random() < 0.12 + df*0.15){
+        enemies.push({x:p.x+rng(15,p.w-15), y:p.y-10, platX:p.x, platW:p.w,
+          dir:1, speed:0.5+Math.random()*0.8, alive:true, phase:Math.random()*Math.PI*2});
+      }
+
+      x += pw;
     }
 
-    // House
-    if(!elevated && !moving && w>200 && distance>100 && Math.random()<0.18){
-      var houseX = p.x + 50 + Math.random()*(w-140);
-      houses.push({x:houseX, y:p.y, w:40, h:35, roofH:15, chimneyW:8, chimneyH:14,
-        lit:false, platX:p.x});
+    // Ground-level pyres (spread out)
+    var gx = startX;
+    while(gx < endX){
+      var spacing = d<200 ? rng(100,180) : rng(180,350) + df*100;
+      gx += spacing;
+      if(gx >= endX) break;
+      pyres.push({x:gx, y:groundY, lit:false, h:18});
+    }
+
+    // Ground-level enemies
+    if(d > 150){
+      var ex = startX;
+      while(ex < endX){
+        ex += rng(250, 500) - df*100;
+        if(ex >= endX) break;
+        if(Math.random() < 0.3 + df*0.3){
+          enemies.push({x:ex, y:groundY-10, platX:ex-50, platW:100,
+            dir:1, speed:0.5+Math.random()*0.8, alive:true, phase:Math.random()*Math.PI*2});
+        }
+      }
     }
 
     // Water drip hazards
-    if(Math.random()<0.3 && distance>200 && !elevated){
-      var hx = p.x + rng(20, p.w-20);
-      hazards.push({type:'drip', x:hx, baseY:p.y-rng(80,140), dropY:0, timer:rng(0,120), interval:rng(90,160), active:false, platX:p.x, platW:p.w});
-    }
-
-    // Wind gust hazards
-    if(Math.random()<0.2 && distance>400){
-      hazards.push({type:'gust', x:p.x+rng(10,p.w*0.3), w:rng(40,80), y:p.y-60, h:60, dir:Math.random()<0.5?-1:1, strength:rng(1.5,3), platX:p.x});
-    }
-
-    // Low obstacle hazards (after dist 300)
-    if(Math.random()<0.2 && distance>300 && !elevated && w>150){
-      var lx = p.x + rng(40, p.w-40);
-      hazards.push({type:'low', x:lx, y:p.y-22, w:rng(30,50), platX:p.x});
-    }
-
-    // Sparks / crystals
-    if(Math.random()<0.4){
-      var sparkCount = Math.floor(rng(1,4));
-      var b = getBiome(startX/10);
-      for(var i=0;i<sparkCount;i++){
-        pickups.push({type: b.biome===1?'crystal':'spark', x:p.x+rng(20,p.w-20), y:p.y-rng(25,50), collected:false});
+    if(d > 200){
+      var hx = startX;
+      while(hx < endX){
+        hx += rng(200, 400);
+        if(hx >= endX) break;
+        if(Math.random() < 0.25 + df*0.2){
+          hazards.push({type:'drip', x:hx, baseY:groundY-rng(100,160), dropY:0,
+            timer:rng(0,120), interval:rng(70,140), active:false});
+        }
       }
     }
 
-    // Power-ups
-    if(Math.random()<0.08 && distance>150){
-      var types = ['shield','blaze','djump'];
-      var ptype = types[Math.floor(Math.random()*types.length)];
-      pickups.push({type:ptype, x:p.x+rng(30,p.w-30), y:p.y-rng(35,55), collected:false});
+    // Wind gust hazards
+    if(d > 400){
+      var wx = startX;
+      while(wx < endX){
+        wx += rng(300, 600);
+        if(wx >= endX) break;
+        if(Math.random() < 0.2 + df*0.2){
+          hazards.push({type:'gust', x:wx, w:rng(50,90), y:groundY-70, h:70,
+            dir:Math.random()<0.5?-1:1, strength:rng(1.5,3)});
+        }
+      }
     }
 
-    // Water Sprite enemies (15% after dist 150)
-    if(Math.random()<0.15 && distance>150 && !elevated && w>100){
-      enemies.push({x:p.x+rng(20,p.w-20), y:p.y-10, platX:p.x, platW:p.w,
-        dir:1, speed:0.5+Math.random()*0.5, alive:true, phase:Math.random()*Math.PI*2});
+    // Low obstacles (must slide under)
+    if(d > 300){
+      var ox = startX;
+      while(ox < endX){
+        ox += rng(250, 500);
+        if(ox >= endX) break;
+        if(Math.random() < 0.2 + df*0.15){
+          hazards.push({type:'low', x:ox, y:groundY-22, w:rng(30,50)});
+        }
+      }
     }
 
-    return p.x + p.w;
+    // Ground-level decor (trees)
+    var tx = startX;
+    while(tx < endX){
+      tx += rng(60, 180);
+      if(tx >= endX) break;
+      var bio = getBiome(tx/10);
+      if(bio.biome===0 && Math.random()<0.3){
+        decor.push({type:'tree', x:tx, y:groundY,
+          h:25+Math.random()*15, w:8+Math.random()*6, worldX:tx});
+      } else if(bio.biome===2 && Math.random()<0.25){
+        decor.push({type:'bare_tree', x:tx, y:groundY,
+          h:20+Math.random()*15, worldX:tx});
+      } else if(bio.biome===1 && Math.random()<0.3){
+        decor.push({type:'stalactite', x:tx, y:groundY-rng(90,140),
+          h:10+Math.random()*15, worldX:tx});
+      }
+      // Grass
+      if(Math.random()<0.5){
+        decor.push({type:'grass', x:tx+rng(-10,10), y:groundY, worldX:tx,
+          blades:Math.floor(rng(2,5)), h:3+Math.random()*4});
+      }
+      // Rocks
+      if(Math.random()<0.15){
+        decor.push({type:'rock', x:tx+rng(-5,5), y:groundY, worldX:tx,
+          w:4+Math.random()*5, h:3+Math.random()*3});
+      }
+    }
   }
 
-  function ensurePlats(){
-    var viewR = camX + W + 500;
-    while(lastPlatEnd < viewR){
-      var gap = rng(60, 120);
-      gap += Math.min(distance*0.01, 40);
-      if(distance<200) gap = Math.min(gap, 100);
-      gap = Math.min(gap, maxJump());
-      lastPlatEnd += gap;
-      lastPlatEnd = genPlatform(lastPlatEnd);
+  function generateHouse(x){
+    // House on a dedicated high platform
+    var platW = 100;
+    var houseW = 60, houseH = 50, roofH = 18, chimneyW = 10, chimneyH = 16;
+    var platY = groundY - TIER_HIGH - 10;
+
+    // House platform
+    platforms.push({x:x-platW/2, y:platY, w:platW, tier:'house', type:'normal',
+      crumbleTimer:-1, crumbleMax:60, crumbled:false});
+
+    var houseX = x - houseW/2;
+    houses.push({x:houseX, y:platY, w:houseW, h:houseH, roofH:roofH,
+      chimneyW:chimneyW, chimneyH:chimneyH, lit:false, worldX:x});
+  }
+
+  function genPlatDecor(p){
+    // Grass on platforms
+    var count = Math.floor(rng(1,4));
+    for(var i=0;i<count;i++){
+      decor.push({type:'grass', x:p.x+rng(5,p.w-5), y:p.y, worldX:p.x,
+        blades:Math.floor(rng(2,4)), h:2+Math.random()*3});
     }
-    var viewL = camX - 150;
-    while(platforms.length>0 && platforms[0].x+platforms[0].w<viewL) platforms.shift();
-    while(pyres.length>0 && pyres[0].x+30<viewL) pyres.shift();
-    while(hazards.length>0 && (hazards[0].x||hazards[0].platX||0)+200<viewL) hazards.shift();
-    while(pickups.length>0 && pickups[0].x+20<viewL) pickups.shift();
-    while(houses.length>0 && houses[0].x+50<viewL) houses.shift();
-    while(decor.length>0 && (decor[0].platX||decor[0].x)+400<viewL) decor.shift();
-    while(enemies.length>0 && enemies[0].platX+enemies[0].platW+50<viewL) enemies.shift();
+  }
+
+  var lastGenX = 0;
+  var CHUNK_SIZE = 600;
+
+  function ensureWorld(){
+    var viewR = camX + W + 600;
+    while(lastGenX < viewR){
+      var chunkStart = lastGenX;
+      var chunkEnd = lastGenX + CHUNK_SIZE;
+      generateChunk(chunkStart, chunkEnd);
+
+      // Houses every 800-1200px
+      while(nextHouseX < chunkEnd){
+        if(nextHouseX > chunkStart){
+          generateHouse(nextHouseX);
+        }
+        nextHouseX += rng(800, 1200);
+      }
+
+      lastGenX = chunkEnd;
+    }
+
+    // Cleanup offscreen left
+    var viewL = camX - 200;
+    var filterLeft = function(arr, getX){
+      while(arr.length>0 && getX(arr[0])<viewL) arr.shift();
+    };
+    filterLeft(platforms, function(p){return p.x+p.w;});
+    filterLeft(pyres, function(p){return p.x+30;});
+    filterLeft(hazards, function(p){return (p.x||0)+200;});
+    filterLeft(pickups, function(p){return p.x+20;});
+    filterLeft(houses, function(p){return p.x+p.w+20;});
+    filterLeft(decor, function(p){return (p.worldX||p.x)+50;});
+    filterLeft(enemies, function(p){return p.x+50;});
   }
 
   function initClouds(){
     clouds=[];
-    for(var i=0;i<4;i++){
+    for(var i=0;i<5;i++){
       clouds.push({x:rng(0,W*2), y:rng(20,groundY*0.35), w:rng(80,160), h:rng(20,40), speed:rng(0.1,0.3)});
     }
   }
@@ -444,7 +527,7 @@ canvas{display:block;width:100%;height:100%}
   // ---- Game ----
   function startGame(){
     state='play';
-    groundY = H*GROUND_FRAC;
+    groundY = Math.floor(H*GROUND_FRAC);
     camX=0; distance=0; score=0; combo=0; bestCombo=0; comboTimer=0;
     totalSparks=0; frame=0; shake=0; popupTimer=0;
     shieldTimer=0; blazeTimer=0; hitFreezeFrames=0;
@@ -459,15 +542,13 @@ canvas{display:block;width:100%;height:100%}
 
     pl={x:80, y:groundY-PH, vx:0, vy:0, onGround:true, fuel:FUEL_MAX, size:1, jumps:0, maxJumps:1};
 
-    wind={x:WIND_START, sx:0, y:groundY-30, speed:WIND_SPEED};
+    wind={x:WIND_START, sx:0, y:groundY-30, speed:WIND_BASE_SPEED};
 
-    lastPlatEnd=-50;
-    var fp={x:-50,y:groundY,w:500,elevated:false,moving:false,moveRange:0,movePhase:0,dirtPatches:[]};
-    platforms.push(fp);
-    genDecor(fp);
-    pyres.push({x:250,y:groundY,lit:false,h:20});
-    lastPlatEnd=fp.x+fp.w;
-    ensurePlats();
+    lastGenX=0; nextHouseX=900;
+    // First pyre close
+    pyres.push({x:200, y:groundY, lit:false, h:18});
+    pyres.push({x:400, y:groundY, lit:false, h:18});
+    ensureWorld();
 
     document.getElementById('ui').classList.remove('active');
     document.getElementById('start-screen').style.display='none';
@@ -480,7 +561,7 @@ canvas{display:block;width:100%;height:100%}
     state='dead'; deathP(); shake=12;
 
     var fs=score, isNew=fs>bestScore;
-    if(isNew){ bestScore=fs; try{localStorage.setItem('ember3_best',bestScore);}catch(e){} }
+    if(isNew){ bestScore=fs; try{localStorage.setItem('ember4_best',bestScore);}catch(e){} }
     var elapsed=((Date.now()-startTime)/1000)|0;
     setTimeout(function(){
       document.getElementById('go-score').textContent=fs;
@@ -496,6 +577,15 @@ canvas{display:block;width:100%;height:100%}
     },600);
   }
 
+  function takeDamage(amount, reason){
+    if(dashInvulnTimer>0 || shieldTimer>0) return false;
+    pl.fuel -= amount;
+    shake = Math.min(8, amount/2);
+    hitFreezeFrames = 2;
+    if(pl.fuel<=0){ pl.fuel=0; die(); return true; }
+    return false;
+  }
+
   // ---- Input ----
   document.addEventListener('keydown',function(e){keys[e.key]=true;
     if(e.key===' '||e.key==='ArrowUp'||e.key==='w'||e.key==='W')e.preventDefault();
@@ -505,7 +595,7 @@ canvas{display:block;width:100%;height:100%}
   canvas.addEventListener('touchstart',function(e){e.preventDefault();
     tL=false;tR=false;tJ=false;tSlide=false;tDash=false;
     for(var i=0;i<e.touches.length;i++){
-      var tx=e.touches[i].clientX, ty=e.touches[i].clientY;
+      var tx=e.touches[i].clientX;
       if(tx<W*0.33)tL=true;else if(tx>W*0.67)tR=true;else tJ=true;
     }
     if(e.touches.length>0){touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;touchSwiped=false;}
@@ -555,22 +645,27 @@ canvas{display:block;width:100%;height:100%}
     wallSlideDir=0;
     for(var i=0;i<platforms.length;i++){
       var p=platforms[i];
-      var py=p.y;
-      if(p.moving) py+=Math.sin(frame*0.02+p.movePhase)*p.moveRange;
-      var platBot = p.elevated ? py+PLAT_H : py+200;
-      // Player must be alongside wall vertically
-      if(pl.y+PH <= py || pl.y >= platBot) continue;
-      // Check left wall of platform (player on left side pressing right)
+      if(p.crumbled) continue;
+      var platBot = p.y + PLAT_H;
+      if(pl.y+PH <= p.y || pl.y >= platBot) continue;
       if(inputX>0 && pl.x>=p.x-8 && pl.x<=p.x+4){
-        pl.x=p.x-6;
-        wallSlideDir=-1; // wall is to the right, slide on right wall
-        return;
+        pl.x=p.x-6; wallSlideDir=-1; return;
       }
-      // Check right wall of platform (player on right side pressing left)
       if(inputX<0 && pl.x<=p.x+p.w+8 && pl.x>=p.x+p.w-4){
-        pl.x=p.x+p.w+6;
-        wallSlideDir=1; // wall is to the left, slide on left wall
-        return;
+        pl.x=p.x+p.w+6; wallSlideDir=1; return;
+      }
+    }
+    // Wall slide on houses
+    for(var i=0;i<houses.length;i++){
+      var hs=houses[i];
+      var wallTop = hs.y - hs.h;
+      var wallBot = hs.y;
+      if(pl.y+PH <= wallTop || pl.y >= wallBot) continue;
+      if(inputX>0 && pl.x>=hs.x-8 && pl.x<=hs.x+4){
+        pl.x=hs.x-6; wallSlideDir=-1; return;
+      }
+      if(inputX<0 && pl.x<=hs.x+hs.w+8 && pl.x>=hs.x+hs.w-4){
+        pl.x=hs.x+hs.w+6; wallSlideDir=1; return;
       }
     }
   }
@@ -579,13 +674,13 @@ canvas{display:block;width:100%;height:100%}
   function update(){
     if(state!=='play') return;
 
-    // Hit freeze
     if(hitFreezeFrames>0){hitFreezeFrames--;return;}
 
     frame++;
     if(frame>1e8) frame-=1e8;
 
-    var speed = BASE_SPEED + Math.min(distance*0.0008, 2.5);
+    var df = diff();
+    var speed = BASE_SPEED + Math.min(distance*0.0006, 2.0) + df*0.5;
     if(blazeTimer>0){ speed*=1.3; blazeTimer--; if(blazeTimer<=0) popup('Blaze Off',''); }
     if(shieldTimer>0){ shieldTimer--; if(shieldTimer<=0) popup('Shield Off',''); }
     if(dashInvulnTimer>0) dashInvulnTimer--;
@@ -620,7 +715,6 @@ canvas{display:block;width:100%;height:100%}
       pl.vx = dashDir * DASH_SPEED + speed;
       pl.x += pl.vx;
       dashTimer--;
-      // Dash streak particles
       dashStreakP(pl.x-camX, pl.y+PH/2, dashDir);
     } else {
       var slideBoost = slideTimer>0 ? 1.5 : 0;
@@ -628,14 +722,14 @@ canvas{display:block;width:100%;height:100%}
       pl.x += pl.vx;
     }
 
-    // Variable jump height - cut velocity if jump released early
+    // Variable jump height
     var jNow = wJ();
     if(!jNow && jumpHeld && pl.vy<0){
       pl.vy *= 0.5;
     }
     jumpHeld = jNow && pl.vy<0;
 
-    // Jump (with coyote time and wall jump)
+    // Jump
     if(jNow && !jumpPressed){
       if(pl.onGround || coyoteTimer>0){
         pl.vy = blazeTimer>0 ? JUMP_VEL*1.2 : JUMP_VEL;
@@ -644,9 +738,8 @@ canvas{display:block;width:100%;height:100%}
         coyoteTimer = 0;
         jumpHeld = true;
       } else if(wallSlideDir!==0){
-        // Wall jump
         pl.vy = JUMP_VEL*0.9;
-        pl.x += wallSlideDir * 20; // kick away from wall
+        pl.x += wallSlideDir * 20;
         pl.vx = wallSlideDir * 6;
         pl.jumps = 1;
         wallSlideDir = 0;
@@ -679,21 +772,35 @@ canvas{display:block;width:100%;height:100%}
     // Platform collision
     var prevOnGround = pl.onGround;
     pl.onGround = false;
+
+    // Elevated platform collision
     for(var i=0;i<platforms.length;i++){
       var p = platforms[i];
-      var py = p.y;
-      if(p.moving) py += Math.sin(frame*0.02+p.movePhase)*p.moveRange;
-
-      if(pl.x > p.x && pl.x < p.x+p.w){
+      if(p.crumbled) continue;
+      if(pl.x > p.x-2 && pl.x < p.x+p.w+2){
         var bot = pl.y+PH;
         var prevBot = bot - pl.vy;
-        if(pl.vy>=0 && prevBot<=py+6 && bot>=py-2){
-          pl.y = py - PH;
+        if(pl.vy>=0 && prevBot<=p.y+6 && bot>=p.y-2){
+          pl.y = p.y - PH;
           pl.vy = 0;
           pl.onGround = true;
           pl.jumps = 0;
           airDashUsed = false;
           wallSlideDir = 0;
+
+          // Crumbling platform
+          if(p.type==='crumble' && p.crumbleTimer<0){
+            p.crumbleTimer = p.crumbleMax;
+          }
+
+          // Thorny platform edge damage
+          if(p.type==='thorny'){
+            var edgeDist = Math.min(pl.x - p.x, p.x+p.w - pl.x);
+            if(edgeDist < 12){
+              if(takeDamage(10, 'thorns')) return;
+              sparkP(pl.x-camX, pl.y+PH, '#88ff44');
+            }
+          }
           break;
         }
       }
@@ -718,6 +825,29 @@ canvas{display:block;width:100%;height:100%}
             wallSlideDir = 0;
             break;
           }
+        }
+      }
+    }
+
+    // CONTINUOUS GROUND — player always lands on ground if falling below it
+    if(!pl.onGround && pl.y + PH >= groundY && pl.vy >= 0){
+      pl.y = groundY - PH;
+      pl.vy = 0;
+      pl.onGround = true;
+      pl.jumps = 0;
+      airDashUsed = false;
+      wallSlideDir = 0;
+    }
+
+    // Update crumbling platforms
+    for(var i=0;i<platforms.length;i++){
+      var p = platforms[i];
+      if(p.crumbleTimer > 0){
+        p.crumbleTimer--;
+        if(p.crumbleTimer <= 0){
+          p.crumbled = true;
+          // Player falls to ground (not death)
+          dustP(pl.x-camX, p.y);
         }
       }
     }
@@ -747,34 +877,31 @@ canvas{display:block;width:100%;height:100%}
     for(var i=0;i<houses.length;i++){
       var hs = houses[i];
       if(hs.lit) continue;
-      var cx = hs.x + hs.w - 10;
+      var cx = hs.x + hs.w - 12;
       var cy = hs.y - hs.h - hs.roofH - hs.chimneyH;
-      if(Math.abs(pl.x - cx)<14 && Math.abs(pl.y+PH - (cy+hs.chimneyH))<20){
+      if(Math.abs(pl.x - cx)<16 && Math.abs(pl.y+PH - (cy+hs.chimneyH))<22){
         hs.lit = true;
-        score += 3;
-        pl.fuel = Math.min(FUEL_MAX, pl.fuel + 35);
-        combo++; if(combo>bestCombo)bestCombo=combo; comboTimer=150;
+        score += 5;
+        pl.fuel = Math.min(FUEL_MAX, pl.fuel + 40);
+        combo++; if(combo>bestCombo)bestCombo=combo; comboTimer=180;
         chimneyP(cx-camX, cy);
-        shake = 5;
-        popup('+3 Chimney!','Toasty!');
+        shake = 6;
+        popup('+5 Chimney!','Toasty!');
       }
     }
 
-    // Fall death
-    if(pl.y > H+60){ die(); return; }
-
-    // Fuel
-    pl.fuel -= FUEL_DRAIN + Math.min(distance*0.00002, 0.03);
+    // Fuel drain (scales with difficulty)
+    pl.fuel -= FUEL_DRAIN + df * 0.03;
     pl.fuel = Math.max(0, pl.fuel);
     pl.size = 0.5 + 0.5*(pl.fuel/FUEL_MAX);
     if(pl.fuel<=0){ die(); return; }
 
-    // Camera with slight lead
+    // Camera with lead
     var leadX = pl.vx * 8;
     camX += (pl.x - W*0.3 + leadX - camX)*0.08;
     distance = pl.x/10;
 
-    ensurePlats();
+    ensureWorld();
 
     // Pyre collision
     for(var i=0;i<pyres.length;i++){
@@ -797,13 +924,17 @@ canvas{display:block;width:100%;height:100%}
     for(var i=0;i<pickups.length;i++){
       var pk=pickups[i];
       if(pk.collected) continue;
-      var pksx = pk.x-camX;
-      var dx=pk.x-pl.x, dy=pk.y-(pl.y+PH/2);
-      if(Math.abs(dx)<18 && Math.abs(dy)<22){
+      var dx2=pk.x-pl.x, dy2=pk.y-(pl.y+PH/2);
+      if(Math.abs(dx2)<18 && Math.abs(dy2)<22){
         pk.collected=true;
+        var pksx=pk.x-camX;
         if(pk.type==='spark'||pk.type==='crystal'){
           totalSparks++;
           sparkP(pksx, pk.y, pk.type==='crystal'?'#aa66ff':'#ffcc44');
+        } else if(pk.type==='fuel'){
+          pl.fuel=Math.min(FUEL_MAX, pl.fuel+20);
+          sparkP(pksx, pk.y, '#ff8800');
+          popup('+20 Fuel','');
         } else if(pk.type==='shield'){
           shieldTimer=480;
           popup('Flame Shield','Immune to hazards');
@@ -829,27 +960,25 @@ canvas{display:block;width:100%;height:100%}
         if(hz.timer<=0){hz.active=true; hz.dropY=0; hz.timer=hz.interval;}
         if(hz.active){
           hz.dropY+=3;
-          var dy2=hz.baseY+hz.dropY;
-          if(!isInvuln && Math.abs(hz.x-pl.x)<10 && Math.abs(dy2-(pl.y+PH/2))<14){
-            pl.fuel-=15; shake=5; hitFreezeFrames=2;
+          var dropAbsY=hz.baseY+hz.dropY;
+          if(!isInvuln && Math.abs(hz.x-pl.x)<10 && Math.abs(dropAbsY-(pl.y+PH/2))<14){
+            if(takeDamage(15, 'drip')) return;
             sparkP(pl.x-camX, pl.y+PH/2, '#4488ff');
             hz.active=false;
-            if(pl.fuel<=0){die();return;}
           }
           if(hz.dropY > 200) hz.active=false;
         }
       } else if(hz.type==='gust'){
         if(pl.x>hz.x && pl.x<hz.x+hz.w && pl.y+PH>hz.y && pl.y<hz.y+hz.h){
           pl.x += hz.dir * hz.strength;
-          if(!isInvuln) pl.fuel -= 0.05;
+          if(!isInvuln) pl.fuel -= 0.08;
         }
       } else if(hz.type==='low'){
-        // Low obstacle: bar at head height
         var playerH = slideTimer>0 ? PH*0.4 : PH;
         var playerTop = pl.y + PH - playerH;
         if(!isInvuln && Math.abs(pl.x-hz.x)<hz.w/2+6 && playerTop<hz.y+6 && pl.y+PH>hz.y-2){
-          if(slideTimer<=0){ // not sliding, hit it
-            pl.fuel-=10; shake=3; hitFreezeFrames=2;
+          if(slideTimer<=0){
+            if(takeDamage(10, 'obstacle')) return;
             sparkP(pl.x-camX, hz.y, '#886644');
           }
         }
@@ -860,47 +989,40 @@ canvas{display:block;width:100%;height:100%}
     for(var i=enemies.length-1;i>=0;i--){
       var en=enemies[i];
       if(!en.alive) continue;
-      // Patrol
       en.x += en.dir * en.speed;
       if(en.x<=en.platX+10 || en.x>=en.platX+en.platW-10) en.dir*=-1;
       en.phase += 0.08;
 
-      // Collision with player
       var edx=en.x-pl.x, edy=(en.y)-(pl.y+PH/2);
       if(Math.abs(edx)<14 && Math.abs(edy)<16){
         if(blazeTimer>0){
-          // Extinguish with steam
           en.alive=false;
           steamP(en.x-camX, en.y);
           score++;
         } else if(!isInvuln){
-          // Knockback + fuel loss
-          pl.fuel-=20;
           pl.vy=-5;
           pl.x += (edx<0?1:-1)*30;
-          shake=6; hitFreezeFrames=2;
+          if(takeDamage(20, 'water_sprite')) return;
           sparkP(pl.x-camX, pl.y+PH/2, '#4488ff');
-          if(pl.fuel<=0){die();return;}
         }
       }
     }
-    // Cleanup dead/offscreen enemies
     for(var i=enemies.length-1;i>=0;i--){
       if(!enemies[i].alive || enemies[i].x<camX-100) enemies.splice(i,1);
     }
 
     // Wind Spirit
-    wind.speed = WIND_SPEED + Math.min(distance*0.002, 3);
+    wind.speed = WIND_BASE_SPEED + df * 3.0 + Math.min(distance*0.0008, 1.5);
     var targetWX = pl.x - W*0.65;
-    wind.x += (targetWX-wind.x)*0.012 + wind.speed*0.35;
-    if(wind.x < pl.x-W*0.85) wind.x = pl.x-W*0.85;
+    wind.x += (targetWX-wind.x)*0.01 + wind.speed*0.3;
+    if(wind.x < pl.x-W*0.9) wind.x = pl.x-W*0.9;
     wind.sx = wind.x-camX;
     wind.y = groundY-25+Math.sin(frame*0.04)*8;
 
     var psx = pl.x-camX;
     if(wind.sx > psx-12){ die(); return; }
 
-    // Wind blows out pyres
+    // Wind blows out pyres behind it
     for(var i=0;i<pyres.length;i++){
       if(pyres[i].lit && pyres[i].x<wind.x+10) pyres[i].lit=false;
     }
@@ -910,7 +1032,6 @@ canvas{display:block;width:100%;height:100%}
     document.getElementById('hud-dist').textContent=Math.floor(distance);
     document.getElementById('fuel-fill').style.width=pl.fuel+'%';
 
-    // Popup timer
     if(popupTimer>0){popupTimer--;if(popupTimer<=0)document.getElementById('popup').style.opacity='0';}
 
     // Trail particles
@@ -923,7 +1044,7 @@ canvas{display:block;width:100%;height:100%}
     for(var i=0;i<houses.length;i++){
       var hs=houses[i];
       if(hs.lit && frame%6===0){
-        var cx = hs.x + hs.w - 10;
+        var cx = hs.x + hs.w - 12;
         var cy = hs.y - hs.h - hs.roofH - hs.chimneyH;
         smokeP(cx-camX, cy);
       }
@@ -939,9 +1060,9 @@ canvas{display:block;width:100%;height:100%}
       }
     }
 
-    // Snowflakes (biome 2)
-    var b = getBiome(distance);
-    if(b.biome===2 || (b.biome===1 && b.t>0.5)){
+    // Snowflakes
+    var bio = getBiome(distance);
+    if(bio.biome===2 || (bio.biome===1 && bio.t>0.5)){
       for(var i=0;i<snowflakes.length;i++){
         var sf=snowflakes[i];
         sf.x+=sf.vx+Math.sin(frame*0.02+i)*0.2;
@@ -963,8 +1084,7 @@ canvas{display:block;width:100%;height:100%}
 
     var bc = getBiomeBlend(distance);
 
-    // Sky with combo warmth pulse
-    var np=Math.min(1,distance/800);
+    // Sky
     var warmPulse = combo>=5 ? Math.sin(frame*0.05)*0.08+0.08 : 0;
     var grad=ctx.createLinearGradient(0,0,0,H);
     var sr=bc.sky[0], sg=bc.sky[1], sb=bc.sky[2];
@@ -1030,69 +1150,93 @@ canvas{display:block;width:100%;height:100%}
     // Mountains (parallax)
     drawMountains();
 
-    // Void below ground
+    // CONTINUOUS GROUND — solid earth with grass top
     var gc = bc.ground;
+    var gtc = bc.groundTop;
+    // Earth fill from groundY to bottom
     ctx.fillStyle='rgb('+gc[0]+','+gc[1]+','+gc[2]+')';
-    ctx.fillRect(0,groundY-2,W,H-groundY+4);
+    ctx.fillRect(0,groundY,W,H-groundY);
+    // Grass/top strip
+    ctx.fillStyle='rgb('+gtc[0]+','+gtc[1]+','+gtc[2]+')';
+    ctx.fillRect(0,groundY-2,W,5);
+    // Dirt texture lines
+    ctx.fillStyle='rgba(0,0,0,0.05)';
+    ctx.fillRect(0,groundY+12,W,1);
+    ctx.fillRect(0,groundY+28,W,1);
 
-    // Platforms
+    // Elevated Platforms
     var biome = getBiome(distance);
     for(var i=0;i<platforms.length;i++){
       var p=platforms[i];
+      if(p.crumbled) continue;
       var px=p.x-camX;
       if(px+p.w<-20||px>W+20) continue;
 
-      var py=p.y;
-      if(p.moving) py+=Math.sin(frame*0.02+p.movePhase)*p.moveRange;
+      var shaking = (p.type==='crumble' && p.crumbleTimer>0 && p.crumbleTimer<30);
+      var shX = shaking ? (Math.random()-.5)*3 : 0;
+      var shY = shaking ? (Math.random()-.5)*2 : 0;
 
-      var topCol = biome.biome===2?'#4a4a48':biome.biome===1?'#2e2838':'#2a1e18';
-      var bodyCol = biome.biome===2?'#2a2a2c':biome.biome===1?'#1a1420':'#1a1210';
-      var elevBody = biome.biome===1?'#2a2235':'#3d2e22';
-      var elevTop = biome.biome===1?'#352a40':'#4a3828';
+      var topCol, bodyCol;
+      if(p.type==='thorny'){
+        topCol='#5a3a2a'; bodyCol='#3a2218';
+      } else if(p.type==='crumble'){
+        var fade = p.crumbleTimer>0 ? Math.max(0.3, p.crumbleTimer/p.crumbleMax) : 1;
+        topCol='rgba(90,75,60,'+fade+')'; bodyCol='rgba(50,40,30,'+fade+')';
+      } else if(p.tier==='house'){
+        topCol='#5a5550'; bodyCol='#3a3530';
+      } else {
+        topCol = biome.biome===2?'#4a4a48':biome.biome===1?'#3a2e42':'#4a3828';
+        bodyCol = biome.biome===2?'#2a2a2c':biome.biome===1?'#2a2030':'#3d2e22';
+      }
 
-      if(p.elevated){
-        ctx.fillStyle=elevBody;ctx.fillRect(px,py,p.w,PLAT_H);
-        ctx.fillStyle=elevTop;ctx.fillRect(px,py,p.w,3);
-        for(var d=0;d<p.dirtPatches.length;d++){
-          var dp=p.dirtPatches[d];
-          ctx.fillStyle='rgba(0,0,0,'+dp.dark+')';
-          ctx.fillRect(px+dp.rx,py+3,Math.min(dp.rw,p.w-dp.rx),PLAT_H-3);
-        }
-        var postH = groundY-py-PLAT_H;
-        var lx=px+10, rx=px+p.w-16;
-        ctx.fillStyle='#2a1e15';
-        ctx.fillRect(lx,py+PLAT_H,6,postH);
-        ctx.fillRect(rx,py+PLAT_H,6,postH);
-        ctx.strokeStyle='#2a1e15';ctx.lineWidth=2;
-        var beamCount = Math.max(1,Math.floor(postH/40));
-        for(var b2=0;b2<beamCount;b2++){
-          var by = py+PLAT_H+20+b2*(postH/beamCount);
-          if(by<groundY-5){
-            ctx.beginPath();ctx.moveTo(lx+3,by);ctx.lineTo(rx+3,by+20);ctx.stroke();
-            ctx.beginPath();ctx.moveTo(rx+3,by);ctx.lineTo(lx+3,by+20);ctx.stroke();
+      // Platform body
+      ctx.fillStyle=bodyCol;
+      ctx.fillRect(px+shX, p.y+shY, p.w, PLAT_H);
+      ctx.fillStyle=topCol;
+      ctx.fillRect(px+shX, p.y+shY, p.w, 3);
+
+      // Support posts to ground
+      if(p.tier!=='house' || true){
+        var postH = groundY - p.y - PLAT_H;
+        if(postH > 5){
+          var lx=px+8+shX, rx=px+p.w-14+shX;
+          ctx.fillStyle='#2a1e15';
+          ctx.fillRect(lx, p.y+PLAT_H+shY, 5, postH);
+          ctx.fillRect(rx, p.y+PLAT_H+shY, 5, postH);
+          // Cross beams
+          ctx.strokeStyle='#2a1e15';ctx.lineWidth=1.5;
+          var beamCount = Math.max(1,Math.floor(postH/35));
+          for(var b2=0;b2<beamCount;b2++){
+            var by = p.y+PLAT_H+15+b2*(postH/beamCount)+shY;
+            if(by<groundY-5){
+              ctx.beginPath();ctx.moveTo(lx+2,by);ctx.lineTo(rx+3,by+15);ctx.stroke();
+            }
           }
         }
-        ctx.fillStyle=bodyCol;ctx.fillRect(px,groundY,p.w,H-groundY);
-        ctx.fillStyle=topCol;ctx.fillRect(px,groundY-1,p.w,3);
-      } else {
-        ctx.fillStyle=bodyCol;ctx.fillRect(px,py,p.w,H-py);
-        ctx.fillStyle=p.moving?'#3a2a1a':topCol;ctx.fillRect(px,py-1,p.w,4);
-        for(var d=0;d<p.dirtPatches.length;d++){
-          var dp=p.dirtPatches[d];
-          ctx.fillStyle='rgba(0,0,0,'+dp.dark+')';
-          ctx.fillRect(px+dp.rx,py+4,Math.min(dp.rw,p.w-dp.rx),8);
-        }
-        ctx.fillStyle='rgba(0,0,0,.05)';ctx.fillRect(px,py+10,p.w,1);
-        ctx.fillStyle='rgba(0,0,0,.03)';ctx.fillRect(px,py+24,p.w,1);
       }
-      // Snow cap on platforms in snow biome
+
+      // Thorny platform decoration
+      if(p.type==='thorny'){
+        ctx.fillStyle='#4a6a30';
+        for(var t=0;t<p.w;t+=8){
+          ctx.beginPath();
+          ctx.moveTo(px+t+shX, p.y+shY);
+          ctx.lineTo(px+t+4+shX, p.y-5+shY);
+          ctx.lineTo(px+t+8+shX, p.y+shY);
+          ctx.fill();
+        }
+      }
+
+      // Snow cap
       if(biome.biome===2){
         ctx.fillStyle='rgba(220,225,235,0.3)';
-        ctx.fillRect(px,py-2,p.w,3);
+        ctx.fillRect(px+shX, p.y-2+shY, p.w, 3);
       }
-      ctx.fillStyle='rgba(0,0,0,.2)';
-      ctx.fillRect(px,py,2,Math.min(PLAT_H,H-py));
-      ctx.fillRect(px+p.w-2,py,2,Math.min(PLAT_H,H-py));
+
+      // Side edges
+      ctx.fillStyle='rgba(0,0,0,.15)';
+      ctx.fillRect(px+shX, p.y+shY, 2, PLAT_H);
+      ctx.fillRect(px+p.w-2+shX, p.y+shY, 2, PLAT_H);
     }
 
     // Decor
@@ -1135,40 +1279,99 @@ canvas{display:block;width:100%;height:100%}
     for(var i=0;i<houses.length;i++){
       var hs=houses[i];
       var hx=hs.x-camX;
-      if(hx+hs.w<-20||hx>W+60) continue;
+      if(hx+hs.w<-40||hx>W+40) continue;
 
       var wallTop = hs.y-hs.h;
       var roofTop = wallTop-hs.roofH;
-      var cx = hx+hs.w-10;
+      var cx = hx+hs.w-12;
       var chimneyTop = roofTop-hs.chimneyH;
 
-      ctx.fillStyle='#2a1e15';ctx.fillRect(hx,wallTop,hs.w,hs.h);
-      ctx.fillStyle='#cc9933';ctx.globalAlpha=0.7;
-      ctx.fillRect(hx+12,wallTop+10,10,8);ctx.globalAlpha=1;
-      ctx.strokeStyle='#1a1510';ctx.lineWidth=1;
-      ctx.strokeRect(hx+12,wallTop+10,10,8);
-      ctx.beginPath();ctx.moveTo(hx+17,wallTop+10);ctx.lineTo(hx+17,wallTop+18);ctx.stroke();
+      // Stone foundation
+      ctx.fillStyle='#555550';
+      ctx.fillRect(hx-2, hs.y-6, hs.w+4, 6);
+      for(var si=0;si<hs.w+4;si+=8){
+        ctx.fillStyle=si%16<8?'#4a4a45':'#5a5a55';
+        ctx.fillRect(hx-2+si, hs.y-6, 8, 6);
+      }
 
-      ctx.fillStyle='#1e1510';ctx.beginPath();
-      ctx.moveTo(hx-4,wallTop);ctx.lineTo(hx+hs.w/2,roofTop);ctx.lineTo(hx+hs.w+4,wallTop);ctx.fill();
+      // Wooden walls
+      ctx.fillStyle='#5a4030';
+      ctx.fillRect(hx, wallTop, hs.w, hs.h-6);
+      // Wood grain
+      ctx.fillStyle='rgba(0,0,0,0.1)';
+      for(var wy=wallTop+8;wy<hs.y-8;wy+=10){
+        ctx.fillRect(hx, wy, hs.w, 1);
+      }
+      // Vertical planks
+      ctx.fillStyle='rgba(0,0,0,0.06)';
+      for(var wx=hx+12;wx<hx+hs.w;wx+=14){
+        ctx.fillRect(wx, wallTop, 1, hs.h-6);
+      }
 
-      ctx.fillStyle='#444';
-      ctx.fillRect(cx-hs.chimneyW/2, chimneyTop, hs.chimneyW, hs.chimneyH+hs.roofH*0.5);
+      // Window with yellow light
+      var winX = hx+14, winY = wallTop+14, winW = 14, winH = 12;
+      ctx.fillStyle='#cc9933';ctx.globalAlpha=0.8;
+      ctx.fillRect(winX, winY, winW, winH);
+      ctx.globalAlpha=1;
+      // Window frame
+      ctx.strokeStyle='#3a2a1a';ctx.lineWidth=1.5;
+      ctx.strokeRect(winX, winY, winW, winH);
+      // Cross pane
+      ctx.beginPath();ctx.moveTo(winX+winW/2, winY);ctx.lineTo(winX+winW/2, winY+winH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(winX, winY+winH/2);ctx.lineTo(winX+winW, winY+winH/2);ctx.stroke();
+      // Window glow
+      ctx.globalAlpha=0.1;
+      var wGlow=ctx.createRadialGradient(winX+winW/2, winY+winH/2, 0, winX+winW/2, winY+winH/2, 30);
+      wGlow.addColorStop(0,'rgba(255,200,80,.5)');wGlow.addColorStop(1,'rgba(255,200,80,0)');
+      ctx.fillStyle=wGlow;ctx.fillRect(winX-20, winY-20, winW+40, winH+40);
+      ctx.globalAlpha=1;
+
+      // Door
+      ctx.fillStyle='#3a2518';
+      ctx.fillRect(hx+hs.w-20, wallTop+hs.h-26, 12, 20);
+      ctx.fillStyle='#cc9933';
+      ctx.beginPath();ctx.arc(hx+hs.w-11, wallTop+hs.h-16, 1.5, 0, Math.PI*2);ctx.fill();
+
+      // Peaked roof
+      ctx.fillStyle='#8b3a1a';
+      ctx.beginPath();
+      ctx.moveTo(hx-6, wallTop);
+      ctx.lineTo(hx+hs.w/2, roofTop);
+      ctx.lineTo(hx+hs.w+6, wallTop);
+      ctx.fill();
+      // Roof shading
+      ctx.fillStyle='rgba(0,0,0,0.15)';
+      ctx.beginPath();
+      ctx.moveTo(hx+hs.w/2, roofTop);
+      ctx.lineTo(hx+hs.w+6, wallTop);
+      ctx.lineTo(hx+hs.w/2, wallTop);
+      ctx.fill();
+
+      // Chimney
       ctx.fillStyle='#555';
+      ctx.fillRect(cx-hs.chimneyW/2, chimneyTop, hs.chimneyW, hs.chimneyH+hs.roofH*0.5);
+      ctx.fillStyle='#666';
       ctx.fillRect(cx-hs.chimneyW/2-1, chimneyTop, hs.chimneyW+2, 3);
+      // Chimney bricks
+      ctx.fillStyle='rgba(0,0,0,0.08)';
+      for(var cy2=chimneyTop+5;cy2<chimneyTop+hs.chimneyH+hs.roofH*0.4;cy2+=5){
+        ctx.fillRect(cx-hs.chimneyW/2, cy2, hs.chimneyW, 1);
+      }
 
       if(hs.lit){
         var t=frame*.12;
+        // Big fire eruption from chimney
         ctx.fillStyle='#ff6b2b';ctx.globalAlpha=.7;
-        ctx.beginPath();ctx.arc(cx+Math.sin(t)*2,chimneyTop-6,5,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(cx+Math.sin(t)*3,chimneyTop-8,7,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#ffaa00';ctx.globalAlpha=.6;
-        ctx.beginPath();ctx.arc(cx+Math.sin(t*1.3),chimneyTop-10,3.5,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(cx+Math.sin(t*1.3),chimneyTop-14,5,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#fff8e0';ctx.globalAlpha=.4;
-        ctx.beginPath();ctx.arc(cx,chimneyTop-4,2.5,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(cx,chimneyTop-6,3.5,0,Math.PI*2);ctx.fill();
         ctx.globalAlpha=1;
-        var glow=ctx.createRadialGradient(cx,chimneyTop,0,cx,chimneyTop,50);
-        glow.addColorStop(0,'rgba(255,107,43,.1)');glow.addColorStop(1,'rgba(255,107,43,0)');
-        ctx.fillStyle=glow;ctx.fillRect(cx-50,chimneyTop-50,100,100);
+        // Warm glow on house
+        var glow=ctx.createRadialGradient(cx,chimneyTop,0,cx,chimneyTop,70);
+        glow.addColorStop(0,'rgba(255,107,43,.12)');glow.addColorStop(1,'rgba(255,107,43,0)');
+        ctx.fillStyle=glow;ctx.fillRect(cx-70,chimneyTop-70,140,140);
       }
     }
 
@@ -1180,9 +1383,11 @@ canvas{display:block;width:100%;height:100%}
       if(hzx<-60||hzx>W+60) continue;
       ctx.fillStyle=biome.biome===1?'#4a3a55':'#5a4a3a';
       ctx.fillRect(hzx-hz.w/2, hz.y, hz.w, 5);
-      // Support
-      ctx.fillRect(hzx-hz.w/2, hz.y, 3, 8);
-      ctx.fillRect(hzx+hz.w/2-3, hz.y, 3, 8);
+      ctx.fillRect(hzx-hz.w/2, hz.y, 3, groundY-hz.y);
+      ctx.fillRect(hzx+hz.w/2-3, hz.y, 3, groundY-hz.y);
+      // Warning stripes
+      ctx.fillStyle='rgba(255,100,50,0.15)';
+      ctx.fillRect(hzx-hz.w/2, hz.y, hz.w, 5);
     }
 
     // Hazards (drip, gust)
@@ -1235,7 +1440,6 @@ canvas{display:block;width:100%;height:100%}
         sg2.addColorStop(0,'rgba(255,204,68,.4)');sg2.addColorStop(1,'rgba(255,204,68,0)');
         ctx.fillStyle=sg2;ctx.fillRect(pkx-12,pk.y+bob-12,24,24);ctx.globalAlpha=1;
       } else if(pk.type==='crystal'){
-        // Purple crystal for cave biome
         ctx.fillStyle='#aa66ff';ctx.globalAlpha=.7+.2*Math.sin(frame*.08+i);
         ctx.beginPath();
         ctx.moveTo(pkx,pk.y+bob-6);ctx.lineTo(pkx+4,pk.y+bob);ctx.lineTo(pkx,pk.y+bob+4);ctx.lineTo(pkx-4,pk.y+bob);
@@ -1244,6 +1448,18 @@ canvas{display:block;width:100%;height:100%}
         var cg2=ctx.createRadialGradient(pkx,pk.y+bob,0,pkx,pk.y+bob,14);
         cg2.addColorStop(0,'rgba(170,102,255,.4)');cg2.addColorStop(1,'rgba(170,102,255,0)');
         ctx.fillStyle=cg2;ctx.fillRect(pkx-14,pk.y+bob-14,28,28);ctx.globalAlpha=1;
+      } else if(pk.type==='fuel'){
+        // Glowing orange fuel canister
+        ctx.globalAlpha=0.3;
+        var fg=ctx.createRadialGradient(pkx,pk.y+bob,0,pkx,pk.y+bob,16);
+        fg.addColorStop(0,'rgba(255,136,0,.5)');fg.addColorStop(1,'rgba(255,136,0,0)');
+        ctx.fillStyle=fg;ctx.fillRect(pkx-16,pk.y+bob-16,32,32);
+        ctx.globalAlpha=0.9;
+        ctx.fillStyle='#ff8800';
+        ctx.fillRect(pkx-4,pk.y+bob-5,8,10);
+        ctx.fillStyle='#ffaa44';
+        ctx.fillRect(pkx-3,pk.y+bob-4,6,3);
+        ctx.globalAlpha=1;
       } else {
         var cols={shield:'#44aaff',blaze:'#ff4444',djump:'#44ff88'};
         var labels={shield:'S',blaze:'B',djump:'J'};
@@ -1273,14 +1489,12 @@ canvas{display:block;width:100%;height:100%}
       if(!en.alive) continue;
       var ex=en.x-camX;
       if(ex<-20||ex>W+20) continue;
-      // Wobbling water blob
       var wobble=Math.sin(en.phase)*1.5;
       ctx.fillStyle='#4488dd';ctx.globalAlpha=0.7;
       ctx.beginPath();ctx.ellipse(ex,en.y+wobble,5+Math.sin(en.phase*1.3),4+Math.cos(en.phase*0.7),0,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#66aaee';ctx.globalAlpha=0.5;
       ctx.beginPath();ctx.arc(ex-1,en.y-2+wobble,2,0,Math.PI*2);ctx.fill();
       ctx.globalAlpha=1;
-      // Eyes
       ctx.fillStyle='#fff';
       ctx.beginPath();ctx.arc(ex-2,en.y-1+wobble,1.5,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(ex+2,en.y-1+wobble,1.5,0,Math.PI*2);ctx.fill();
@@ -1319,7 +1533,10 @@ canvas{display:block;width:100%;height:100%}
       } else if(p.t==='sh'){ctx.globalAlpha=p.life*.5;ctx.fillStyle='#44aaff';
       } else if(p.t==='sm'){ctx.globalAlpha=p.life*.2;ctx.fillStyle='#888';p.vy-=.01;
       } else if(p.t==='dust'){ctx.globalAlpha=p.life*.5;ctx.fillStyle='#8a7a6a';p.vy-=.01;
-      } else if(p.t==='steam'){ctx.globalAlpha=p.life*.4;ctx.fillStyle='#cceeff';p.vy-=.02;}
+      } else if(p.t==='steam'){ctx.globalAlpha=p.life*.4;ctx.fillStyle='#cceeff';p.vy-=.02;
+      } else if(p.t==='mf'){var t2=1-p.life;ctx.globalAlpha=p.life*.7;
+        ctx.fillStyle='rgb(255,'+Math.floor(180-t2*140)+','+Math.max(0,Math.floor(50-t2*50))+')';
+      }
 
       ctx.beginPath();ctx.arc(p.x,p.y,p.sz*p.life,0,Math.PI*2);ctx.fill();
     }
@@ -1335,7 +1552,6 @@ canvas{display:block;width:100%;height:100%}
         ctx.fillStyle=sg3;ctx.fillRect(psx2-22,pl.y+PH/2-22,44,44);
         ctx.globalAlpha=1;
       }
-      // Dash flash
       if(dashTimer>0){
         ctx.globalAlpha=0.3;ctx.fillStyle='#ff8844';
         ctx.beginPath();ctx.arc(psx2,pl.y+PH/2,PH*0.8,0,Math.PI*2);ctx.fill();
@@ -1343,11 +1559,8 @@ canvas{display:block;width:100%;height:100%}
       }
       var flameSize = PH*pl.size*0.7;
       var flameW = 1, flameH = 1;
-      // Squash on landing
       if(landSquashTimer>0){ flameW=1.3; flameH=0.7; }
-      // Wall slide flatten
       if(wallSlideDir!==0){ flameW=0.7; flameH=1.2; }
-      // Slide compress
       if(slideTimer>0){ flameW=1.4; flameH=0.5; }
       drawFlame(psx2, pl.y+PH/2, flameSize, flameW, flameH);
     }
@@ -1361,15 +1574,6 @@ canvas{display:block;width:100%;height:100%}
       drawFlame(mx,my,28+Math.sin(frame*.03)*3,1,1);
       if(frame%3===0) addP({x:mx+(Math.random()-.5)*15,y:my+(Math.random()-.5)*8,
         vx:(Math.random()-.5)*.5,vy:-Math.random()*2-1,sz:rng(3,6),life:1,dec:rng(.02,.03),t:'mf'});
-      for(var i=particles.length-1;i>=0;i--){
-        var p=particles[i];
-        if(p.t!=='mf') continue;
-        p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;
-        if(p.life<=0){particles.splice(i,1);continue;}
-        var t2=1-p.life;ctx.globalAlpha=p.life*.7;
-        ctx.fillStyle='rgb(255,'+Math.floor(180-t2*140)+','+Math.max(0,Math.floor(50-t2*50))+')';
-        ctx.beginPath();ctx.arc(p.x,p.y,p.sz*p.life,0,Math.PI*2);ctx.fill();
-      }
       ctx.globalAlpha=1;ctx.restore();
     }
   }
