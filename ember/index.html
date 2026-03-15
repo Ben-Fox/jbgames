@@ -124,9 +124,9 @@ canvas{display:block;width:100%;height:100%}
   var SLIDE_DURATION = 20;
 
   // Platform tier heights above ground
-  var TIER_LOW = 40;
-  var TIER_MED = 80;
-  var TIER_HIGH = 120;
+  var TIER_LOW = 45;
+  var TIER_MED = 90;
+  var TIER_HIGH = 140;
 
   // ---- State ----
   var state = 'menu';
@@ -177,13 +177,13 @@ canvas{display:block;width:100%;height:100%}
   }
   function lerp(a,b,t){ return a+(b-a)*Math.max(0,Math.min(1,t)); }
 
-  // Difficulty factor 0-1 based on distance
+  // Difficulty factor 0-1 based on distance — gentle early, steep late
   function diff(){
-    if(distance<200) return 0;
-    if(distance<500) return (distance-200)/300*0.25;
-    if(distance<1000) return 0.25+(distance-500)/500*0.25;
-    if(distance<2000) return 0.5+(distance-1000)/1000*0.25;
-    return Math.min(1, 0.75+(distance-2000)/2000*0.25);
+    if(distance<300) return 0;                                          // Tutorial
+    if(distance<700) return (distance-300)/400*0.15;                    // Easy
+    if(distance<1500) return 0.15+(distance-700)/800*0.25;              // Medium
+    if(distance<3000) return 0.40+(distance-1500)/1500*0.30;            // Hard
+    return Math.min(1, 0.70+(distance-3000)/4000*0.30);                 // Expert
   }
 
   // Biome: 0=forest, 1=cave, 2=snow
@@ -290,50 +290,72 @@ canvas{display:block;width:100%;height:100%}
     var d = startX / 10; // approximate distance
     var df = diff();
 
-    // Elevated platforms
+    // Track platform positions to prevent overlaps
+    var placedPlats = [];
+    function overlapsExisting(nx, ny, nw){
+      for(var j=0;j<placedPlats.length;j++){
+        var pp=placedPlats[j];
+        // Check horizontal overlap AND similar height (within 30px)
+        if(nx < pp.x+pp.w+30 && nx+nw > pp.x-30 && Math.abs(ny-pp.y)<35) return true;
+      }
+      return false;
+    }
+
+    // Elevated platforms — wider spacing, no overlaps
     var x = startX;
     while(x < endX){
-      var spacing = rng(80, 200) - df*60;
-      x += Math.max(50, spacing);
+      var spacing = d<200 ? rng(160,280) : rng(120,240) - df*40;
+      x += Math.max(80, spacing);
       if(x >= endX) break;
 
-      // Decide tier
+      // Decide tier — fewer platforms early, more variety later
       var tierRoll = Math.random();
       var tier, tierH, minW, maxW;
       if(d < 200){
-        // Tutorial: only low platforms
-        tier = 'low'; tierH = TIER_LOW; minW = 140; maxW = 220;
-      } else if(tierRoll < 0.45){
-        tier = 'low'; tierH = TIER_LOW; minW = 100; maxW = 200;
-      } else if(tierRoll < 0.8){
-        tier = 'med'; tierH = TIER_MED; minW = 80; maxW = 160;
+        // Tutorial: sparse low platforms only
+        tier = 'low'; tierH = TIER_LOW; minW = 120; maxW = 180;
+        if(Math.random()>0.5){ x+=100; continue; } // skip half in tutorial
+      } else if(d < 500){
+        if(tierRoll < 0.55){ tier = 'low'; tierH = TIER_LOW; minW = 100; maxW = 180; }
+        else { tier = 'med'; tierH = TIER_MED; minW = 80; maxW = 140; }
+      } else if(tierRoll < 0.35){
+        tier = 'low'; tierH = TIER_LOW; minW = 80; maxW = 160;
+      } else if(tierRoll < 0.7){
+        tier = 'med'; tierH = TIER_MED; minW = 70; maxW = 140;
       } else {
-        tier = 'high'; tierH = TIER_HIGH; minW = 60; maxW = 120;
+        tier = 'high'; tierH = TIER_HIGH; minW = 60; maxW = 110;
       }
 
       var pw = rng(minW, maxW);
       var py = groundY - tierH;
 
+      // Skip if would overlap
+      if(overlapsExisting(x, py, pw)){
+        x += 60;
+        continue;
+      }
+
       // Platform type
       var ptype = 'normal';
-      if(d > 500 && Math.random() < 0.15 * df) ptype = 'crumble';
-      if(d > 1000 && Math.random() < 0.12 * df && tier !== 'low') ptype = 'thorny';
+      if(d > 500 && Math.random() < 0.12 * df) ptype = 'crumble';
+      if(d > 1000 && Math.random() < 0.10 * df && tier !== 'low') ptype = 'thorny';
 
       var p = {x:x, y:py, w:pw, tier:tier, type:ptype,
                crumbleTimer:-1, crumbleMax:60, crumbled:false};
       platforms.push(p);
+      placedPlats.push(p);
 
       // Decor on platform
       genPlatDecor(p);
 
-      // Pyre on ground-level and low platforms (strategic placement)
-      if(tier === 'low' && Math.random() < (d<200 ? 0.7 : 0.35 - df*0.15)){
+      // Pyre on low platforms only — RARE now
+      if(tier === 'low' && Math.random() < (d<200 ? 0.4 : 0.15 - df*0.05)){
         pyres.push({x:p.x+rng(20,p.w-20), y:p.y, lit:false, h:18});
       }
 
       // Sparks on medium/high platforms
-      if(tier !== 'low' && Math.random() < 0.5){
-        var sparkCount = Math.floor(rng(2,5));
+      if(tier !== 'low' && Math.random() < 0.4){
+        var sparkCount = Math.floor(rng(2,4));
         var bio = getBiome(d);
         for(var i=0;i<sparkCount;i++){
           pickups.push({type: bio.biome===1?'crystal':'spark',
@@ -342,19 +364,19 @@ canvas{display:block;width:100%;height:100%}
       }
 
       // Fuel canisters on high platforms
-      if(tier === 'high' && Math.random() < 0.25){
+      if(tier === 'high' && Math.random() < 0.2){
         pickups.push({type:'fuel', x:p.x+p.w/2, y:p.y-15, collected:false});
       }
 
       // Power-ups on highest platforms (rare)
-      if(tier === 'high' && Math.random() < 0.06 + df*0.02){
+      if(tier === 'high' && Math.random() < 0.05 + df*0.02){
         var types = ['shield','blaze','djump'];
         pickups.push({type:types[Math.floor(Math.random()*types.length)],
           x:p.x+rng(15,p.w-15), y:p.y-20, collected:false});
       }
 
-      // Enemies on ground and low platforms
-      if(tier === 'low' && d > 200 && Math.random() < 0.12 + df*0.15){
+      // Enemies on low platforms
+      if(tier === 'low' && d > 250 && Math.random() < 0.10 + df*0.12){
         enemies.push({x:p.x+rng(15,p.w-15), y:p.y-10, platX:p.x, platW:p.w,
           dir:1, speed:0.5+Math.random()*0.8, alive:true, phase:Math.random()*Math.PI*2});
       }
@@ -362,22 +384,22 @@ canvas{display:block;width:100%;height:100%}
       x += pw;
     }
 
-    // Ground-level pyres (spread out)
+    // Ground-level pyres — MUCH more spread out, strategic
     var gx = startX;
     while(gx < endX){
-      var spacing = d<200 ? rng(100,180) : rng(180,350) + df*100;
+      var spacing = d<200 ? rng(200,350) : rng(350,600) + df*200;
       gx += spacing;
       if(gx >= endX) break;
       pyres.push({x:gx, y:groundY, lit:false, h:18});
     }
 
     // Ground-level enemies
-    if(d > 150){
+    if(d > 200){
       var ex = startX;
       while(ex < endX){
-        ex += rng(250, 500) - df*100;
+        ex += rng(300, 600) - df*80;
         if(ex >= endX) break;
-        if(Math.random() < 0.3 + df*0.3){
+        if(Math.random() < 0.2 + df*0.25){
           enemies.push({x:ex, y:groundY-10, platX:ex-50, platW:100,
             dir:1, speed:0.5+Math.random()*0.8, alive:true, phase:Math.random()*Math.PI*2});
         }
@@ -385,12 +407,12 @@ canvas{display:block;width:100%;height:100%}
     }
 
     // Water drip hazards
-    if(d > 200){
+    if(d > 250){
       var hx = startX;
       while(hx < endX){
-        hx += rng(200, 400);
+        hx += rng(250, 450);
         if(hx >= endX) break;
-        if(Math.random() < 0.25 + df*0.2){
+        if(Math.random() < 0.2 + df*0.2){
           hazards.push({type:'drip', x:hx, baseY:groundY-rng(100,160), dropY:0,
             timer:rng(0,120), interval:rng(70,140), active:false});
         }
@@ -398,12 +420,12 @@ canvas{display:block;width:100%;height:100%}
     }
 
     // Wind gust hazards
-    if(d > 400){
+    if(d > 500){
       var wx = startX;
       while(wx < endX){
-        wx += rng(300, 600);
+        wx += rng(350, 650);
         if(wx >= endX) break;
-        if(Math.random() < 0.2 + df*0.2){
+        if(Math.random() < 0.15 + df*0.2){
           hazards.push({type:'gust', x:wx, w:rng(50,90), y:groundY-70, h:70,
             dir:Math.random()<0.5?-1:1, strength:rng(1.5,3)});
         }
@@ -411,12 +433,12 @@ canvas{display:block;width:100%;height:100%}
     }
 
     // Low obstacles (must slide under)
-    if(d > 300){
+    if(d > 400){
       var ox = startX;
       while(ox < endX){
-        ox += rng(250, 500);
+        ox += rng(300, 550);
         if(ox >= endX) break;
-        if(Math.random() < 0.2 + df*0.15){
+        if(Math.random() < 0.15 + df*0.15){
           hazards.push({type:'low', x:ox, y:groundY-22, w:rng(30,50)});
         }
       }
@@ -452,13 +474,20 @@ canvas{display:block;width:100%;height:100%}
   }
 
   function generateHouse(x){
-    // House on a dedicated high platform
-    var platW = 100;
-    var houseW = 60, houseH = 50, roofH = 18, chimneyW = 10, chimneyH = 16;
-    var platY = groundY - TIER_HIGH - 10;
+    // House on a dedicated high platform — BIG houses, player needs to climb up
+    var houseW = 110, houseH = 85, roofH = 30, chimneyW = 14, chimneyH = 22;
+    var platW = houseW + 40; // platform wider than house
+    var platY = groundY - TIER_HIGH - 15;
 
-    // House platform
+    // House platform (stone, sturdy)
     platforms.push({x:x-platW/2, y:platY, w:platW, tier:'house', type:'normal',
+      crumbleTimer:-1, crumbleMax:60, crumbled:false});
+
+    // Stepping stone platform below — helps player reach the house
+    var stepW = rng(70, 100);
+    var stepY = groundY - TIER_MED;
+    var stepX = x - platW/2 - stepW - rng(10, 40);
+    platforms.push({x:stepX, y:stepY, w:stepW, tier:'med', type:'normal',
       crumbleTimer:-1, crumbleMax:60, crumbled:false});
 
     var houseX = x - houseW/2;
@@ -490,7 +519,7 @@ canvas{display:block;width:100%;height:100%}
         if(nextHouseX > chunkStart){
           generateHouse(nextHouseX);
         }
-        nextHouseX += rng(800, 1200);
+        nextHouseX += rng(1000, 1600);
       }
 
       lastGenX = chunkEnd;
@@ -544,7 +573,7 @@ canvas{display:block;width:100%;height:100%}
 
     wind={x:WIND_START, sx:0, y:groundY-30, speed:WIND_BASE_SPEED};
 
-    lastGenX=0; nextHouseX=900;
+    lastGenX=0; nextHouseX=1200;
     // First pyre close
     pyres.push({x:200, y:groundY, lit:false, h:18});
     pyres.push({x:400, y:groundY, lit:false, h:18});
@@ -879,7 +908,7 @@ canvas{display:block;width:100%;height:100%}
       if(hs.lit) continue;
       var cx = hs.x + hs.w - 12;
       var cy = hs.y - hs.h - hs.roofH - hs.chimneyH;
-      if(Math.abs(pl.x - cx)<16 && Math.abs(pl.y+PH - (cy+hs.chimneyH))<22){
+      if(Math.abs(pl.x - cx)<20 && Math.abs(pl.y+PH - (cy+hs.chimneyH))<28){
         hs.lit = true;
         score += 5;
         pl.fuel = Math.min(FUEL_MAX, pl.fuel + 40);
@@ -1308,8 +1337,8 @@ canvas{display:block;width:100%;height:100%}
         ctx.fillRect(wx, wallTop, 1, hs.h-6);
       }
 
-      // Window with yellow light
-      var winX = hx+14, winY = wallTop+14, winW = 14, winH = 12;
+      // Windows with yellow light — bigger house = two windows
+      var winX = hx+12, winY = wallTop+20, winW = 18, winH = 16;
       ctx.fillStyle='#cc9933';ctx.globalAlpha=0.8;
       ctx.fillRect(winX, winY, winW, winH);
       ctx.globalAlpha=1;
@@ -1326,11 +1355,25 @@ canvas{display:block;width:100%;height:100%}
       ctx.fillStyle=wGlow;ctx.fillRect(winX-20, winY-20, winW+40, winH+40);
       ctx.globalAlpha=1;
 
-      // Door
+      // Second window on right side
+      var win2X = hx+hs.w-32, win2Y = wallTop+20;
+      ctx.fillStyle='#cc9933';ctx.globalAlpha=0.8;
+      ctx.fillRect(win2X, win2Y, winW, winH);
+      ctx.globalAlpha=1;
+      ctx.strokeStyle='#3a2a1a';ctx.lineWidth=1.5;
+      ctx.strokeRect(win2X, win2Y, winW, winH);
+      ctx.beginPath();ctx.moveTo(win2X+winW/2, win2Y);ctx.lineTo(win2X+winW/2, win2Y+winH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(win2X, win2Y+winH/2);ctx.lineTo(win2X+winW, win2Y+winH/2);ctx.stroke();
+
+      // Door (centered, bigger)
+      var doorW = 16, doorH = 30;
+      var doorX = hx + hs.w/2 - doorW/2;
       ctx.fillStyle='#3a2518';
-      ctx.fillRect(hx+hs.w-20, wallTop+hs.h-26, 12, 20);
+      ctx.fillRect(doorX, hs.y-doorH-6, doorW, doorH);
+      ctx.fillStyle='#2a1810';
+      ctx.fillRect(doorX, hs.y-doorH-6, doorW, 2); // door top frame
       ctx.fillStyle='#cc9933';
-      ctx.beginPath();ctx.arc(hx+hs.w-11, wallTop+hs.h-16, 1.5, 0, Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(doorX+doorW-4, hs.y-doorH/2-6, 2, 0, Math.PI*2);ctx.fill();
 
       // Peaked roof
       ctx.fillStyle='#8b3a1a';
