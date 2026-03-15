@@ -65,7 +65,7 @@ canvas{display:block;width:100%;height:100%}
     <div id="instructions">
       Jump: Space / Up / W / Tap center<br>
       Move: Arrows / A,D / Tap sides<br>
-      Light pyres to refuel<br>
+      Light pyres &amp; chimneys to refuel<br>
       Collect power-ups to survive<br>
       Stay ahead of the Wind Spirit
     </div>
@@ -103,7 +103,8 @@ canvas{display:block;width:100%;height:100%}
 
   // ---- Constants ----
   var GROUND_FRAC = 0.82;
-  var PW = 14, PH = 18;
+  var PH = 18;
+  var PLAT_H = 16;
   var BASE_SPEED = 3.0;
   var JUMP_VEL = -10;
   var GRAV = 0.42;
@@ -112,14 +113,15 @@ canvas{display:block;width:100%;height:100%}
   var FUEL_PER_PYRE = 28;
   var WIND_START = -350;
   var WIND_SPEED = 2.4;
-  var MAX_P = 120; // particles
+  var MAX_P = 150;
   var PLAT_MIN_W = 120;
   var PLAT_MAX_W = 320;
 
   // ---- State ----
   var state = 'menu';
-  var pl = {}; // player
+  var pl = {};
   var platforms = [], pyres = [], hazards = [], pickups = [], particles = [];
+  var houses = [], decor = [];
   var wind = {};
   var camX = 0, groundY = 0;
   var score = 0, distance = 0, bestScore = 0;
@@ -129,9 +131,11 @@ canvas{display:block;width:100%;height:100%}
   var lastPlatEnd = 0;
   var keys = {}, tL = false, tR = false, tJ = false;
   var popupTimer = 0;
-  var doubleJumpReady = false; // power-up state
   var shieldTimer = 0;
   var blazeTimer = 0;
+
+  // Clouds (persistent across game, regenerated on start)
+  var clouds = [];
 
   try { bestScore = parseInt(localStorage.getItem('ember3_best'))||0; } catch(e){}
 
@@ -144,6 +148,11 @@ canvas{display:block;width:100%;height:100%}
     el.querySelector('.pop-sub').textContent=sub||'';
     el.style.opacity='1'; popupTimer=90;
   }
+  // Seeded random for deterministic decor per platform
+  function seededRng(seed){
+    var s = seed;
+    return function(){ s=(s*9301+49297)%233280; return s/233280; };
+  }
 
   // ---- Particles ----
   function trailP(){
@@ -155,6 +164,10 @@ canvas{display:block;width:100%;height:100%}
   function pyreP(px,py){
     for(var i=0;i<10;i++) addP({x:px+(Math.random()-.5)*14,y:py+Math.random()*4,
       vx:(Math.random()-.5)*2,vy:-rng(2,5),sz:rng(3,8),life:1,dec:rng(.015,.025),t:'pl'});
+  }
+  function chimneyP(px,py){
+    for(var i=0;i<18;i++) addP({x:px+(Math.random()-.5)*12,y:py+Math.random()*3,
+      vx:(Math.random()-.5)*3,vy:-rng(3,7),sz:rng(3,9),life:1,dec:rng(.012,.022),t:'pl'});
   }
   function windP(){
     addP({x:wind.sx+rng(15,35),y:wind.y+(Math.random()-.5)*35,
@@ -174,47 +187,93 @@ canvas{display:block;width:100%;height:100%}
     addP({x:sx+(Math.random()-.5)*24,y:pl.y+PH/2+(Math.random()-.5)*24,
       vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,sz:rng(2,4),life:1,dec:rng(.04,.06),t:'sh'});
   }
+  function smokeP(px,py){
+    addP({x:px+(Math.random()-.5)*4,y:py,
+      vx:(Math.random()-.5)*.3,vy:-rng(.3,.8),sz:rng(2,4),life:1,dec:rng(.008,.015),t:'sm'});
+  }
 
   // ---- Max jumpable gap calculation ----
   function maxJump(){
-    // airtime = 2 * |JUMP_VEL| / GRAV
-    var jv = blazeTimer>0 ? JUMP_VEL*1.25 : JUMP_VEL;
-    var airtime = 2*Math.abs(jv)/GRAV;
-    var speed = BASE_SPEED + Math.min(distance*0.0008, 2) + 2.5; // max input speed
-    if(blazeTimer>0) speed *= 1.3;
-    return airtime * speed * 0.7; // 70% = comfortable margin
+    // Use BASE speed only — gaps must be passable without holding right
+    var airtime = 2*Math.abs(JUMP_VEL)/GRAV;
+    var speed = BASE_SPEED + Math.min(distance*0.0008, 2.5);
+    return airtime * speed * 0.8; // 80% margin
+  }
+
+  // ---- Generate decor for a platform ----
+  function genDecor(p){
+    var sr = seededRng(Math.floor(p.x*7+p.w*13));
+    // Dirt patches (stored positions for subtle variation)
+    p.dirtPatches = [];
+    for(var i=0;i<Math.floor(sr()*4)+2;i++){
+      p.dirtPatches.push({rx: sr()*p.w, rw: 8+sr()*15, dark: sr()*0.08+0.02});
+    }
+    // Trees on ~30% of ground-level platforms
+    if(!p.elevated && sr()<0.3){
+      var treeCount = Math.floor(sr()*3)+1;
+      for(var i=0;i<treeCount;i++){
+        decor.push({type:'tree', x:p.x+20+sr()*(p.w-40), y:p.y,
+          h:20+sr()*25, w:8+sr()*6, platX:p.x});
+      }
+    }
+    // Grass tufts (3-5 per platform)
+    var grassCount = Math.floor(sr()*3)+3;
+    for(var i=0;i<grassCount;i++){
+      decor.push({type:'grass', x:p.x+10+sr()*(p.w-20), y:p.y, platX:p.x,
+        blades: Math.floor(sr()*3)+2, h:3+sr()*4});
+    }
+    // Rocks on some platforms
+    if(sr()<0.4){
+      var rc = Math.floor(sr()*2)+1;
+      for(var i=0;i<rc;i++){
+        decor.push({type:'rock', x:p.x+15+sr()*(p.w-30), y:p.y, platX:p.x,
+          w:4+sr()*5, h:3+sr()*3});
+      }
+    }
   }
 
   // ---- Platform generation ----
   function genPlatform(startX){
     var w = rng(PLAT_MIN_W, PLAT_MAX_W);
-    // Shrink platforms slightly over time
     w = Math.max(80, w - Math.min(distance*0.03, 80));
     var elevated = Math.random()<0.25 && distance>300;
     var yOff = elevated ? -(rng(30,60)) : 0;
-    // Moving platforms after distance 500
     var moving = !elevated && Math.random()<0.15 && distance>500;
-    var p = {x:startX, y:groundY+yOff, w:w, h:16, elevated:elevated,
-             moving:moving, moveRange:moving?rng(30,60):0, moveSpeed:moving?rng(0.5,1.2):0, movePhase:Math.random()*Math.PI*2};
+    var p = {x:startX, y:groundY+yOff, w:w, elevated:elevated,
+             moving:moving, moveRange:moving?rng(30,60):0, movePhase:Math.random()*Math.PI*2,
+             dirtPatches:[]};
     platforms.push(p);
+
+    // Generate decor
+    genDecor(p);
 
     // Pyre on most platforms
     if(Math.random()<0.65 || platforms.length<=2){
-      pyres.push({x:p.x+30+Math.random()*(p.w-60), y:p.y, lit:false, h:20, platIdx:platforms.length-1});
+      pyres.push({x:p.x+30+Math.random()*(p.w-60), y:p.y, lit:false, h:20});
     }
 
-    // Hazards: water drips above some platforms (after dist 200)
+    // House on wider ground-level platforms (15-20% chance after dist 100)
+    if(!elevated && !moving && w>200 && distance>100 && Math.random()<0.18){
+      var houseX = p.x + 50 + Math.random()*(w-140);
+      houses.push({
+        x:houseX, y:p.y, w:40, h:35,
+        roofH:15, chimneyW:8, chimneyH:14,
+        lit:false, platX:p.x
+      });
+    }
+
+    // Hazards: water drips
     if(Math.random()<0.3 && distance>200 && !elevated){
       var hx = p.x + rng(20, p.w-20);
       hazards.push({type:'drip', x:hx, baseY:p.y-rng(80,140), dropY:0, timer:rng(0,120), interval:rng(90,160), active:false, platX:p.x, platW:p.w});
     }
 
-    // Hazards: wind gust zones (after dist 400)
+    // Hazards: wind gust zones
     if(Math.random()<0.2 && distance>400){
-      hazards.push({type:'gust', x:p.x+rng(10,p.w*0.3), w:rng(40,80), y:p.y-60, h:60, dir:Math.random()<0.5?-1:1, strength:rng(1.5,3)});
+      hazards.push({type:'gust', x:p.x+rng(10,p.w*0.3), w:rng(40,80), y:p.y-60, h:60, dir:Math.random()<0.5?-1:1, strength:rng(1.5,3), platX:p.x});
     }
 
-    // Collectible sparks (small bonus flames)
+    // Collectible sparks
     if(Math.random()<0.4){
       var sparkCount = Math.floor(rng(1,4));
       for(var i=0;i<sparkCount;i++){
@@ -222,7 +281,7 @@ canvas{display:block;width:100%;height:100%}
       }
     }
 
-    // Power-up pickups (rare)
+    // Power-up pickups
     if(Math.random()<0.08 && distance>150){
       var types = ['shield','blaze','djump'];
       var ptype = types[Math.floor(Math.random()*types.length)];
@@ -235,9 +294,11 @@ canvas{display:block;width:100%;height:100%}
   function ensurePlats(){
     var viewR = camX + W + 500;
     while(lastPlatEnd < viewR){
-      var gap = rng(60, 140);
-      gap += Math.min(distance*0.015, 50);
-      // NEVER exceed jumpable distance
+      var gap = rng(60, 120);
+      gap += Math.min(distance*0.01, 40);
+      // Early gaps are small
+      if(distance<200) gap = Math.min(gap, 100);
+      // Never exceed jumpable distance
       gap = Math.min(gap, maxJump());
       lastPlatEnd += gap;
       lastPlatEnd = genPlatform(lastPlatEnd);
@@ -247,6 +308,16 @@ canvas{display:block;width:100%;height:100%}
     while(pyres.length>0 && pyres[0].x+30<viewL) pyres.shift();
     while(hazards.length>0 && (hazards[0].x||hazards[0].platX||0)+200<viewL) hazards.shift();
     while(pickups.length>0 && pickups[0].x+20<viewL) pickups.shift();
+    while(houses.length>0 && houses[0].x+50<viewL) houses.shift();
+    while(decor.length>0 && (decor[0].platX||decor[0].x)+400<viewL) decor.shift();
+  }
+
+  // ---- Init clouds ----
+  function initClouds(){
+    clouds=[];
+    for(var i=0;i<4;i++){
+      clouds.push({x:rng(0,W*2), y:rng(20,groundY*0.35), w:rng(80,160), h:rng(20,40), speed:rng(0.1,0.3)});
+    }
   }
 
   // ---- Game ----
@@ -255,18 +326,21 @@ canvas{display:block;width:100%;height:100%}
     groundY = H*GROUND_FRAC;
     camX=0; distance=0; score=0; combo=0; bestCombo=0; comboTimer=0;
     totalSparks=0; frame=0; shake=0; popupTimer=0;
-    doubleJumpReady=false; shieldTimer=0; blazeTimer=0;
+    shieldTimer=0; blazeTimer=0;
     startTime=Date.now();
     particles=[]; platforms=[]; pyres=[]; hazards=[]; pickups=[];
+    houses=[]; decor=[];
+    initClouds();
 
     pl={x:80, y:groundY-PH, vx:0, vy:0, onGround:true, fuel:FUEL_MAX, size:1, jumps:0, maxJumps:1};
 
     wind={x:WIND_START, sx:0, y:groundY-30, speed:WIND_SPEED};
 
     lastPlatEnd=-50;
-    var fp={x:-50,y:groundY,w:500,h:16,elevated:false,moving:false,moveRange:0,moveSpeed:0,movePhase:0};
+    var fp={x:-50,y:groundY,w:500,elevated:false,moving:false,moveRange:0,movePhase:0,dirtPatches:[]};
     platforms.push(fp);
-    pyres.push({x:250,y:groundY,lit:false,h:20,platIdx:0});
+    genDecor(fp);
+    pyres.push({x:250,y:groundY,lit:false,h:20});
     lastPlatEnd=fp.x+fp.w;
     ensurePlats();
 
@@ -340,7 +414,6 @@ canvas{display:block;width:100%;height:100%}
     frame++;
     if(frame>1e8) frame-=1e8;
 
-    // Speed increases gently over time
     var speed = BASE_SPEED + Math.min(distance*0.0008, 2.5);
     if(blazeTimer>0){ speed*=1.3; blazeTimer--; if(blazeTimer<=0) popup('Blaze Off',''); }
     if(shieldTimer>0){ shieldTimer--; if(shieldTimer<=0) popup('Shield Off',''); }
@@ -352,7 +425,7 @@ canvas{display:block;width:100%;height:100%}
     pl.vx = speed + inputX*2.5;
     pl.x += pl.vx;
 
-    // Jump (with double jump support)
+    // Jump
     var jNow = wJ();
     if(jNow && !jumpPressed){
       if(pl.onGround){
@@ -376,7 +449,6 @@ canvas{display:block;width:100%;height:100%}
     for(var i=0;i<platforms.length;i++){
       var p = platforms[i];
       var py = p.y;
-      // Moving platform offset
       if(p.moving) py += Math.sin(frame*0.02+p.movePhase)*p.moveRange;
 
       if(pl.x > p.x && pl.x < p.x+p.w){
@@ -389,6 +461,46 @@ canvas{display:block;width:100%;height:100%}
           pl.jumps = 0;
           break;
         }
+      }
+    }
+
+    // House roof collision (roof is a collidable surface)
+    if(!pl.onGround){
+      for(var i=0;i<houses.length;i++){
+        var hs = houses[i];
+        // Roof top y = hs.y - hs.h - hs.roofH
+        var roofTop = hs.y - hs.h - hs.roofH;
+        var roofLeft = hs.x - 5;
+        var roofRight = hs.x + hs.w + 5;
+        if(pl.x > roofLeft && pl.x < roofRight){
+          var bot = pl.y+PH;
+          var prevBot = bot - pl.vy;
+          if(pl.vy>=0 && prevBot<=roofTop+6 && bot>=roofTop-2){
+            pl.y = roofTop - PH;
+            pl.vy = 0;
+            pl.onGround = true;
+            pl.jumps = 0;
+            break;
+          }
+        }
+      }
+    }
+
+    // House chimney collision (light it)
+    for(var i=0;i<houses.length;i++){
+      var hs = houses[i];
+      if(hs.lit) continue;
+      // Chimney position: right side of roof, top
+      var cx = hs.x + hs.w - 10;
+      var cy = hs.y - hs.h - hs.roofH - hs.chimneyH;
+      if(Math.abs(pl.x - cx)<14 && Math.abs(pl.y+PH - (cy+hs.chimneyH))<20){
+        hs.lit = true;
+        score += 3;
+        pl.fuel = Math.min(FUEL_MAX, pl.fuel + 35);
+        combo++; if(combo>bestCombo)bestCombo=combo; comboTimer=150;
+        chimneyP(cx-camX, cy);
+        shake = 5;
+        popup('+3 Chimney!','Toasty!');
       }
     }
 
@@ -425,7 +537,6 @@ canvas{display:block;width:100%;height:100%}
     if(comboTimer>0){comboTimer--;if(comboTimer<=0)combo=0;}
 
     // Pickups
-    var psx = pl.x-camX;
     for(var i=0;i<pickups.length;i++){
       var pk=pickups[i];
       if(pk.collected) continue;
@@ -434,21 +545,20 @@ canvas{display:block;width:100%;height:100%}
       if(Math.abs(dx)<18 && Math.abs(dy)<22){
         pk.collected=true;
         if(pk.type==='spark'){
-          totalSparks++; score+=0; // sparks are bonus, tracked separately
+          totalSparks++;
           sparkP(pksx, pk.y, '#ffcc44');
         } else if(pk.type==='shield'){
-          shieldTimer=480; // 8 seconds
+          shieldTimer=480;
           popup('Flame Shield','Immune to hazards');
           sparkP(pksx, pk.y, '#44aaff');
         } else if(pk.type==='blaze'){
-          blazeTimer=360; // 6 seconds
+          blazeTimer=360;
           popup('Blaze Boost','Speed + Jump up!');
           sparkP(pksx, pk.y, '#ff4444');
         } else if(pk.type==='djump'){
-          pl.maxJumps=2; doubleJumpReady=true;
+          pl.maxJumps=2;
           popup('Double Jump','Jump again mid-air!');
           sparkP(pksx, pk.y, '#44ff88');
-          // Double jump lasts for the run (permanent until death)
         }
       }
     }
@@ -463,8 +573,6 @@ canvas{display:block;width:100%;height:100%}
         }
         if(hz.active){
           hz.dropY+=3;
-          // Hit player?
-          var dsx=hz.x-camX;
           var dy2=hz.baseY+hz.dropY;
           if(shieldTimer<=0 && Math.abs(hz.x-pl.x)<10 && Math.abs(dy2-(pl.y+PH/2))<14){
             pl.fuel-=15; shake=5;
@@ -475,11 +583,8 @@ canvas{display:block;width:100%;height:100%}
           if(hz.dropY > 200) hz.active=false;
         }
       } else if(hz.type==='gust'){
-        var gsx=hz.x-camX;
-        // Player in gust zone?
         if(pl.x>hz.x && pl.x<hz.x+hz.w && pl.y+PH>hz.y && pl.y<hz.y+hz.h){
           pl.x += hz.dir * hz.strength;
-          // Drain fuel slightly in wind
           if(shieldTimer<=0) pl.fuel -= 0.05;
         }
       }
@@ -493,6 +598,7 @@ canvas{display:block;width:100%;height:100%}
     wind.sx = wind.x-camX;
     wind.y = groundY-25+Math.sin(frame*0.04)*8;
 
+    var psx = pl.x-camX;
     if(wind.sx > psx-12){ die(); return; }
 
     // Wind blows out pyres
@@ -510,9 +616,19 @@ canvas{display:block;width:100%;height:100%}
 
     // Trail particles
     if(frame%2===0) trailP();
-    if(blazeTimer>0 && frame%1===0) trailP();
+    if(blazeTimer>0 && frame%2===0) trailP();
     if(frame%4===0) windP();
     if(shieldTimer>0 && frame%3===0) shieldP();
+
+    // Lit chimney smoke
+    for(var i=0;i<houses.length;i++){
+      var hs=houses[i];
+      if(hs.lit && frame%6===0){
+        var cx = hs.x + hs.w - 10;
+        var cy = hs.y - hs.h - hs.roofH - hs.chimneyH;
+        smokeP(cx-camX, cy);
+      }
+    }
   }
 
   // ---- Draw ----
@@ -541,6 +657,43 @@ canvas{display:block;width:100%;height:100%}
     }
     ctx.globalAlpha=1;
 
+    // Moon
+    if(state==='play'||state==='dead'){
+      var moonX = W*0.82 - (camX*0.01)%200;
+      var moonY = H*0.12;
+      // Glow
+      ctx.globalAlpha=0.06;
+      var mg=ctx.createRadialGradient(moonX,moonY,10,moonX,moonY,80);
+      mg.addColorStop(0,'rgba(220,220,240,.5)');mg.addColorStop(1,'rgba(220,220,240,0)');
+      ctx.fillStyle=mg;ctx.fillRect(moonX-80,moonY-80,160,160);
+      // Moon body
+      ctx.globalAlpha=0.18;
+      ctx.fillStyle='#dde0f0';
+      ctx.beginPath();ctx.arc(moonX,moonY,22,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=0.08;
+      ctx.fillStyle='#ccc';
+      ctx.beginPath();ctx.arc(moonX-5,moonY-4,4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(moonX+7,moonY+5,3,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    // Clouds
+    for(var i=0;i<clouds.length;i++){
+      var cl=clouds[i];
+      cl.x -= cl.speed;
+      if(cl.x+cl.w<-50) cl.x=W+rng(50,200);
+      ctx.globalAlpha=0.04;
+      ctx.fillStyle='#8899aa';
+      // Wispy cloud shape (overlapping ellipses)
+      ctx.beginPath();
+      ctx.ellipse(cl.x,cl.y,cl.w*0.4,cl.h*0.4,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cl.x+cl.w*0.25,cl.y-cl.h*0.1,cl.w*0.3,cl.h*0.35,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cl.x-cl.w*0.2,cl.y+cl.h*0.05,cl.w*0.25,cl.h*0.3,0,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
     // Mountains (parallax)
     drawMountains();
 
@@ -558,22 +711,148 @@ canvas{display:block;width:100%;height:100%}
       if(p.moving) py+=Math.sin(frame*0.02+p.movePhase)*p.moveRange;
 
       if(p.elevated){
-        ctx.fillStyle='#3d2e22';ctx.fillRect(px,py,p.w,p.h);
+        // Platform surface
+        ctx.fillStyle='#3d2e22';ctx.fillRect(px,py,p.w,PLAT_H);
         ctx.fillStyle='#4a3828';ctx.fillRect(px,py,p.w,3);
+        // Dirt patches
+        for(var d=0;d<p.dirtPatches.length;d++){
+          var dp=p.dirtPatches[d];
+          ctx.fillStyle='rgba(0,0,0,'+dp.dark+')';
+          ctx.fillRect(px+dp.rx,py+3,Math.min(dp.rw,p.w-dp.rx),PLAT_H-3);
+        }
+        // Support posts with cross-beams
+        var postH = groundY-py-PLAT_H;
+        var lx=px+10, rx=px+p.w-16;
         ctx.fillStyle='#2a1e15';
-        ctx.fillRect(px+10,py+p.h,6,groundY-py-p.h);
-        ctx.fillRect(px+p.w-16,py+p.h,6,groundY-py-p.h);
+        ctx.fillRect(lx,py+PLAT_H,6,postH);
+        ctx.fillRect(rx,py+PLAT_H,6,postH);
+        // Cross-beams
+        ctx.strokeStyle='#2a1e15';ctx.lineWidth=2;
+        var beamCount = Math.max(1,Math.floor(postH/40));
+        for(var b=0;b<beamCount;b++){
+          var by = py+PLAT_H+20+b*(postH/beamCount);
+          if(by<groundY-5){
+            ctx.beginPath();ctx.moveTo(lx+3,by);ctx.lineTo(rx+3,by+20);ctx.stroke();
+            ctx.beginPath();ctx.moveTo(rx+3,by);ctx.lineTo(lx+3,by+20);ctx.stroke();
+          }
+        }
+        // Ground fill below
         ctx.fillStyle='#1a1210';ctx.fillRect(px,groundY,p.w,H-groundY);
         ctx.fillStyle='#2a1e18';ctx.fillRect(px,groundY-1,p.w,3);
       } else {
         ctx.fillStyle='#1a1210';ctx.fillRect(px,py,p.w,H-py);
         ctx.fillStyle=p.moving?'#3a2a1a':'#2a1e18';ctx.fillRect(px,py-1,p.w,4);
+        // Dirt patches
+        for(var d=0;d<p.dirtPatches.length;d++){
+          var dp=p.dirtPatches[d];
+          ctx.fillStyle='rgba(0,0,0,'+dp.dark+')';
+          ctx.fillRect(px+dp.rx,py+4,Math.min(dp.rw,p.w-dp.rx),8);
+        }
         ctx.fillStyle='#1e1510';ctx.fillRect(px,py+10,p.w,1);
         ctx.fillStyle='#161010';ctx.fillRect(px,py+24,p.w,1);
       }
+      // Edge shadows
       ctx.fillStyle='rgba(0,0,0,.2)';
-      ctx.fillRect(px,py,2,Math.min(p.h,H-py));
-      ctx.fillRect(px+p.w-2,py,2,Math.min(p.h,H-py));
+      ctx.fillRect(px,py,2,Math.min(PLAT_H,H-py));
+      ctx.fillRect(px+p.w-2,py,2,Math.min(PLAT_H,H-py));
+    }
+
+    // Decor (trees, grass, rocks)
+    for(var i=0;i<decor.length;i++){
+      var dc=decor[i];
+      var dx=dc.x-camX;
+      if(dx<-50||dx>W+50) continue;
+
+      if(dc.type==='tree'){
+        // Pine/conifer silhouette
+        ctx.fillStyle='#0d1a0d';
+        // Trunk
+        ctx.fillRect(dx-1.5,dc.y-dc.h*0.3,3,dc.h*0.3);
+        // Triangle canopy layers
+        ctx.beginPath();
+        ctx.moveTo(dx,dc.y-dc.h);
+        ctx.lineTo(dx-dc.w*0.5,dc.y-dc.h*0.25);
+        ctx.lineTo(dx+dc.w*0.5,dc.y-dc.h*0.25);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(dx,dc.y-dc.h*0.85);
+        ctx.lineTo(dx-dc.w*0.65,dc.y-dc.h*0.1);
+        ctx.lineTo(dx+dc.w*0.65,dc.y-dc.h*0.1);
+        ctx.fill();
+      } else if(dc.type==='grass'){
+        ctx.strokeStyle='#1a3a1a';ctx.lineWidth=1;
+        for(var b=0;b<dc.blades;b++){
+          var bx=dx-3+b*2.5;
+          ctx.beginPath();ctx.moveTo(bx,dc.y);
+          ctx.lineTo(bx+(b%2===0?1:-1)*1.5,dc.y-dc.h);
+          ctx.stroke();
+        }
+      } else if(dc.type==='rock'){
+        ctx.fillStyle='#2a2a2a';
+        ctx.beginPath();
+        ctx.ellipse(dx,dc.y-dc.h*0.4,dc.w,dc.h,0,0,Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle='#333';
+        ctx.beginPath();
+        ctx.ellipse(dx,dc.y-dc.h*0.5,dc.w*0.6,dc.h*0.5,0,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    // Houses
+    for(var i=0;i<houses.length;i++){
+      var hs=houses[i];
+      var hx=hs.x-camX;
+      if(hx+hs.w<-20||hx>W+60) continue;
+
+      var wallTop = hs.y-hs.h;
+      var roofTop = wallTop-hs.roofH;
+      var cx = hx+hs.w-10; // chimney x center
+      var chimneyTop = roofTop-hs.chimneyH;
+
+      // Walls
+      ctx.fillStyle='#2a1e15';
+      ctx.fillRect(hx,wallTop,hs.w,hs.h);
+
+      // Window (lit yellow)
+      ctx.fillStyle='#cc9933';ctx.globalAlpha=0.7;
+      ctx.fillRect(hx+12,wallTop+10,10,8);
+      ctx.globalAlpha=1;
+      // Window frame
+      ctx.strokeStyle='#1a1510';ctx.lineWidth=1;
+      ctx.strokeRect(hx+12,wallTop+10,10,8);
+      ctx.beginPath();ctx.moveTo(hx+17,wallTop+10);ctx.lineTo(hx+17,wallTop+18);ctx.stroke();
+
+      // Roof (triangle)
+      ctx.fillStyle='#1e1510';
+      ctx.beginPath();
+      ctx.moveTo(hx-4,wallTop);
+      ctx.lineTo(hx+hs.w/2,roofTop);
+      ctx.lineTo(hx+hs.w+4,wallTop);
+      ctx.fill();
+
+      // Chimney
+      ctx.fillStyle='#444';
+      ctx.fillRect(cx-hs.chimneyW/2, chimneyTop, hs.chimneyW, hs.chimneyH+hs.roofH*0.5);
+      ctx.fillStyle='#555';
+      ctx.fillRect(cx-hs.chimneyW/2-1, chimneyTop, hs.chimneyW+2, 3);
+
+      // Lit chimney effects
+      if(hs.lit){
+        var t=frame*.12;
+        // Fire from chimney
+        ctx.fillStyle='#ff6b2b';ctx.globalAlpha=.7;
+        ctx.beginPath();ctx.arc(cx+Math.sin(t)*2,chimneyTop-6,5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#ffaa00';ctx.globalAlpha=.6;
+        ctx.beginPath();ctx.arc(cx+Math.sin(t*1.3),chimneyTop-10,3.5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff8e0';ctx.globalAlpha=.4;
+        ctx.beginPath();ctx.arc(cx,chimneyTop-4,2.5,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=1;
+        // Warm glow
+        var glow=ctx.createRadialGradient(cx,chimneyTop,0,cx,chimneyTop,50);
+        glow.addColorStop(0,'rgba(255,107,43,.1)');glow.addColorStop(1,'rgba(255,107,43,0)');
+        ctx.fillStyle=glow;ctx.fillRect(cx-50,chimneyTop-50,100,100);
+      }
     }
 
     // Hazards
@@ -582,10 +861,8 @@ canvas{display:block;width:100%;height:100%}
       if(hz.type==='drip'){
         var dsx=hz.x-camX;
         if(dsx<-30||dsx>W+30) continue;
-        // Stalactite
         ctx.fillStyle='#334';ctx.beginPath();
         ctx.moveTo(dsx-4,hz.baseY);ctx.lineTo(dsx+4,hz.baseY);ctx.lineTo(dsx,hz.baseY+10);ctx.fill();
-        // Drip
         if(hz.active){
           var dy=hz.baseY+hz.dropY;
           ctx.fillStyle='#4488dd';ctx.globalAlpha=.8;
@@ -594,7 +871,6 @@ canvas{display:block;width:100%;height:100%}
           ctx.quadraticCurveTo(dsx-4,dy,dsx,dy-6);ctx.fill();
           ctx.globalAlpha=1;
         }
-        // Drip warning (shimmering when about to drop)
         if(!hz.active && hz.timer<30){
           ctx.fillStyle='rgba(68,136,221,.4)';
           ctx.beginPath();ctx.arc(dsx,hz.baseY+12,2+Math.sin(frame*.2)*1,0,Math.PI*2);ctx.fill();
@@ -602,11 +878,9 @@ canvas{display:block;width:100%;height:100%}
       } else if(hz.type==='gust'){
         var gsx=hz.x-camX;
         if(gsx+hz.w<-10||gsx>W+10) continue;
-        // Wind zone visual
         ctx.globalAlpha=0.08+0.04*Math.sin(frame*0.05);
         ctx.fillStyle=hz.dir>0?'#8ecae6':'#a0d0e8';
         ctx.fillRect(gsx,hz.y,hz.w,hz.h);
-        // Wind lines
         ctx.globalAlpha=0.15;ctx.strokeStyle='#8ecae6';ctx.lineWidth=1;
         for(var j=0;j<3;j++){
           var ly=hz.y+15+j*15;
@@ -637,7 +911,6 @@ canvas{display:block;width:100%;height:100%}
         var cols={shield:'#44aaff',blaze:'#ff4444',djump:'#44ff88'};
         var labels={shield:'S',blaze:'B',djump:'J'};
         var col=cols[pk.type]||'#fff';
-        // Glowing orb
         ctx.globalAlpha=.3;
         var og=ctx.createRadialGradient(pkx,pk.y+bob,0,pkx,pk.y+bob,18);
         og.addColorStop(0,col);og.addColorStop(1,'rgba(0,0,0,0)');
@@ -650,7 +923,7 @@ canvas{display:block;width:100%;height:100%}
       }
     }
 
-    // Pyres
+    // Pyres (fire ring style)
     for(var i=0;i<pyres.length;i++){
       var pyre=pyres[i]; var px=pyre.x-camX;
       if(px<-30||px>W+30) continue;
@@ -660,7 +933,7 @@ canvas{display:block;width:100%;height:100%}
     // Wind Spirit
     if(state==='play'||state==='dead') drawWind();
 
-    // Particles
+    // Particles (single pass)
     for(var i=particles.length-1;i>=0;i--){
       var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;
       if(p.life<=0){particles.splice(i,1);continue;}
@@ -672,7 +945,8 @@ canvas{display:block;width:100%;height:100%}
       } else if(p.t==='w'){ctx.globalAlpha=p.life*.3;ctx.fillStyle='#8ecae6';
       } else if(p.t==='d'){ctx.globalAlpha=p.life*.8;ctx.fillStyle=p.life>.5?'#ff6b2b':'#880000';p.vy+=.08;
       } else if(p.t==='s'){ctx.globalAlpha=p.life;ctx.fillStyle=p.col||'#fff';p.vy+=.08;
-      } else if(p.t==='sh'){ctx.globalAlpha=p.life*.5;ctx.fillStyle='#44aaff';}
+      } else if(p.t==='sh'){ctx.globalAlpha=p.life*.5;ctx.fillStyle='#44aaff';
+      } else if(p.t==='sm'){ctx.globalAlpha=p.life*.2;ctx.fillStyle='#888';p.vy-=.01;}
 
       ctx.beginPath();ctx.arc(p.x,p.y,p.sz*p.life,0,Math.PI*2);ctx.fill();
     }
@@ -681,7 +955,6 @@ canvas{display:block;width:100%;height:100%}
     // Player
     if(state==='play'){
       var psx=pl.x-camX;
-      // Shield aura
       if(shieldTimer>0){
         ctx.globalAlpha=.15+.05*Math.sin(frame*.1);
         var sg=ctx.createRadialGradient(psx,pl.y+PH/2,0,psx,pl.y+PH/2,22);
@@ -694,15 +967,18 @@ canvas{display:block;width:100%;height:100%}
 
     ctx.restore();
 
-    // Menu flame
+    // Menu flame (only processed here, not in main particle loop)
     if(state==='menu'){
       ctx.save();
       var mx=W/2,my=H*.33;
       drawFlame(mx,my,28+Math.sin(frame*.03)*3);
       if(frame%3===0) addP({x:mx+(Math.random()-.5)*15,y:my+(Math.random()-.5)*8,
-        vx:(Math.random()-.5)*.5,vy:-Math.random()*2-1,sz:rng(3,6),life:1,dec:rng(.02,.03),t:'f'});
+        vx:(Math.random()-.5)*.5,vy:-Math.random()*2-1,sz:rng(3,6),life:1,dec:rng(.02,.03),t:'mf'});
+      // Process menu-only particles
       for(var i=particles.length-1;i>=0;i--){
-        var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;
+        var p=particles[i];
+        if(p.t!=='mf') continue;
+        p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;
         if(p.life<=0){particles.splice(i,1);continue;}
         var t=1-p.life;ctx.globalAlpha=p.life*.7;
         ctx.fillStyle='rgb(255,'+Math.floor(180-t*140)+','+Math.max(0,Math.floor(50-t*50))+')';
@@ -725,13 +1001,28 @@ canvas{display:block;width:100%;height:100%}
   }
 
   function drawPyre(x,y,h,lit){
-    ctx.strokeStyle='#6b4226';ctx.lineWidth=4;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(x-12,y-2);ctx.lineTo(x+12,y-8);
-    ctx.moveTo(x-10,y-6);ctx.lineTo(x+10,y-2);ctx.moveTo(x-6,y);ctx.lineTo(x+6,y-10);ctx.stroke();
-    ctx.fillStyle='#3a3a3a';
-    ctx.beginPath();ctx.arc(x-8,y,4,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(x+8,y,3.5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(x,y+1,3,0,Math.PI*2);ctx.fill();
+    // Fire ring stones (circular arrangement)
+    ctx.fillStyle='#4a4a4a';
+    var stoneCount=8;
+    for(var i=0;i<stoneCount;i++){
+      var a=i*Math.PI*2/stoneCount;
+      var sx=x+Math.cos(a)*10;
+      var sy=y-2+Math.sin(a)*3;
+      ctx.beginPath();ctx.ellipse(sx,sy,4,2.5,a,0,Math.PI*2);ctx.fill();
+    }
+    // Inner darker ring
+    ctx.fillStyle='#333';
+    for(var i=0;i<stoneCount;i++){
+      var a=i*Math.PI*2/stoneCount+0.4;
+      var sx=x+Math.cos(a)*6;
+      var sy=y-2+Math.sin(a)*2;
+      ctx.beginPath();ctx.ellipse(sx,sy,2.5,1.5,a,0,Math.PI*2);ctx.fill();
+    }
+    // Logs
+    ctx.strokeStyle='#6b4226';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x-8,y-3);ctx.lineTo(x+8,y-7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x-6,y-6);ctx.lineTo(x+6,y-2);ctx.stroke();
+
     if(lit){
       var t=frame*.15;
       ctx.fillStyle='#ff6b2b';ctx.globalAlpha=.7;ctx.beginPath();ctx.arc(x+Math.sin(t)*2,y-h*.5,8,0,Math.PI*2);ctx.fill();
@@ -775,7 +1066,11 @@ canvas{display:block;width:100%;height:100%}
     ctx.lineTo(W,groundY);ctx.fill();
   }
 
-  function loop(){update();draw();requestAnimationFrame(loop);}
+  function loop(){
+    if(state==='menu') { frame++; if(frame>1e8) frame-=1e8; }
+    update();draw();requestAnimationFrame(loop);
+  }
+  initClouds();
   loop();
 })();
 </script>
