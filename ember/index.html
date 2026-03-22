@@ -194,10 +194,10 @@ function initGame(){
 }
 
 function generateInitialPlatforms(){
-  // Middle and sky lane platforms
+  // Initial platforms: very full coverage (tutorial zone)
   for(let x=0;x<W+600;x+=80){
-    if(Math.random()<0.85)platforms.push({x,lane:1,w:80});
-    if(Math.random()<0.7)platforms.push({x,lane:2,w:70});
+    platforms.push({x,lane:1,w:80}); // mid: 100% at start
+    if(Math.random()<0.75) platforms.push({x,lane:2,w:70}); // sky: 75%
   }
 }
 
@@ -213,44 +213,110 @@ function spawnInitialObjects(){
 }
 
 // ===== OBJECT SPAWNING =====
+// Track what's been spawned recently per lane to prevent stacking
+let recentLaneObs=[0,0,0]; // last obstacle X per lane
+
+function safeLane(preferLane){
+  // Pick a lane that doesn't have a recent obstacle too close
+  let best=preferLane!=null?preferLane:(Math.random()*3|0);
+  let minClear=120; // min px between obstacles in same lane
+  if(W+60-recentLaneObs[best]>minClear) return best;
+  // Try other lanes
+  let options=[0,1,2].filter(l=>W+60-recentLaneObs[l]>minClear);
+  if(options.length>0) return options[Math.random()*options.length|0];
+  return best; // fallback
+}
+
+function laneHasPlatform(lane,x){
+  if(lane===0) return true; // ground always exists
+  for(let p of platforms){
+    if(p.lane===lane && x>=p.x && x<=p.x+p.w) return true;
+  }
+  return false;
+}
+
+function safeCollectLane(){
+  // Pick a lane that has a platform (so collectible is reachable)
+  let lanes=[0,1,2].filter(l=>laneHasPlatform(l,W+60));
+  if(lanes.length===0) return 0;
+  // Bias toward higher lanes for better rewards but ground for safety
+  return lanes[Math.random()*lanes.length|0];
+}
+
 function spawnObstacle(){
-  let types=[];
-  types.push('ice');
-  if(dist>200)types.push('water');
-  if(dist>400)types.push('wind');
-  if(dist>600)types.push('log');
-  if(dist>1000)types.push('golem');
-  if(dist>1500)types.push('icicle');
-  let type=types[Math.random()*types.length|0];
-  let lane=Math.random()*3|0;
-  let o={x:W+60,lane,type,w:40,h:40,active:true,timer:0,swing:0};
-  if(type==='water'){o.w=20;o.h=80;o.lane=Math.random()*2|0}
-  if(type==='wind'){o.w=60;o.h=50}
-  if(type==='log'){o.swing=Math.random()*Math.PI*2;o.baseLane=lane}
-  if(type==='golem'){o.w=45;o.h=50;o.speed=1.5}
-  if(type==='icicle'){o.falling=false;o.fy=0;o.shadow=true;o.w=25;o.h=60}
+  // Weighted type selection based on distance
+  let weights=[];
+  weights.push({type:'ice',w:10}); // always available, decreasing weight
+  if(dist>200) weights.push({type:'water',w:dist<500?3:6});
+  if(dist>400) weights.push({type:'wind',w:dist<800?2:5});
+  if(dist>600) weights.push({type:'log',w:dist<1000?2:4});
+  if(dist>1000) weights.push({type:'golem',w:dist<1500?2:4});
+  if(dist>1500) weights.push({type:'icicle',w:3});
+  // Reduce ice weight as game progresses
+  weights[0].w=Math.max(2, 10-Math.floor(dist/200));
+
+  let totalW=weights.reduce((s,w)=>s+w.w,0);
+  let roll=Math.random()*totalW;
+  let type='ice';
+  for(let w of weights){roll-=w.w;if(roll<=0){type=w.type;break}}
+
+  let lane=safeLane();
+  // Some types have lane restrictions
+  if(type==='water') lane=safeLane(Math.random()*2|0); // ground or mid only
+  if(type==='golem') lane=safeLane(0); // ground only — they walk
+
+  let o={x:W+60,lane,type,w:40,h:40,active:true,timer:0,swing:0,nearMissed:false};
+  if(type==='ice'){o.w=35;o.h=35}
+  if(type==='water'){o.w=20;o.h=70}
+  if(type==='wind'){o.w=55;o.h=45}
+  if(type==='log'){o.swing=Math.random()*Math.PI*2;o.baseLane=lane;o.w=40;o.h=16}
+  if(type==='golem'){o.w=42;o.h=48;o.speed=1.0+diff*0.8}
+  if(type==='icicle'){o.falling=false;o.fy=0;o.shadow=true;o.w=22;o.h=55;o.lane=Math.random()*3|0}
   obstacles.push(o);
+  recentLaneObs[o.lane]=W+60;
 }
 
 function spawnCollectible(type,x,lane){
-  collectibles.push({x:x||W+60,lane:lane!=null?lane:(Math.random()*3|0),type:type||'orb',w:20,h:20,active:true,bobTimer:Math.random()*100});
+  let l=lane!=null?lane:safeCollectLane();
+  collectibles.push({x:x||W+60,lane:l,type:type||'orb',w:20,h:20,active:true,bobTimer:Math.random()*100});
+}
+
+// Spawn orbs in a line/arc pattern (3-5 in a row, same lane)
+function spawnOrbLine(){
+  let lane=safeCollectLane();
+  let count=3+Math.floor(Math.random()*3); // 3-5
+  for(let i=0;i<count;i++){
+    spawnCollectible('orb',W+60+i*35,lane);
+  }
 }
 
 function spawnBrazier(){
-  let lane=Math.random()*3|0;
+  // Prefer ground lane (most accessible), sometimes mid
+  let lane=Math.random()<0.65?0:(Math.random()<0.7?1:2);
+  if(lane>0 && !laneHasPlatform(lane,W+60)) lane=0;
   collectibles.push({x:W+60,lane,type:'brazier',w:35,h:45,active:true,lit:false,bobTimer:0});
 }
 
 function spawnPowerup(){
-  let types=['magnet','blaze','fueltank','shield','superjump'];
+  // Weight powerups: fuel tanks more common early, blaze/shield later
+  let types,roll=Math.random();
+  if(dist<400){
+    types=['fueltank','fueltank','magnet','shield','superjump'];
+  } else if(dist<1000){
+    types=['magnet','blaze','fueltank','shield','superjump'];
+  } else {
+    types=['magnet','blaze','blaze','shield','superjump'];
+  }
   let type=types[Math.random()*types.length|0];
-  collectibles.push({x:W+60,lane:Math.random()*3|0,type,w:28,h:28,active:true,bobTimer:Math.random()*100,isPowerup:true});
+  let lane=safeCollectLane();
+  collectibles.push({x:W+60,lane,type,w:28,h:28,active:true,bobTimer:Math.random()*100,isPowerup:true});
 }
 
 function spawnLetter(){
   if(nextFireLetter>3)return;
   let letters='FIRE';
-  collectibles.push({x:W+60,lane:Math.random()*3|0,type:'letter',letter:letters[nextFireLetter],letterIdx:nextFireLetter,w:24,h:24,active:true,bobTimer:Math.random()*100});
+  let lane=safeCollectLane();
+  collectibles.push({x:W+60,lane,type:'letter',letter:letters[nextFireLetter],letterIdx:nextFireLetter,w:24,h:24,active:true,bobTimer:Math.random()*100});
 }
 
 // ===== UPDATE =====
@@ -258,9 +324,12 @@ function update(){
   if(state!=='play')return;
   frame++;
   let mult=getMult();
-  let diff=Math.min(frame/6000,1); // 0->1 over ~100 seconds
+  // Difficulty based on DISTANCE, not time — so speed doesn't trivialize it
+  let diff=Math.min(dist/1500,1); // 0→1 over 1500 distance
 
-  speed=3+diff*5;if(speed>8)speed=8;
+  // Speed: smooth curve. 3→5 over first 750 dist, then 5→8 over next 750
+  speed=3+diff*2.5+Math.max(0,diff-0.5)*2.5;
+  if(speed>8)speed=8;
   if(stunTimer>0){stunTimer--;speed*=0.4}
   let spd=speed*(dashing?1.8:1);
 
@@ -278,12 +347,14 @@ function update(){
 
   bgOffset+=spd;
 
-  // Player lane movement
-  if(playerTargetLane!==playerLane){
+  // Player lane movement — smooth transition, commit lane when close enough
+  playerTargetY=laneY(playerTargetLane);
+  playerY+=(playerTargetY-playerY)*0.18;
+  // Commit to target lane when within 4px (for collision purposes)
+  if(Math.abs(playerY-playerTargetY)<4){
     playerLane=playerTargetLane;
-    playerTargetY=laneY(playerLane);
+    playerY=playerTargetY;
   }
-  playerY+=(playerTargetY-playerY)*0.2;
 
   // Jump
   if(jumping){
@@ -310,12 +381,16 @@ function update(){
   flashAlpha*=0.9;
   whiteFlash*=0.85;
 
-  // Spawn platforms
+  // === PLATFORM SPAWNING ===
+  // Mid platforms: mostly continuous early, more gaps later
+  // Sky platforms: always gappier, more gaps with difficulty
   while(platformEdge<W+800){
-    let gap1=Math.random()<(0.15+diff*0.2);
-    let gap2=Math.random()<(0.3+diff*0.2);
-    if(!gap1)platforms.push({x:platformEdge,lane:1,w:80});
-    if(!gap2)platforms.push({x:platformEdge,lane:2,w:70});
+    // Mid lane: 90% coverage early → 65% at max diff
+    let midChance=0.90-diff*0.25;
+    // Sky lane: 65% coverage early → 40% at max diff
+    let skyChance=0.65-diff*0.25;
+    if(Math.random()<midChance)platforms.push({x:platformEdge,lane:1,w:80});
+    if(Math.random()<skyChance)platforms.push({x:platformEdge,lane:2,w:70});
     platformEdge+=80;
   }
 
@@ -326,32 +401,55 @@ function update(){
   }
   platformEdge-=spd;
 
-  // Spawn obstacles
-  let obsDensity=400-diff*250;if(obsDensity<150)obsDensity=150;
-  nextObstacleX-=spd;
-  if(nextObstacleX<=0){spawnObstacle();nextObstacleX=obsDensity+Math.random()*100}
+  // Decay recent lane tracking
+  for(let l=0;l<3;l++) recentLaneObs[l]-=spd;
 
-  // Spawn collectibles
+  // === OBSTACLE SPAWNING ===
+  // Formula: base spacing decreases with difficulty, random variance ±20%
+  // Early: one every ~350px. Max diff: one every ~140px.
+  let obsBaseSpacing=350-diff*210;
+  if(obsBaseSpacing<140) obsBaseSpacing=140;
+  let obsVariance=obsBaseSpacing*0.2;
+  nextObstacleX-=spd;
+  if(nextObstacleX<=0){
+    spawnObstacle();
+    nextObstacleX=obsBaseSpacing + (Math.random()-0.5)*2*obsVariance;
+  }
+
+  // === COLLECTIBLE SPAWNING ===
+  // Orbs come in lines (70%) or single sparks (30%)
+  // Frequency: every 100-180px early, every 140-220px late (slightly scarcer)
+  let collectSpacing=100+diff*40 + Math.random()*80;
   nextCollectX-=spd;
   if(nextCollectX<=0){
     let r=Math.random();
-    if(r<0.7)spawnCollectible('orb');
-    else spawnCollectible('spark');
-    nextCollectX=60+Math.random()*80;
+    if(r<0.5){
+      spawnOrbLine(); // line of 3-5 orbs in same lane
+    } else if(r<0.8){
+      spawnCollectible('orb'); // single orb
+    } else {
+      spawnCollectible('spark'); // spark (rarer, more points)
+    }
+    nextCollectX=collectSpacing;
   }
 
-  // Spawn braziers
-  let brazSpace=350+diff*150;
+  // === BRAZIER SPAWNING ===
+  // Critical fuel source. Early: every ~300px. Late: every ~500px (scarcer = harder)
+  let brazSpacing=300+diff*200;
   nextBrazierX-=spd;
-  if(nextBrazierX<=0){spawnBrazier();nextBrazierX=brazSpace+Math.random()*100}
+  if(nextBrazierX<=0){spawnBrazier();nextBrazierX=brazSpacing+Math.random()*80}
 
-  // Spawn powerups
+  // === POWER-UP SPAWNING ===
+  // Rare but consistent: every 500-900px, slightly more common late (you need them)
+  let pupSpacing=700-diff*200+Math.random()*200;
+  if(pupSpacing<500) pupSpacing=500;
   nextPowerupX-=spd;
-  if(nextPowerupX<=0){spawnPowerup();nextPowerupX=600+Math.random()*400}
+  if(nextPowerupX<=0){spawnPowerup();nextPowerupX=pupSpacing}
 
-  // Spawn letters
+  // === LETTER SPAWNING ===
+  // One letter every 400-600px when available
   nextLetterX-=spd;
-  if(nextLetterX<=0&&nextFireLetter<=3){spawnLetter();nextLetterX=500+Math.random()*400}
+  if(nextLetterX<=0&&nextFireLetter<=3){spawnLetter();nextLetterX=400+Math.random()*200}
 
   // Update obstacles
   let px=playerX(),py=playerY,pw=30,ph=sliding?15:40;
@@ -359,16 +457,22 @@ function update(){
     let o=obstacles[i];
     o.x-=spd;
     if(o.type==='golem')o.x-=o.speed;
-    if(o.type==='log'){o.swing+=0.03;o.lane=Math.round(o.baseLane+Math.sin(o.swing)*(o.baseLane===0?1:o.baseLane===2?-1:1));o.lane=Math.max(0,Math.min(2,o.lane))}
+    if(o.type==='log'){o.swing+=0.04;o.lane=Math.max(0,Math.min(2,Math.round(1+Math.sin(o.swing))))}
     if(o.type==='icicle'){
       o.timer++;
-      if(!o.falling&&o.timer>60){o.falling=true;o.fy=0}
-      if(o.falling){o.fy+=0.5}
+      // Start falling when it reaches player X area (warning shadow visible first)
+      if(!o.falling&&o.x<px+100){o.falling=true;o.fy=0}
+      if(o.falling){o.fy+=0.6}
+      // Remove if fallen past screen
+      if(o.fy>H){obstacles.splice(i,1);continue}
     }
     if(o.x<-100){obstacles.splice(i,1);continue}
 
-    // Collision
-    let oy=o.type==='icicle'?(o.falling?laneY(o.lane)-60+o.fy:laneY(o.lane)-120):laneY(o.lane);
+    // Collision — compute actual Y position
+    let oy=laneY(o.lane);
+    if(o.type==='icicle'){
+      oy=o.falling? (o.fy) : -100; // fy starts from 0 (top of screen), falls down
+    }
     let hit=o.active&&Math.abs(o.x-px)<(o.w/2+pw/2)&&Math.abs(oy-py)<(o.h/2+ph/2);
 
     // Blaze destroys
@@ -405,23 +509,28 @@ function update(){
       if(fuel<=0){fuel=0;die();return}
     }
 
-    // Near miss check
-    if(o.active&&!hit&&Math.abs(o.x-px)<(o.w/2+pw/2+20)&&Math.abs(oy-py)<(o.h/2+ph/2+20)){
-      if(!o.nearMissed){
+    // Near miss: obstacle passes through player's X zone but in adjacent lane
+    if(o.active&&!o.nearMissed&&o.type!=='icicle'){
+      let xClose=Math.abs(o.x-px)<(o.w/2+pw/2+15); // within X range
+      let sameLane=(o.lane===playerLane);
+      let adjacentLane=Math.abs(o.lane-playerLane)===1;
+      if(xClose && !sameLane && adjacentLane){
         o.nearMissed=true;
         nearMissChain++;
         runStats.nearMisses++;
         score+=5*mult;
-        whiteFlash=0.3;
-        shakeX=(Math.random()-0.5)*3;shakeY=(Math.random()-0.5)*2;
-        addPopup(px+30,py-20,'CLOSE!','#ffffff');
+        whiteFlash=0.2;
+        shakeX=(Math.random()-0.5)*2;shakeY=(Math.random()-0.5)*1.5;
+        addPopup(px+40,py-25,'CLOSE!','#ffffff');
         if(nearMissChain>=3){
           score+=50*mult;
           runStats.fearlessCount++;
-          addPopup(px+30,py-40,'FEARLESS!','#ffcc00');
+          addPopup(px+40,py-45,'FEARLESS!','#FFD600');
           nearMissChain=0;
         }
       }
+      // Reset chain if obstacle passes and wasn't near-missed
+      if(o.x<px-50 && !o.nearMissed) nearMissChain=0;
     }
   }
 
@@ -805,11 +914,11 @@ function drawObstacles(){
       X.fillStyle='rgba(41,182,246,0.2)';
       X.beginPath();X.arc(o.x,y,35,0,Math.PI*2);X.fill();
     }else if(o.type==='icicle'){
-      let iy=o.falling?laneY(o.lane)-60+o.fy:laneY(o.lane)-120;
-      if(!o.falling){
-        // Shadow warning
-        X.fillStyle='rgba(100,150,200,0.3)';
-        X.beginPath();X.ellipse(o.x,laneY(o.lane),15,5,0,0,Math.PI*2);X.fill();
+      let iy=o.falling? o.fy : -60; // starts above screen, falls
+      // Shadow warning on target lane
+      if(!o.falling || o.fy<laneY(o.lane)){
+        X.fillStyle='rgba(100,150,200,'+(o.falling?0.5:0.25)+')';
+        X.beginPath();X.ellipse(o.x,laneY(o.lane)+5,18,6,0,0,Math.PI*2);X.fill();
       }
       X.fillStyle='#29B6F6';
       X.beginPath();
