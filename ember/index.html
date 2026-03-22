@@ -121,6 +121,7 @@ let runStats;
 // Object pools
 let obstacles=[],collectibles=[],particles=[],platforms=[],popups=[];
 let bgOffset=0;
+let gameDiff=0; // current difficulty 0-1, updated each frame
 
 // Lane Y positions (computed on resize)
 function laneY(lane){
@@ -181,7 +182,8 @@ function initGame(){
   fireLetters=[false,false,false,false];nextFireLetter=0;
   activeEffects={magnet:0,blaze:0,shield:false,superJump:0};
   obstacles.length=0;collectibles.length=0;particles.length=0;platforms.length=0;popups.length=0;
-  bgOffset=0;
+  bgOffset=0;gameDiff=0;
+  recentLaneObs=[0,0,0];
   runStats={orbsCollected:0,braziersLit:0,distance:0,dashThrough:0,fireComplete:0,
     score:0,powerupsUsed:0,noDmgDist:0,sparksCollected:0,nearMisses:0,brazierStreak:0,
     jumps:0,slides:0,skyOrbs:0,magnetUsed:0,blazeUsed:0,shieldUsed:0,fueltankUsed:0,
@@ -270,7 +272,7 @@ function spawnObstacle(){
   if(type==='water'){o.w=20;o.h=70}
   if(type==='wind'){o.w=55;o.h=45}
   if(type==='log'){o.swing=Math.random()*Math.PI*2;o.baseLane=lane;o.w=40;o.h=16}
-  if(type==='golem'){o.w=42;o.h=48;o.speed=1.0+diff*0.8}
+  if(type==='golem'){o.w=42;o.h=48;o.speed=1.0+gameDiff*0.8}
   if(type==='icicle'){o.falling=false;o.fy=0;o.shadow=true;o.w=22;o.h=55;o.lane=Math.random()*3|0}
   obstacles.push(o);
   recentLaneObs[o.lane]=W+60;
@@ -325,7 +327,8 @@ function update(){
   frame++;
   let mult=getMult();
   // Difficulty based on DISTANCE, not time — so speed doesn't trivialize it
-  let diff=Math.min(dist/1500,1); // 0→1 over 1500 distance
+  gameDiff=Math.min(dist/1500,1); // 0→1 over 1500 distance
+  let diff=gameDiff;
 
   // Speed: smooth curve. 3→5 over first 750 dist, then 5→8 over next 750
   speed=3+diff*2.5+Math.max(0,diff-0.5)*2.5;
@@ -417,9 +420,7 @@ function update(){
   }
 
   // === COLLECTIBLE SPAWNING ===
-  // Orbs come in lines (70%) or single sparks (30%)
-  // Frequency: every 100-180px early, every 140-220px late (slightly scarcer)
-  let collectSpacing=100+diff*40 + Math.random()*80;
+  // Orbs come in lines (50%) or single orbs/sparks
   nextCollectX-=spd;
   if(nextCollectX<=0){
     let r=Math.random();
@@ -430,7 +431,8 @@ function update(){
     } else {
       spawnCollectible('spark'); // spark (rarer, more points)
     }
-    nextCollectX=collectSpacing;
+    // Spacing: 100-180px early, 140-220px late
+    nextCollectX=100+diff*40+Math.random()*80;
   }
 
   // === BRAZIER SPAWNING ===
@@ -544,14 +546,24 @@ function update(){
     let cy=laneY(c.lane)+Math.sin(c.bobTimer)*5;
     let magnetRange=activeEffects.magnet>0?200:0;
     let autoCollect=activeEffects.blaze>0;
+
+    // Magnet pull — actually move collectible toward player
+    if(magnetRange>0&&(c.type==='orb'||c.type==='spark')){
+      let mdx=c.x-px,mdy=cy-py;
+      let md=Math.sqrt(mdx*mdx+mdy*mdy);
+      if(md<magnetRange){
+        c.x+=(px-c.x)*0.12;
+        // Pull toward player's lane
+        if(c.lane!==playerLane){
+          c.lane=playerLane; // snap lane to player for collection
+        }
+      }
+    }
+
+    // Recalculate after magnet pull
+    cy=laneY(c.lane)+Math.sin(c.bobTimer)*5;
     let dx=c.x-px,dy=cy-py;
     let d=Math.sqrt(dx*dx+dy*dy);
-
-    // Magnet pull
-    if(magnetRange>0&&d<magnetRange&&(c.type==='orb'||c.type==='spark')){
-      c.x+=(px-c.x)*0.1;
-      cy+=(py-cy)*0.1;
-    }
 
     let hitDist=(c.type==='brazier'?40:autoCollect?60:28);
     if(d<hitDist&&c.active){
@@ -659,9 +671,8 @@ function checkMissions(){
       addPopup(W/2,H/4,'MULTIPLIER UP! ×'+getMult(),'#ffcc00');
     }
     missionSetIndex++;
-    generateMissions();
+    generateMissions(); // this calls saveData()
   }
-  saveData();
 }
 
 // ===== DIE =====
@@ -1144,6 +1155,17 @@ function drawHUD(){
     X.fillText(txt+' '+prog,8,my);
   }
 
+  // Dash cooldown indicator
+  if(dashCooldown>0){
+    let cdPct=dashCooldown/180;
+    X.fillStyle='rgba(0,200,255,0.3)';
+    X.fillRect(W-62,H-85,50*cdPct,6);
+    X.strokeStyle='rgba(0,200,255,0.4)';X.lineWidth=1;
+    X.strokeRect(W-62,H-85,50,6);
+    X.fillStyle='rgba(255,255,255,0.4)';X.font='9px sans-serif';X.textAlign='right';
+    X.fillText('DASH',W-14,H-86);
+  }
+
   // Active effects indicators
   let ex=W-12;
   X.textAlign='right';X.font='12px sans-serif';
@@ -1271,14 +1293,18 @@ C.addEventListener('touchend',e=>{
       if(dy<-30)switchLane(1);
       else if(dy>30){if(playerTargetLane===0)slide();else switchLane(-1)}
     }
+  }else if(state==='over'){
+    // Tap anywhere to restart quickly
+    if(dist2<20&&dt<300)startGame();
   }
 },{passive:false});
 
-// Mouse click zones
+// Mouse click zones (desktop only — won't fire with touch)
 C.addEventListener('click',e=>{
+  if(state==='over'){startGame();return}
   if(state!=='play')return;
   let x=e.clientX/W;
-  if(x<0.33)switchLane(-1);
+  if(x<0.33){if(playerTargetLane===0)slide();else switchLane(-1)}
   else if(x>0.66)switchLane(1);
   else jump();
 });
