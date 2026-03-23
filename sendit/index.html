@@ -85,10 +85,249 @@ initMissions();
 const TW=18; // terrain point spacing
 let terrain=[], terrainGenX=0;
 const baseY=H*0.65;
-let segType=0; // 0=flat,1=ramp,2=gap,3=landing
-let segRemain=0, segStartY=0, rampAngle=0;
+const GAP_Y=baseY+400; // Y value for gaps (well below screen)
 
-function difficulty(){return Math.min(dist/3000,1)}
+// ── PATTERN SYSTEM ──
+let patternOrder=[], patternIndex=0, cycleCount=0;
+let currentPatternId=0, currentPatternName='';
+let patternNameTimer=0; // frames remaining for name display
+let patternStartTerrainIdx=0; // terrain index where current pattern started
+let patternLanded=false; // has player landed after the pattern's last gap?
+let patternsCompleted=0;
+
+const PATTERN_NAMES=[
+  '','Clean Gap','Double Hop','Step Up','Step Down','Triple Quick',
+  'High Rise','Cliff Drop','Staircase Up','Staircase Down','Valley',
+  'Long Send','Stepping Stone','Double Decker','Quick-Stop','Hang Time',
+  'Zigzag','Gap Train','Leap of Faith','Island Hopping','The Gauntlet'
+];
+function patternBonus(id){
+  if(id<=5)return 100; if(id<=10)return 200; if(id<=15)return 300; return 500;
+}
+function gapScale(){return Math.min(1+cycleCount*0.1, 1.5)} // cap at cycle 5
+function speedForCycle(){return 4.5+cycleCount*0.3}
+
+function shuffleArray(a){for(let i=a.length-1;i>0;i--){let j=Math.random()*i+1|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function initPatterns(){
+  patternOrder=[];
+  for(let i=2;i<=20;i++)patternOrder.push(i);
+  shuffleArray(patternOrder);
+  patternOrder.unshift(1); // Clean Gap always first
+  patternIndex=0;cycleCount=0;patternsCompleted=0;
+}
+function nextPattern(){
+  if(patternIndex>=patternOrder.length){
+    cycleCount++;
+    patternOrder=[];for(let i=1;i<=20;i++)patternOrder.push(i);
+    shuffleArray(patternOrder);
+    patternIndex=0;
+  }
+  let id=patternOrder[patternIndex++];
+  currentPatternId=id;
+  currentPatternName=PATTERN_NAMES[id];
+  patternNameTimer=120; // 2 seconds at 60fps
+  patternLanded=false;
+  patternStartTerrainIdx=terrain.length;
+  return id;
+}
+
+// Helper: push N points of flat terrain at given Y
+function pushFlat(y,n){for(let i=0;i<n;i++)terrain.push(y)}
+// Helper: smooth ramp from current Y to target Y over n points (cosine interp)
+function pushRamp(fromY,toY,n){
+  for(let i=0;i<n;i++){
+    let t=(i+1)/n;
+    let smooth=0.5-0.5*Math.cos(t*Math.PI);
+    terrain.push(fromY+(toY-fromY)*smooth);
+  }
+}
+// Helper: push gap (below-screen terrain)
+function pushGap(n){for(let i=0;i<n;i++)terrain.push(GAP_Y)}
+// Helper: breathing room (flat at baseY)
+function pushBreather(){let n=Math.round((200+Math.random()*100)/TW);pushFlat(baseY,n)}
+
+// Scale gap point count by cycle difficulty
+function gs(n){return Math.round(n*gapScale())}
+
+// ── PATTERN GENERATORS ──
+// Each generates terrain points for one complete jump sequence.
+// All assume terrain currently ends at baseY (from breather).
+const PATTERNS={
+  1:function(){ // Clean Gap
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-40,6);
+    pushGap(gs(11));
+    pushFlat(baseY,8);
+  },
+  2:function(){ // Double Hop
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-25,4);
+    pushGap(gs(7));
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY-25,4);
+    pushGap(gs(7));
+    pushFlat(baseY,6);
+  },
+  3:function(){ // Step Up
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY-80,7);
+    pushFlat(baseY-80,9);
+    // drop off edge
+    pushGap(gs(8));
+    pushRamp(baseY+60,baseY,4);
+    pushFlat(baseY,5);
+  },
+  4:function(){ // Step Down
+    pushRamp(baseY,baseY-60,5);
+    pushFlat(baseY-60,8);
+    pushRamp(baseY-60,baseY-75,4);
+    pushGap(gs(8));
+    pushFlat(baseY,8);
+  },
+  5:function(){ // Triple Quick
+    for(let i=0;i<3;i++){
+      pushFlat(baseY,3);
+      pushRamp(baseY,baseY-20,3);
+      pushGap(gs(5));
+    }
+    pushFlat(baseY,5);
+  },
+  6:function(){ // High Rise
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-120,12);
+    pushFlat(baseY-120,10);
+    pushGap(gs(6));
+    pushRamp(baseY+40,baseY,5);
+    pushFlat(baseY,5);
+  },
+  7:function(){ // Cliff Drop
+    pushRamp(baseY,baseY-90,8);
+    pushFlat(baseY-90,14);
+    pushGap(gs(14));
+    pushFlat(baseY,8);
+  },
+  8:function(){ // Staircase Up
+    let levels=[baseY,baseY-40,baseY-80,baseY-120];
+    for(let i=0;i<3;i++){
+      pushFlat(levels[i],5);
+      pushRamp(levels[i],levels[i]-15,3);
+      pushGap(gs(6));
+      pushRamp(levels[i+1]+10,levels[i+1],2);
+    }
+    pushFlat(levels[3],6);
+    pushGap(gs(10));
+    pushRamp(baseY+30,baseY,4);
+    pushFlat(baseY,5);
+  },
+  9:function(){ // Staircase Down
+    let levels=[baseY-100,baseY-60,baseY-30,baseY];
+    pushRamp(baseY,levels[0],6);
+    for(let i=0;i<3;i++){
+      pushFlat(levels[i],5);
+      pushGap(gs(6+i*2));
+      pushRamp(levels[i+1]+5,levels[i+1],2);
+    }
+    pushFlat(baseY,6);
+  },
+  10:function(){ // Valley
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY+80,8);
+    pushFlat(baseY+80,6);
+    pushRamp(baseY+80,baseY,8);
+    pushFlat(baseY,5);
+  },
+  11:function(){ // Long Send
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY-55,7);
+    pushGap(gs(20));
+    pushFlat(baseY,8);
+  },
+  12:function(){ // Stepping Stone
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-35,5);
+    pushGap(gs(7));
+    pushFlat(baseY-10,3); // tiny middle platform
+    pushGap(gs(7));
+    pushFlat(baseY,6);
+  },
+  13:function(){ // Double Decker
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-45,6);
+    pushGap(gs(5));
+    pushFlat(baseY-70,3); // high small platform (bonus)
+    pushGap(gs(3));
+    pushFlat(baseY,10); // wide low platform
+  },
+  14:function(){ // Quick-Stop
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-30,5);
+    pushGap(gs(8));
+    pushFlat(baseY,3); // tiny platform
+    pushRamp(baseY,baseY-25,3);
+    pushGap(gs(8));
+    pushFlat(baseY,6);
+  },
+  15:function(){ // Hang Time
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-100,10);
+    pushGap(gs(22));
+    pushRamp(baseY+30,baseY,4);
+    pushFlat(baseY,6);
+  },
+  16:function(){ // Zigzag
+    let ups=[baseY-40,baseY+20,baseY-50,baseY+10];
+    let prev=baseY;
+    for(let i=0;i<4;i++){
+      pushRamp(prev,ups[i]-(i%2===0?15:0),4);
+      pushGap(gs(5));
+      prev=ups[i];
+    }
+    pushRamp(prev,baseY,4);
+    pushFlat(baseY,5);
+  },
+  17:function(){ // Gap Train
+    for(let i=0;i<4;i++){
+      pushFlat(baseY,5);
+      pushRamp(baseY,baseY-25,4);
+      pushGap(gs(7));
+    }
+    pushFlat(baseY,6);
+  },
+  18:function(){ // Leap of Faith
+    pushRamp(baseY,baseY-80,8);
+    pushFlat(baseY-80,10);
+    pushGap(gs(18));
+    pushFlat(baseY-20,3); // narrow landing
+    pushRamp(baseY-20,baseY,4);
+    pushFlat(baseY,5);
+  },
+  19:function(){ // Island Hopping
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-35,5);
+    pushGap(gs(7));
+    pushFlat(baseY-5,3); // island 1
+    pushGap(gs(7));
+    pushFlat(baseY+5,3); // island 2
+    pushGap(gs(7));
+    pushFlat(baseY,3); // island 3
+    pushRamp(baseY,baseY,2);
+    pushFlat(baseY,5);
+  },
+  20:function(){ // The Gauntlet
+    pushFlat(baseY,4);
+    pushRamp(baseY,baseY-45,6);
+    pushGap(gs(8));
+    pushFlat(baseY,3); // small platform
+    pushRamp(baseY,baseY-35,4);
+    pushGap(gs(7));
+    pushFlat(baseY-80,5); // high platform
+    pushGap(gs(12)); // massive drop
+    pushRamp(baseY+40,baseY,5);
+    pushFlat(baseY,6);
+  }
+};
+
+function difficulty(){return Math.min(cycleCount/5,1)}
 function terrainYAt(wx){
   let i=Math.floor(wx/TW);
   if(i<0)return baseY;
@@ -103,35 +342,12 @@ function terrainAngleAt(wx){
 }
 function genTerrain(){
   while(terrainGenX<camX+W*2){
-    let d=difficulty();
-    if(segRemain<=0){
-      segType=(segType+1)%4;
-      if(segType===0) segRemain=80+Math.random()*(70*(1-d*0.5))|0; // flat
-      else if(segType===1){segRemain=60+Math.random()*40|0; rampAngle=-(20+25*d)*Math.PI/180;} // ramp (neg = uphill)
-      else if(segType===2) segRemain=(100+300*d*(0.5+Math.random()*0.5))|0; // gap
-      else segRemain=80+Math.random()*40|0; // landing
-      segStartY=terrain.length>0?terrain[terrain.length-1]:baseY;
-    }
-    let y=segStartY;
-    if(segType===0) y=segStartY; // flat
-    else if(segType===1){ // ramp going up
-      let pct=1-segRemain/(60+40);
-      y=segStartY+Math.tan(rampAngle)*TW;
-      segStartY=y;
-    } else if(segType===2){ // gap - valley
-      let gapDepth=80+120*d;
-      let mid=segRemain*0.5;
-      let totalGap=100+300*d;
-      let prog=(totalGap-segRemain)/totalGap;
-      y=segStartY+Math.sin(prog*Math.PI)*gapDepth;
-    } else { // landing slope down
-      let landAngle=(15+20*d)*Math.PI/180;
-      y=segStartY+Math.tan(landAngle)*TW;
-      segStartY=y;
-    }
-    terrain.push(y);
-    terrainGenX+=TW;
-    segRemain-=TW;
+    // Need more terrain - generate next pattern
+    let id=nextPattern();
+    pushBreather();
+    PATTERNS[id]();
+    pushBreather();
+    terrainGenX=terrain.length*TW;
   }
 }
 
@@ -270,7 +486,8 @@ function updateRagdoll(){
 // ── GAME LOOP ──
 function startGame(){
   state=STATE.PLAY;score=0;dist=0;trickCount=0;bestCombo=0;gapsCleared=0;
-  terrain=[];terrainGenX=0;segType=0;segRemain=0;
+  terrain=[];terrainGenX=0;
+  initPatterns();
   bike={x:200,y:0,vx:4.5,vy:0,angle:0,angVel:0,grounded:true,wheelRot:0};
   charging=false;charge=0;airborne=false;airTricks=[];trickInProgress=null;trickFrame=0;trickRecovery=0;
   comboCount=0;chainMult=1;camX=0;camY=baseY-H/2;camZoom=1;
@@ -307,8 +524,7 @@ function handleInput(){
 
 function updateBike(){
   if(ragdoll)return;
-  let d=difficulty();
-  let baseSpd=4+3*d;
+  let baseSpd=speedForCycle();
   
   if(bike.grounded){
     bike.vx=Math.max(bike.vx,baseSpd);
@@ -362,6 +578,14 @@ function updateBike(){
       addDust(bike.x,gy,6);
       gapsCleared++;
       updateMission('gaps',1);
+      // Pattern completion bonus: check if we landed past the pattern's terrain
+      if(!patternLanded&&bike.x/TW>patternStartTerrainIdx){
+        patternLanded=true;
+        let bonus=patternBonus(currentPatternId)*scoreMult;
+        score+=bonus;
+        patternsCompleted++;
+        addPopup('Pattern Complete! +'+bonus,bike.x,bike.y-110,'#7c3aed',22,60);
+      }
       // landing bonuses
       let isWheelie=angleDiff>0.26&&bike.angle<surfAngle;
       let isPerfect=angleDiff<0.09;
@@ -605,6 +829,18 @@ function drawHUD(){
   // distance
   X.textAlign='right';X.fillStyle='rgba(0,0,0,0.7)';X.font='bold 22px system-ui';
   X.fillText(dist+'m',W-15,35);
+  // pattern progress
+  X.font='bold 16px system-ui';X.fillStyle='rgba(0,0,0,0.5)';
+  X.fillText('Jump '+Math.min(patternIndex,20)+'/20',W-15,58);
+  if(cycleCount>0){X.font='12px system-ui';X.fillStyle='rgba(0,0,0,0.4)';X.fillText('Cycle '+(cycleCount+1),W-15,74)}
+  // pattern name display
+  if(patternNameTimer>0){
+    patternNameTimer--;
+    let a=Math.min(1,patternNameTimer/30);
+    X.globalAlpha=a;X.textAlign='center';X.fillStyle='#7c3aed';X.font='bold 32px system-ui';
+    X.fillText(currentPatternName,W/2,70);
+    X.globalAlpha=1;
+  }
   // trick chain display
   if(airborne&&airTricks.length>0){
     X.textAlign='center';X.fillStyle='#2980b9';X.font='bold 20px system-ui';
