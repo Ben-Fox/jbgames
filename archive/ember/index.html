@@ -2,1331 +2,522 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>EMBER — Light the Way</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ember — Side Runner</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0e0e12;font-family:'Segoe UI',system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif}
 canvas{display:block;width:100%;height:100%}
-#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-#menu,#gameover{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);pointer-events:auto;z-index:10}
-#menu.hidden,#gameover.hidden{display:none;pointer-events:none}
-.title{font-size:clamp(48px,12vw,96px);font-weight:900;background:linear-gradient(180deg,#fff 0%,#ff9900 30%,#ff4400 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px rgba(255,120,0,0.5);letter-spacing:4px;animation:flicker 0.15s infinite alternate}
-@keyframes flicker{0%{opacity:1;filter:brightness(1)}100%{opacity:0.92;filter:brightness(1.1)}}
-.subtitle{color:#a0a0b0;font-size:clamp(14px,3vw,22px);margin-top:4px;letter-spacing:6px;text-transform:uppercase}
-.btn{pointer-events:auto;border:none;border-radius:12px;padding:16px 48px;font-size:clamp(18px,4vw,28px);font-weight:700;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;letter-spacing:1px;margin:8px}
-.btn:active{transform:scale(0.95)}
-.btn-play{background:linear-gradient(135deg,#ff6600,#ff3300);color:#fff;box-shadow:0 4px 24px rgba(255,80,0,0.4);margin-top:28px}
-.btn-play:hover{box-shadow:0 6px 32px rgba(255,80,0,0.6)}
-.btn-menu{background:rgba(124,58,237,0.3);color:#c4b5fd;border:2px solid #7c3aed;box-shadow:0 2px 12px rgba(124,58,237,0.2)}
-.info{color:#888;font-size:clamp(12px,2.5vw,16px);margin-top:12px}
-.info span{color:#ff9900;font-weight:700}
-.home-link{position:absolute;top:12px;left:12px;color:#7c3aed;text-decoration:none;font-size:14px;pointer-events:auto;opacity:0.7}
-.home-link:hover{opacity:1}
-.missions-preview{margin-top:16px;width:80%;max-width:360px}
-.mp-item{background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:8px 12px;margin:4px 0;color:#c4b5fd;font-size:clamp(11px,2.2vw,14px);display:flex;justify-content:space-between;align-items:center}
-.mp-prog{color:#ff9900;font-weight:700;white-space:nowrap;margin-left:8px}
-.mp-done{text-decoration:line-through;opacity:0.5}
-#gameover .score-line{color:#fff;font-size:clamp(16px,3.5vw,24px);margin:4px 0}
-#gameover .score-line span{color:#ff9900;font-weight:700}
-#gameover .go-title{font-size:clamp(28px,7vw,52px);color:#ff4400;font-weight:900;margin-bottom:12px}
-.btn-row{display:flex;gap:12px;margin-top:16px}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff;text-align:center}
+.overlay.hidden{display:none}
+.overlay h1{font-size:3em;background:linear-gradient(180deg,#fff 0%,#ffd700 30%,#ff6600 70%,#ff2200 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.2em;text-shadow:none}
+.overlay .sub{color:#ffaa44;font-size:1.1em;margin-bottom:1.2em}
+.overlay .info{color:#ccc;font-size:.95em;margin-bottom:.5em}
+.overlay button{padding:14px 40px;font-size:1.15em;border:none;border-radius:8px;cursor:pointer;margin:8px;background:linear-gradient(135deg,#ff6600,#ff2200);color:#fff;font-weight:bold;transition:transform .1s}
+.overlay button:hover{transform:scale(1.05)}
+.overlay button:active{transform:scale(.97)}
+.overlay .controls{color:#999;font-size:.85em;margin-top:1em}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui">
-<div id="menu">
-<a href="/index.html" class="home-link">← BrainSmacks</a>
-<div class="title">EMBER</div>
-<div class="subtitle">Light the way</div>
-<div class="info">Best: <span id="menuBest">0</span> &nbsp;|&nbsp; Multiplier: <span id="menuMult">×1</span></div>
-<button class="btn btn-play" id="btnPlay">PLAY</button>
-<div class="missions-preview" id="menuMissions"></div>
-<div class="info" style="margin-top:20px;opacity:0.5">↑↓ lanes · Space jump · Shift dash</div>
+<div class="overlay" id="menu">
+<h1>🔥 EMBER</h1>
+<div class="sub">Side Runner</div>
+<div class="info" id="menuBest"></div>
+<button id="btnPlay">PLAY</button>
+<div class="controls">Space / Tap / Click to Jump<br>Hold for higher jump</div>
 </div>
-<div id="gameover" class="hidden">
-<div class="go-title">FLAME OUT</div>
-<div class="score-line">Score: <span id="goScore">0</span></div>
-<div class="score-line">Distance: <span id="goDist">0</span></div>
-<div class="score-line">Braziers Lit: <span id="goBraz">0</span></div>
-<div class="score-line">Best: <span id="goBest">0</span></div>
-<div class="missions-preview" id="goMissions"></div>
-<div class="btn-row">
-<button class="btn btn-play" id="btnAgain">PLAY AGAIN</button>
-<button class="btn btn-menu" id="btnMenu">MENU</button>
-</div>
-</div>
+<div class="overlay hidden" id="gameover">
+<h1>GAME OVER</h1>
+<div class="info" id="goScore"></div>
+<div class="info" id="goPatterns"></div>
+<div class="info" id="goBest"></div>
+<button id="btnRetry">PLAY AGAIN</button>
+<button id="btnMenu">MENU</button>
 </div>
 <script>
-"use strict";
 const C=document.getElementById('c'),X=C.getContext('2d');
-let W,H,DPR;
-function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;C.width=W*DPR;C.height=H*DPR;X.setTransform(DPR,0,0,DPR,0,0)}
-resize();cacheLanePositions();
-window.addEventListener('resize',function(){resize();if(state!=='play')cacheLanePositions()});
+let W,H,GY;
+function resize(){W=C.width=window.innerWidth;H=C.height=window.innerHeight;GY=H*.78}
+resize();window.addEventListener('resize',resize);
 
-// ===== CONSTANTS =====
-const LANE_COUNT=3;
-const FUEL_MAX=100;
-const MULT_LEVELS=[1,2,3,5,8,10,15,20,30];
-const LS_BEST='ember5_best',LS_MULT='ember5_mult',LS_MISS='ember5_missions';
-
-// ===== MISSION TEMPLATES =====
-const MISSION_TEMPLATES=[
-{id:'orbs',text:'Collect {n} fuel orbs',key:'orbsCollected',base:30,scale:20,icon:'🔥'},
-{id:'braziers',text:'Light {n} braziers',key:'braziersLit',base:3,scale:2,icon:'🏮'},
-{id:'dist',text:'Travel {n} distance',key:'distance',base:300,scale:200,icon:'📏'},
-{id:'dash',text:'Dash through {n} obstacles',key:'dashThrough',base:2,scale:1,icon:'💨'},
-{id:'fire',text:'Collect all F-I-R-E letters',key:'fireComplete',base:1,scale:0,icon:'🔤'},
-{id:'score',text:'Score {n} points',key:'score',base:500,scale:400,icon:'⭐'},
-{id:'powerups',text:'Use {n} power-ups',key:'powerupsUsed',base:2,scale:1,icon:'✨'},
-{id:'nodmg',text:'Reach dist {n} without damage',key:'noDmgDist',base:200,scale:100,icon:'🛡️'},
-{id:'sparks',text:'Collect {n} sparks',key:'sparksCollected',base:15,scale:10,icon:'💛'},
-{id:'nearmiss',text:'Get {n} near-misses',key:'nearMisses',base:3,scale:2,icon:'😱'},
-{id:'brazrow',text:'Light {n} braziers in a row',key:'brazierStreak',base:3,scale:1,icon:'🔥'},
-{id:'jumps',text:'Jump {n} times',key:'jumps',base:20,scale:15,icon:'⬆️'},
-{id:'slides',text:'Slide {n} times',key:'slides',base:10,scale:8,icon:'⬇️'},
-{id:'skyorbs',text:'Collect {n} orbs in sky lane',key:'skyOrbs',base:10,scale:8,icon:'☁️'},
-{id:'magnet',text:'Use magnet {n} times',key:'magnetUsed',base:1,scale:1,icon:'🧲'},
-{id:'blaze',text:'Use blaze mode {n} times',key:'blazeUsed',base:1,scale:1,icon:'🌟'},
-{id:'shield',text:'Get {n} shields',key:'shieldUsed',base:1,scale:1,icon:'🔵'},
-{id:'fueltank',text:'Get {n} fuel tanks',key:'fueltankUsed',base:1,scale:1,icon:'⛽'},
-{id:'fearless',text:'Get {n} FEARLESS combos',key:'fearlessCount',base:1,scale:1,icon:'💀'},
-{id:'laneswitch',text:'Switch lanes {n} times',key:'laneSwitches',base:30,scale:20,icon:'↕️'},
-{id:'orbs2',text:'Collect {n} fuel orbs',key:'orbsCollected',base:60,scale:30,icon:'🔥'},
-{id:'braziers2',text:'Light {n} braziers',key:'braziersLit',base:6,scale:3,icon:'🏮'},
-{id:'dist2',text:'Travel {n} distance',key:'distance',base:600,scale:300,icon:'📏'},
-{id:'score2',text:'Score {n} points',key:'score',base:1200,scale:600,icon:'⭐'},
-{id:'sparks2',text:'Collect {n} sparks',key:'sparksCollected',base:30,scale:15,icon:'💛'},
-{id:'nearmiss2',text:'Get {n} near-misses',key:'nearMisses',base:8,scale:3,icon:'😱'},
-{id:'jumps2',text:'Jump {n} times',key:'jumps',base:40,scale:20,icon:'⬆️'},
-{id:'dash2',text:'Dash through {n} obstacles',key:'dashThrough',base:5,scale:2,icon:'💨'},
-{id:'laneswitch2',text:'Switch lanes {n} times',key:'laneSwitches',base:60,scale:30,icon:'↕️'},
-{id:'powerups2',text:'Use {n} power-ups',key:'powerupsUsed',base:4,scale:2,icon:'✨'},
+// ---- PATTERNS ----
+// Each pattern: {name, platforms:[{x,y,w},...], points}
+// x=relative offset from chunk start, y=pixels above ground (0=ground), w=width
+// Gap between last platform of prev chunk and first of this chunk is implicit
+// We define entry ground, pattern content, exit ground
+function P(name,pts,platforms){return{name,points:pts,platforms}}
+const PATTERNS=[
+// 1 Clean Gap
+P('Clean Gap',10,[{x:0,y:0,w:200},{x:380,y:0,w:200}]),
+// 2 Double Hop
+P('Double Hop',15,[{x:0,y:0,w:150},{x:250,y:0,w:120},{x:420,y:0,w:150}]),
+// 3 Step Up
+P('Step Up',20,[{x:0,y:0,w:150},{x:220,y:80,w:200},{x:490,y:0,w:150}]),
+// 4 Step Down
+P('Step Down',15,[{x:0,y:80,w:200},{x:270,y:0,w:150},{x:470,y:0,w:150}]),
+// 5 Triple Quick
+P('Triple Quick',20,[{x:0,y:0,w:100},{x:180,y:0,w:100},{x:360,y:0,w:100},{x:540,y:0,w:150}]),
+// 6 High Rise
+P('High Rise',25,[{x:0,y:0,w:150},{x:220,y:60,w:120},{x:410,y:130,w:120},{x:600,y:0,w:150}]),
+// 7 Cliff Drop
+P('Cliff Drop',25,[{x:0,y:120,w:250},{x:480,y:0,w:180}]),
+// 8 Staircase Up
+P('Staircase Up',25,[{x:0,y:0,w:120},{x:190,y:50,w:110},{x:370,y:100,w:110},{x:550,y:150,w:120}]),
+// 9 Staircase Down
+P('Staircase Down',25,[{x:0,y:150,w:120},{x:210,y:100,w:110},{x:420,y:50,w:110},{x:630,y:0,w:150}]),
+// 10 Valley
+P('Valley',30,[{x:0,y:0,w:150},{x:250,y:-60,w:80},{x:430,y:0,w:150}]),
+// 11 Long Send
+P('Long Send',35,[{x:0,y:0,w:200},{x:480,y:0,w:200}]),
+// 12 Stepping Stone
+P('Stepping Stone',30,[{x:0,y:0,w:150},{x:280,y:40,w:60},{x:470,y:0,w:150}]),
+// 13 Double Decker
+P('Double Decker',30,[{x:0,y:0,w:150},{x:280,y:0,w:150},{x:280,y:110,w:150,bonus:true},{x:500,y:0,w:150}]),
+// 14 Quick-Stop
+P('Quick-Stop',35,[{x:0,y:0,w:150},{x:280,y:30,w:50},{x:460,y:0,w:150}]),
+// 15 Hang Time
+P('Hang Time',35,[{x:0,y:140,w:200},{x:480,y:0,w:200}]),
+// 16 Zigzag
+P('Zigzag',40,[{x:0,y:0,w:100},{x:170,y:80,w:90},{x:330,y:0,w:90},{x:490,y:80,w:90},{x:650,y:0,w:120}]),
+// 17 Gap Train
+P('Gap Train',35,[{x:0,y:0,w:100},{x:200,y:0,w:100},{x:400,y:0,w:100},{x:600,y:0,w:100},{x:800,y:0,w:120}]),
+// 18 Leap of Faith
+P('Leap of Faith',40,[{x:0,y:140,w:180},{x:500,y:-30,w:100}]),
+// 19 Island Hopping
+P('Island Hopping',45,[{x:0,y:0,w:150},{x:250,y:30,w:55},{x:405,y:60,w:55},{x:560,y:30,w:55},{x:720,y:0,w:150}]),
+// 20 The Gauntlet
+P('The Gauntlet',50,[{x:0,y:0,w:120},{x:190,y:90,w:100},{x:370,y:90,w:50},{x:520,y:0,w:100},{x:700,y:0,w:150}]),
 ];
 
-// ===== GAME STATE =====
-let state='menu'; // menu, play, over
-let score,dist,fuel,speed,frame,multLevel,bestScore;
-let playerLane,playerTargetLane,playerY,playerTargetY,playerVY;
-let jumping,sliding,slideTimer,dashing,dashTimer,dashCooldown;
-let stunTimer,shakeX,shakeY,flashAlpha,whiteFlash;
-let nearMissChain,brazierStreak,noDmgDist,dmgTaken;
-let fireLetters; // [F,I,R,E] booleans
-let nextFireLetter; // index 0-3
-let activeEffects; // {magnet,blaze,shield,superJump} with timers
-let missions,missionSetIndex;
-let runStats;
+// ---- GAME STATE ----
+let state='menu'; // menu, play, dead, gameover
+let score,chain,bestScore,cycle,patIdx,speed;
+let platforms,camX,player,particles,jumpHeld,jumpTime;
+let patternLabel,patternLabelTimer,totalPatterns;
+let deathTimer;
+let bgTrees=[];
 
-// Object pools
-let obstacles=[],collectibles=[],particles=[],platforms=[],popups=[];
-let bgOffset=0;
-let gameDiff=0; // current difficulty 0-1, updated each frame
+function loadBest(){bestScore=parseInt(localStorage.getItem('ember6_best'))||0}
+function saveBest(){if(score>bestScore){bestScore=score;localStorage.setItem('ember6_best',bestScore)}}
+loadBest();
 
-// Lane Y positions — cached at game start to prevent shifting
-let lanePositions=[0,0,0];
-function cacheLanePositions(){
-  lanePositions=[H*0.78, H*0.52, H*0.28];
-}
-function laneY(lane){
-  return lanePositions[lane]||lanePositions[0];
-}
-function playerX(){return W*0.22}
-
-// ===== SAVE/LOAD =====
-function loadData(){
-  bestScore=parseInt(localStorage.getItem(LS_BEST))||0;
-  multLevel=parseInt(localStorage.getItem(LS_MULT))||0;
-  try{
-    let m=JSON.parse(localStorage.getItem(LS_MISS));
-    if(m&&m.missions&&m.setIndex!=null){missions=m.missions;missionSetIndex=m.setIndex}
-    else generateMissions();
-  }catch(e){generateMissions()}
-}
-function saveData(){
-  localStorage.setItem(LS_BEST,bestScore);
-  localStorage.setItem(LS_MULT,multLevel);
-  localStorage.setItem(LS_MISS,JSON.stringify({missions,setIndex:missionSetIndex}));
-}
-function getMult(){return MULT_LEVELS[Math.min(multLevel,MULT_LEVELS.length-1)]}
-
-function generateMissions(){
-  if(missionSetIndex==null)missionSetIndex=0;
-  let pool=[...MISSION_TEMPLATES];
-  // shuffle
-  for(let i=pool.length-1;i>0;i--){let j=Math.random()*i|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
-  missions=[];
-  let used=new Set();
-  for(let t of pool){
-    if(used.has(t.key))continue;
-    used.add(t.key);
-    let n=t.base+t.scale*missionSetIndex;
-    missions.push({...t,target:n,progress:0,done:false});
-    if(missions.length===3)break;
-  }
-  if(missions.length<3){
-    // fallback
-    while(missions.length<3){
-      let t=MISSION_TEMPLATES[Math.random()*MISSION_TEMPLATES.length|0];
-      let n=t.base+t.scale*missionSetIndex;
-      missions.push({...t,target:n,progress:0,done:false});
-    }
-  }
-  saveData();
+// ---- PLATFORM GENERATION ----
+let nextX; // world X where next chunk starts
+function genChunk(idx){
+  const pat=PATTERNS[idx%20];
+  const base=nextX;
+  const out=[];
+  // breathing room ground before pattern
+  out.push({x:base,y:0,w:200,pattern:-1});
+  const pStart=base+200;
+  pat.platforms.forEach(p=>{
+    out.push({x:pStart+p.x,y:p.y,w:p.w,pattern:idx,bonus:!!p.bonus});
+  });
+  // figure out end
+  const last=pat.platforms[pat.platforms.length-1];
+  nextX=pStart+last.x+last.w;
+  return{platforms:out,name:pat.name,points:pat.points,idx};
 }
 
-// ===== INIT GAME =====
-function initGame(){
-  score=0;dist=0;fuel=FUEL_MAX;speed=3;frame=0;
-  playerLane=0;playerTargetLane=0;playerY=laneY(0);playerTargetY=laneY(0);playerVY=0;
-  jumping=false;sliding=false;slideTimer=0;dashing=false;dashTimer=0;dashCooldown=0;
-  stunTimer=0;shakeX=0;shakeY=0;flashAlpha=0;whiteFlash=0;
-  nearMissChain=0;brazierStreak=0;noDmgDist=0;dmgTaken=false;
-  fireLetters=[false,false,false,false];nextFireLetter=0;
-  activeEffects={magnet:0,blaze:0,shield:false,superJump:0};
-  obstacles.length=0;collectibles.length=0;particles.length=0;platforms.length=0;popups.length=0;
-  bgOffset=0;gameDiff=0;
-  recentLaneObs=[0,0,0];
-  cacheLanePositions(); // lock lane positions for this run
-  runStats={orbsCollected:0,braziersLit:0,distance:0,dashThrough:0,fireComplete:0,
-    score:0,powerupsUsed:0,noDmgDist:0,sparksCollected:0,nearMisses:0,brazierStreak:0,
-    jumps:0,slides:0,skyOrbs:0,magnetUsed:0,blazeUsed:0,shieldUsed:0,fueltankUsed:0,
-    fearlessCount:0,laneSwitches:0};
-  // Reset mission progress for non-done missions
-  for(let m of missions)if(!m.done)m.progress=0;
-  // Generate platforms
-  generateInitialPlatforms();
-  spawnInitialObjects();
-}
-
-function generateInitialPlatforms(){
-  // Initial platforms: very full coverage (tutorial zone)
-  for(let x=0;x<W+600;x+=80){
-    platforms.push({x,lane:1,w:80}); // mid: 100% at start
-    if(Math.random()<0.75) platforms.push({x,lane:2,w:70}); // sky: 75%
-  }
-}
-
-let nextObstacleX=W+200;
-let nextCollectX=W+50;
-let nextBrazierX=W+300;
-let nextLetterX=W+800;
-let nextPowerupX=W+600;
-let platformEdge=W+600;
-
-function spawnInitialObjects(){
-  nextObstacleX=W+200;nextCollectX=W+100;nextBrazierX=W+350;nextLetterX=W+900;nextPowerupX=W+700;platformEdge=W+600;
-}
-
-// ===== OBJECT SPAWNING =====
-// Track what's been spawned recently per lane to prevent stacking
-let recentLaneObs=[0,0,0]; // last obstacle X per lane
-
-function safeLane(preferLane){
-  // Pick a lane that doesn't have a recent obstacle too close
-  let best=preferLane!=null?preferLane:(Math.random()*3|0);
-  let minClear=120; // min px between obstacles in same lane
-  if(W+60-recentLaneObs[best]>minClear) return best;
-  // Try other lanes
-  let options=[0,1,2].filter(l=>W+60-recentLaneObs[l]>minClear);
-  if(options.length>0) return options[Math.random()*options.length|0];
-  return best; // fallback
-}
-
-function laneHasPlatform(lane,x){
-  if(lane===0) return true; // ground always exists
-  for(let p of platforms){
-    if(p.lane===lane && x>=p.x && x<=p.x+p.w) return true;
-  }
-  return false;
-}
-
-function safeCollectLane(){
-  // Pick a lane that has a platform (so collectible is reachable)
-  let lanes=[0,1,2].filter(l=>laneHasPlatform(l,W+60));
-  if(lanes.length===0) return 0;
-  // Bias toward higher lanes for better rewards but ground for safety
-  return lanes[Math.random()*lanes.length|0];
-}
-
-function spawnObstacle(){
-  // Weighted type selection based on distance
-  let weights=[];
-  weights.push({type:'ice',w:10}); // always available, decreasing weight
-  if(dist>200) weights.push({type:'water',w:dist<500?3:6});
-  if(dist>400) weights.push({type:'wind',w:dist<800?2:5});
-  if(dist>600) weights.push({type:'log',w:dist<1000?2:4});
-  if(dist>1000) weights.push({type:'golem',w:dist<1500?2:4});
-  if(dist>1500) weights.push({type:'icicle',w:3});
-  // Reduce ice weight as game progresses
-  weights[0].w=Math.max(2, 10-Math.floor(dist/200));
-
-  let totalW=weights.reduce((s,w)=>s+w.w,0);
-  let roll=Math.random()*totalW;
-  let type='ice';
-  for(let w of weights){roll-=w.w;if(roll<=0){type=w.type;break}}
-
-  let lane=safeLane();
-  // Some types have lane restrictions
-  if(type==='water') lane=safeLane(Math.random()*2|0); // ground or mid only
-  if(type==='golem') lane=safeLane(0); // ground only — they walk
-
-  let o={x:W+60,lane,type,w:40,h:40,active:true,timer:0,swing:0,nearMissed:false};
-  if(type==='ice'){o.w=35;o.h=35}
-  if(type==='water'){o.w=20;o.h=70}
-  if(type==='wind'){o.w=55;o.h=45}
-  if(type==='log'){o.swing=Math.random()*Math.PI*2;o.baseLane=lane;o.w=40;o.h=16}
-  if(type==='golem'){o.w=42;o.h=48;o.speed=1.0+gameDiff*0.8}
-  if(type==='icicle'){o.falling=false;o.fy=0;o.shadow=true;o.w=22;o.h=55;o.lane=Math.random()*3|0}
-  obstacles.push(o);
-  recentLaneObs[o.lane]=W+60;
-}
-
-function spawnCollectible(type,x,lane){
-  let l=lane!=null?lane:safeCollectLane();
-  collectibles.push({x:x||W+60,lane:l,type:type||'orb',w:20,h:20,active:true,bobTimer:Math.random()*100});
-}
-
-// Spawn orbs in a line/arc pattern (3-5 in a row, same lane)
-function spawnOrbLine(){
-  let lane=safeCollectLane();
-  let count=3+Math.floor(Math.random()*3); // 3-5
-  let bobPhase=Math.random()*100;
+// ---- PARTICLES ----
+function spawnParticles(wx,y,count,color,vx,vy,life){
   for(let i=0;i<count;i++){
-    let l=lane;
-    collectibles.push({x:W+60+i*35,lane:l,type:'orb',w:20,h:20,active:true,bobTimer:bobPhase+i*0.3,magnetYOff:0});
+    particles.push({wx,y,vx:(Math.random()-.5)*vx,vy:-Math.random()*vy,life:life||30,maxLife:life||30,
+      color:color||`hsl(${30+Math.random()*20},100%,${50+Math.random()*30}%)`});
   }
 }
 
-function spawnBrazier(){
-  // Prefer ground lane (most accessible), sometimes mid
-  let lane=Math.random()<0.65?0:(Math.random()<0.7?1:2);
-  if(lane>0 && !laneHasPlatform(lane,W+60)) lane=0;
-  collectibles.push({x:W+60,lane,type:'brazier',w:35,h:45,active:true,lit:false,bobTimer:0});
-}
-
-function spawnPowerup(){
-  // Weight powerups: fuel tanks more common early, blaze/shield later
-  let types,roll=Math.random();
-  if(dist<400){
-    types=['fueltank','fueltank','magnet','shield','superjump'];
-  } else if(dist<1000){
-    types=['magnet','blaze','fueltank','shield','superjump'];
-  } else {
-    types=['magnet','blaze','blaze','shield','superjump'];
+// ---- INIT GAME ----
+function initGame(){
+  score=0;chain=0;cycle=1;patIdx=0;totalPatterns=0;
+  speed=4;camX=0;
+  platforms=[];nextX=0;
+  particles=[];jumpHeld=false;jumpTime=0;
+  patternLabel='';patternLabelTimer=0;deathTimer=0;lastScoredPattern=-1;floatingTexts=[];
+  // gen initial chunks
+  // start with a long ground
+  platforms.push({x:0,y:0,w:400,pattern:-1});
+  nextX=400;
+  for(let i=0;i<5;i++){
+    const c=genChunk(patIdx);
+    c.platforms.forEach(p=>platforms.push(p));
+    patIdx++;
   }
-  let type=types[Math.random()*types.length|0];
-  let lane=safeCollectLane();
-  collectibles.push({x:W+60,lane,type,w:28,h:28,active:true,bobTimer:Math.random()*100,isPowerup:true});
+  player={x:200,y:GY-40,vy:0,onGround:false,w:28,h:36,dead:false,_wasOnGround:false};
+  // gen trees
+  bgTrees=[];
+  for(let i=0;i<40;i++)bgTrees.push({x:Math.random()*W*3,h:40+Math.random()*60,w:20+Math.random()*15});
+  showPattern(0);
+  state='play';
 }
 
-function spawnLetter(){
-  if(nextFireLetter>3)return;
-  let letters='FIRE';
-  let lane=safeCollectLane();
-  collectibles.push({x:W+60,lane,type:'letter',letter:letters[nextFireLetter],letterIdx:nextFireLetter,w:24,h:24,active:true,bobTimer:Math.random()*100});
+function showPattern(idx){
+  patternLabel=PATTERNS[idx%20].name;
+  patternLabelTimer=120;
 }
 
-// ===== UPDATE =====
+// ---- INPUT ----
+let jumpPressed=false;
+function jDown(){if(state==='play'&&!player.dead)jumpPressed=true;}
+function jUp(){jumpPressed=false;jumpHeld=false;}
+window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jDown()}});
+window.addEventListener('keyup',e=>{if(e.code==='Space')jUp()});
+C.addEventListener('mousedown',e=>{e.preventDefault();jDown()});
+C.addEventListener('mouseup',jUp);
+C.addEventListener('touchstart',e=>{e.preventDefault();jDown()},{passive:false});
+C.addEventListener('touchend',jUp);
+
+// ---- UPDATE ----
 function update(){
   if(state!=='play')return;
-  frame++;
-  let mult=getMult();
-  // Difficulty based on DISTANCE, not time — so speed doesn't trivialize it
-  gameDiff=Math.min(dist/1500,1); // 0→1 over 1500 distance
-  let diff=gameDiff;
-
-  // Speed: smooth curve. 3→5 over first 750 dist, then 5→8 over next 750
-  speed=3+diff*2.5+Math.max(0,diff-0.5)*2.5;
-  if(speed>8)speed=8;
-  if(stunTimer>0){stunTimer--;speed*=0.4}
-  let spd=speed*(dashing?1.8:1);
-
-  // Fuel drain
-  let drain=0.03+diff*0.03;
-  fuel-=drain;
-  if(fuel<=0){fuel=0;die();return}
-
-  // Distance
-  dist+=spd*0.1;
-  runStats.distance=dist;
-  if(!dmgTaken)noDmgDist=dist;
-  runStats.noDmgDist=noDmgDist;
-  runStats.score=score;
-
-  bgOffset+=spd;
-
-  // Player lane movement — smooth transition, commit lane when close enough
-  playerTargetY=laneY(playerTargetLane);
-  playerY+=(playerTargetY-playerY)*0.18;
-  // Commit to target lane when within 4px (for collision purposes)
-  if(Math.abs(playerY-playerTargetY)<4){
-    playerLane=playerTargetLane;
-    playerY=playerTargetY;
+  if(player.dead){
+    deathTimer++;
+    player.vy+=.6;player.y+=player.vy;
+    if(deathTimer>60)showGameOver();
+    return;
   }
+  const maxJumpTime=12;
+  const jumpPower=-11;
+  const gravity=.55;
 
-  // Jump
-  if(jumping){
-    playerVY+=0.6;
-    playerY+=playerVY;
-    if(playerY>=playerTargetY){playerY=playerTargetY;jumping=false;playerVY=0}
+  // Move camera (player stays at fixed screen X)
+  camX+=speed;
+  const px=camX+150; // player world X (fixed screen pos = 150)
+
+  // Jump logic - variable height
+  if(jumpPressed&&player.onGround&&!jumpHeld){
+    player.vy=jumpPower;player.onGround=false;jumpHeld=true;jumpTime=0;
+    spawnParticles(px,player.y+player.h/2,5,null,3,2,20);
   }
-
-  // Slide
-  if(slideTimer>0)slideTimer--;
-  else sliding=false;
-
-  // Dash
-  if(dashing){dashTimer--;if(dashTimer<=0)dashing=false}
-  if(dashCooldown>0)dashCooldown--;
-
-  // Effects
-  if(activeEffects.magnet>0)activeEffects.magnet--;
-  if(activeEffects.blaze>0)activeEffects.blaze--;
-  if(activeEffects.superJump>0)activeEffects.superJump--;
-
-  // Shake decay
-  shakeX*=0.8;shakeY*=0.8;
-  flashAlpha*=0.9;
-  whiteFlash*=0.85;
-
-  // === PLATFORM SPAWNING ===
-  // Mid platforms: mostly continuous early, more gaps later
-  // Sky platforms: always gappier, more gaps with difficulty
-  while(platformEdge<W+800){
-    // Mid lane: 90% coverage early → 65% at max diff
-    let midChance=0.90-diff*0.25;
-    // Sky lane: 65% coverage early → 40% at max diff
-    let skyChance=0.65-diff*0.25;
-    if(Math.random()<midChance)platforms.push({x:platformEdge,lane:1,w:80});
-    if(Math.random()<skyChance)platforms.push({x:platformEdge,lane:2,w:70});
-    platformEdge+=80;
+  if(jumpHeld&&jumpPressed&&jumpTime<maxJumpTime){
+    player.vy+=-0.5;jumpTime++;
   }
+  if(!jumpPressed)jumpHeld=false;
 
-  // Move platforms
-  for(let i=platforms.length-1;i>=0;i--){
-    platforms[i].x-=spd;
-    if(platforms[i].x<-100)platforms.splice(i,1);
-  }
-  platformEdge-=spd;
+  // Gravity
+  if(!player.onGround)player.vy+=gravity;
+  player.y+=player.vy;
 
-  // Decay recent lane tracking
-  for(let l=0;l<3;l++) recentLaneObs[l]-=spd;
+  // Platform collision
+  player.onGround=false;
+  let onAny=false;
+  const playerWorldLeft=px-player.w/2;
+  const playerWorldRight=px+player.w/2;
+  const playerBottom=player.y+player.h/2;
 
-  // === OBSTACLE SPAWNING ===
-  // Formula: base spacing decreases with difficulty, random variance ±20%
-  // Early: one every ~350px. Max diff: one every ~140px.
-  let obsBaseSpacing=350-diff*210;
-  if(obsBaseSpacing<140) obsBaseSpacing=140;
-  let obsVariance=obsBaseSpacing*0.2;
-  nextObstacleX-=spd;
-  if(nextObstacleX<=0){
-    spawnObstacle();
-    nextObstacleX=obsBaseSpacing + (Math.random()-0.5)*2*obsVariance;
-  }
+  for(const pl of platforms){
+    const plTop=GY-pl.y;
+    const plLeft=pl.x;
+    const plRight=pl.x+pl.w;
+    // Check if player is over this platform
+    if(playerWorldRight>plLeft+4&&playerWorldLeft<plRight-4){
+      // Landing on top
+      if(player.vy>=0&&playerBottom>=plTop-5&&playerBottom<=plTop+12){
+        player.y=plTop-player.h/2;
+        player.vy=0;player.onGround=true;onAny=true;
 
-  // === COLLECTIBLE SPAWNING ===
-  // Orbs come in lines (50%) or single orbs/sparks
-  nextCollectX-=spd;
-  if(nextCollectX<=0){
-    let r=Math.random();
-    if(r<0.5){
-      spawnOrbLine(); // line of 3-5 orbs in same lane
-    } else if(r<0.8){
-      spawnCollectible('orb'); // single orb
-    } else {
-      spawnCollectible('spark'); // spark (rarer, more points)
-    }
-    // Spacing: 100-180px early, 140-220px late
-    nextCollectX=100+diff*40+Math.random()*80;
-  }
-
-  // === BRAZIER SPAWNING ===
-  // Critical fuel source. Early: every ~300px. Late: every ~500px (scarcer = harder)
-  let brazSpacing=300+diff*200;
-  nextBrazierX-=spd;
-  if(nextBrazierX<=0){spawnBrazier();nextBrazierX=brazSpacing+Math.random()*80}
-
-  // === POWER-UP SPAWNING ===
-  // Rare but consistent: every 500-900px, slightly more common late (you need them)
-  let pupSpacing=700-diff*200+Math.random()*200;
-  if(pupSpacing<500) pupSpacing=500;
-  nextPowerupX-=spd;
-  if(nextPowerupX<=0){spawnPowerup();nextPowerupX=pupSpacing}
-
-  // === LETTER SPAWNING ===
-  // One letter every 400-600px when available
-  nextLetterX-=spd;
-  if(nextLetterX<=0&&nextFireLetter<=3){spawnLetter();nextLetterX=400+Math.random()*200}
-
-  // Update obstacles
-  let px=playerX(),py=playerY,pw=30,ph=sliding?15:40;
-  for(let i=obstacles.length-1;i>=0;i--){
-    let o=obstacles[i];
-    o.x-=spd;
-    if(o.type==='golem')o.x-=o.speed;
-    if(o.type==='log'){o.swing+=0.04;o.lane=Math.max(0,Math.min(2,Math.round(1+Math.sin(o.swing))))}
-    if(o.type==='icicle'){
-      o.timer++;
-      // Start falling when it reaches player X area (warning shadow visible first)
-      if(!o.falling&&o.x<px+100){o.falling=true;o.fy=0}
-      if(o.falling){o.fy+=0.6}
-      // Remove if fallen past screen
-      if(o.fy>H){obstacles.splice(i,1);continue}
-    }
-    if(o.x<-100){obstacles.splice(i,1);continue}
-
-    // Collision — compute actual Y position
-    let oy=laneY(o.lane);
-    if(o.type==='icicle'){
-      oy=o.falling? (o.fy) : -100; // fy starts from 0 (top of screen), falls down
-    }
-    let hit=o.active&&Math.abs(o.x-px)<(o.w/2+pw/2)&&Math.abs(oy-py)<(o.h/2+ph/2);
-
-    // Blaze destroys
-    if(hit&&activeEffects.blaze>0){
-      o.active=false;
-      for(let p=0;p<8;p++)particles.push(makeParticle(o.x,oy,'#ff4400',3));
-      score+=10*mult;
-      continue;
-    }
-
-    if(hit&&o.active){
-      if(dashing&&dashTimer>0){
-        o.active=false;
-        runStats.dashThrough++;
-        score+=15*mult;
-        addPopup(o.x,oy-20,'DASH!','#00ccff');
-        for(let p=0;p<5;p++)particles.push(makeParticle(o.x,oy,'#00ccff',2));
-        continue;
-      }
-      if(activeEffects.shield){
-        activeEffects.shield=false;
-        o.active=false;
-        addPopup(px,py-30,'BLOCKED!','#4488ff');
-        for(let p=0;p<6;p++)particles.push(makeParticle(o.x,oy,'#4488ff',2));
-        continue;
-      }
-      // Take damage
-      fuel-=15;dmgTaken=true;
-      stunTimer=30;
-      shakeX=(Math.random()-0.5)*12;shakeY=(Math.random()-0.5)*8;
-      flashAlpha=0.4;
-      o.active=false;
-      brazierStreak=0;
-      if(fuel<=0){fuel=0;die();return}
-    }
-
-    // Near miss: obstacle passes through player's X zone but in adjacent lane
-    if(o.active&&!o.nearMissed&&o.type!=='icicle'){
-      let xClose=Math.abs(o.x-px)<(o.w/2+pw/2+15); // within X range
-      let sameLane=(o.lane===playerLane);
-      let adjacentLane=Math.abs(o.lane-playerLane)===1;
-      if(xClose && !sameLane && adjacentLane){
-        o.nearMissed=true;
-        nearMissChain++;
-        runStats.nearMisses++;
-        score+=5*mult;
-        whiteFlash=0.2;
-        shakeX=(Math.random()-0.5)*2;shakeY=(Math.random()-0.5)*1.5;
-        addPopup(px+40,py-25,'CLOSE!','#ffffff');
-        if(nearMissChain>=3){
-          score+=50*mult;
-          runStats.fearlessCount++;
-          addPopup(px+40,py-45,'FEARLESS!','#FFD600');
-          nearMissChain=0;
+        // Check if just landed (was in air)
+        if(!player._wasOnGround){
+          // Score for pattern completion check
+          handleLanding(pl,playerWorldLeft-plLeft);
+          spawnParticles(camX+150,plTop,8,null,4,3,25);
         }
+        break;
       }
-      // Reset chain if obstacle passes and wasn't near-missed
-      if(o.x<px-50 && !o.nearMissed) nearMissChain=0;
     }
   }
+  player._wasOnGround=player.onGround;
 
-  // Update collectibles
-  for(let i=collectibles.length-1;i>=0;i--){
-    let c=collectibles[i];
-    c.x-=spd;
-    c.bobTimer+=0.05;
-    if(c.x<-80){collectibles.splice(i,1);continue}
+  // Fall death
+  if(player.y>H+50){
+    die();return;
+  }
 
-    // Each collectible has a smooth Y offset for magnet pull
-    if(c.magnetYOff==null) c.magnetYOff=0;
-    let baseY=laneY(c.lane)+Math.sin(c.bobTimer)*4;
-    let cy=baseY+c.magnetYOff;
-    let magnetRange=activeEffects.magnet>0?200:0;
-    let autoCollect=activeEffects.blaze>0;
-
-    // Magnet pull — smoothly attract X and Y toward player
-    if(magnetRange>0&&(c.type==='orb'||c.type==='spark')){
-      let mdx=c.x-px,mdy=cy-py;
-      let md=Math.sqrt(mdx*mdx+mdy*mdy);
-      if(md<magnetRange){
-        c.x+=(px-c.x)*0.12;
-        c.magnetYOff+=(py-baseY-c.magnetYOff)*0.12;
-        cy=baseY+c.magnetYOff;
-      }
-    } else {
-      // Decay magnet offset when magnet is off
-      c.magnetYOff*=0.9;
-      if(Math.abs(c.magnetYOff)<0.5) c.magnetYOff=0;
-      cy=baseY+c.magnetYOff;
-    }
-
-    let dx=c.x-px,dy=cy-py;
-    let d=Math.sqrt(dx*dx+dy*dy);
-
-    let hitDist=(c.type==='brazier'?40:autoCollect?60:28);
-    if(d<hitDist&&c.active){
-      collect(c,i);
-    }
+  // Trail particles
+  if(Math.random()<.3){
+    particles.push({wx:px-10+Math.random()*5,y:player.y-5+Math.random()*10,
+      vx:-1-Math.random(),vy:-Math.random()*1.5,life:15,maxLife:15,
+      color:`hsl(${20+Math.random()*30},100%,${50+Math.random()*40}%)`});
   }
 
   // Update particles
   for(let i=particles.length-1;i>=0;i--){
-    let p=particles[i];
-    p.x+=p.vx;p.y+=p.vy;p.vy+=p.g||0;p.life--;
+    const p=particles[i];
+    p.wx+=p.vx;p.y+=p.vy;p.life--;
     if(p.life<=0)particles.splice(i,1);
   }
-  while(particles.length>200)particles.shift();
 
-  // Update popups
-  for(let i=popups.length-1;i>=0;i--){
-    let p=popups[i];
-    p.y-=1;p.life--;p.alpha=p.life/p.maxLife;
-    if(p.life<=0)popups.splice(i,1);
-  }
-
-  // Ambient particles
-  if(frame%3===0&&particles.length<180){
-    particles.push({x:W+10,y:Math.random()*H,vx:-speed*0.5-Math.random(),vy:-0.5+Math.random()*0.3,life:120,color:'#ff880040',size:2+Math.random()*3,g:0});
-  }
-
-  // Check missions
-  checkMissions();
-}
-
-function collect(c,idx){
-  let mult=getMult();
-  let px2=playerX(),py2=playerY;
-  if(c.type==='orb'){
-    fuel=Math.min(fuel+1,FUEL_MAX);
-    runStats.orbsCollected++;
-    if(playerLane===2)runStats.skyOrbs++;
-    score+=1*mult;
-    for(let p=0;p<3;p++)particles.push(makeParticle(c.x,laneY(c.lane),'#ff8800',1.5));
-  }else if(c.type==='spark'){
-    score+=10*mult;
-    runStats.sparksCollected++;
-    for(let p=0;p<5;p++)particles.push(makeParticle(c.x,laneY(c.lane),'#ffdd00',2));
-  }else if(c.type==='brazier'&&!c.lit){
-    c.lit=true;
-    fuel=Math.min(fuel+25,FUEL_MAX);
-    score+=50*mult;
-    runStats.braziersLit++;
-    brazierStreak++;
-    runStats.brazierStreak=Math.max(runStats.brazierStreak,brazierStreak);
-    for(let p=0;p<15;p++)particles.push(makeParticle(c.x,laneY(c.lane)-20,'#ff4400',3));
-    for(let p=0;p<10;p++)particles.push(makeParticle(c.x,laneY(c.lane)-30,'#ffcc00',2));
-    addPopup(c.x,laneY(c.lane)-40,'+25⛽ +50★','#ff8800');
-    return; // don't remove
-  }else if(c.type==='letter'){
-    if(c.letterIdx===nextFireLetter){
-      fireLetters[c.letterIdx]=true;
-      nextFireLetter++;
-      addPopup(c.x,laneY(c.lane)-20,c.letter+'!','#ffcc00');
-      for(let p=0;p<8;p++)particles.push(makeParticle(c.x,laneY(c.lane),'#ffcc00',2.5));
-      if(nextFireLetter===4){
-        score+=500*mult;
-        fuel=FUEL_MAX;
-        runStats.fireComplete=1;
-        addPopup(px2,py2-50,'F-I-R-E! +500★','#ff4400');
-      }
+  // Generate more chunks as needed
+  while(nextX<camX+W*2){
+    const c=genChunk(patIdx);
+    c.platforms.forEach(p=>platforms.push(p));
+    if(patIdx%20===0&&patIdx>0){
+      cycle++;speed=Math.min(8,4+cycle*.3);
     }
-  }else if(c.isPowerup){
-    runStats.powerupsUsed++;
-    if(c.type==='magnet'){activeEffects.magnet=900;runStats.magnetUsed++;addPopup(c.x,laneY(c.lane)-20,'MAGNET!','#aa44ff')}
-    else if(c.type==='blaze'){activeEffects.blaze=480;runStats.blazeUsed++;addPopup(c.x,laneY(c.lane)-20,'BLAZE!','#ff4400')}
-    else if(c.type==='fueltank'){fuel=FUEL_MAX;runStats.fueltankUsed++;addPopup(c.x,laneY(c.lane)-20,'FUEL UP!','#00cc44')}
-    else if(c.type==='shield'){activeEffects.shield=true;runStats.shieldUsed++;addPopup(c.x,laneY(c.lane)-20,'SHIELD!','#4488ff')}
-    else if(c.type==='superjump'){activeEffects.superJump=600;addPopup(c.x,laneY(c.lane)-20,'SUPER JUMP!','#ff88ff')}
-    for(let p=0;p<12;p++)particles.push(makeParticle(c.x,laneY(c.lane),'#ffffff',3));
+    showPattern(patIdx);
+    patIdx++;
   }
-  collectibles.splice(idx,1);
+
+  // Clean old platforms
+  platforms=platforms.filter(p=>p.x+p.w>camX-200);
+
+  if(patternLabelTimer>0)patternLabelTimer--;
 }
 
-function makeParticle(x,y,color,size){
-  return{x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4-1,life:30+Math.random()*20,color,size:size||2,g:0.05};
-}
-function addPopup(x,y,text,color){
-  popups.push({x,y,text,color,life:60,maxLife:60,alpha:1});
-}
+let lastScoredPattern=-1;
+function handleLanding(pl,distFromLeft){
+  if(pl.pattern<0)return; // breathing room
+  if(pl.pattern===lastScoredPattern)return;
+  lastScoredPattern=pl.pattern;
+  totalPatterns++;
 
-// ===== MISSIONS =====
-function checkMissions(){
-  let allDone=true;
-  for(let m of missions){
-    if(m.done){continue}
-    allDone=false;
-    let val=runStats[m.key]||0;
-    m.progress=Math.min(val,m.target);
-    if(m.progress>=m.target){
-      m.done=true;
-      addPopup(W/2,H/3,'MISSION COMPLETE!','#7c3aed');
-    }
+  const pat=PATTERNS[pl.pattern%20];
+  let pts=pat.points;
+  let clean=false;
+  if(distFromLeft<pl.w*.2){
+    clean=true;pts=Math.floor(pts*1.5);
+    chain++;
+  } else {
+    chain=0;
   }
-  if(allDone&&missions.every(m=>m.done)){
-    // Upgrade multiplier
-    if(multLevel<MULT_LEVELS.length-1){
-      multLevel++;
-      addPopup(W/2,H/4,'MULTIPLIER UP! ×'+getMult(),'#ffcc00');
-    }
-    missionSetIndex++;
-    generateMissions(); // this calls saveData()
-  }
-}
+  const mult=Math.min(10,chain>0?chain:1);
+  pts*=mult;
+  if(pl.bonus)pts*=2;
+  score+=pts;
 
-// ===== DIE =====
+  // Floating text
+  const sx=150;const sy=player.y-30;
+  floatingTexts.push({x:sx,y:sy,text:clean?`CLEAN! +${pts}`:`+${pts}`,life:60,color:clean?'#ffff00':'#ffffff'});
+  if(pl.bonus)floatingTexts.push({x:sx,y:sy-20,text:'BONUS PATH!',life:60,color:'#ff44ff'});
+}
+let floatingTexts=[];
+
 function die(){
-  state='over';
-  if(score>bestScore)bestScore=score;
-  saveData();
-  // Show game over
-  document.getElementById('goScore').textContent=Math.floor(score);
-  document.getElementById('goDist').textContent=Math.floor(dist);
-  document.getElementById('goBraz').textContent=runStats.braziersLit;
-  document.getElementById('goBest').textContent=Math.floor(bestScore);
-  renderMissionList('goMissions');
+  player.dead=true;player.vy=-8;deathTimer=0;
+  spawnParticles(camX+150,player.y,20,null,8,8,40);
+}
+function showGameOver(){
+  saveBest();state='gameover';
+  document.getElementById('goScore').textContent=`Score: ${score}`;
+  document.getElementById('goPatterns').textContent=`Patterns: ${totalPatterns} | Cycle: ${cycle}`;
+  document.getElementById('goBest').textContent=`Best: ${bestScore}`;
   document.getElementById('gameover').classList.remove('hidden');
 }
 
-function renderMissionList(elId){
-  let el=document.getElementById(elId);
-  el.innerHTML='';
-  for(let m of missions){
-    let d=document.createElement('div');
-    d.className='mp-item'+(m.done?' mp-done':'');
-    let txt=m.text.replace('{n}',m.target);
-    d.innerHTML=`<span>${m.icon} ${txt}</span><span class="mp-prog">${Math.floor(m.progress||0)}/${m.target}</span>`;
-    el.appendChild(d);
-  }
-}
-
-// ===== DRAW =====
+// ---- DRAW ----
 function draw(){
+  X.clearRect(0,0,W,H);
+
+  // Sky
+  const sky=X.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#1a0533');sky.addColorStop(.4,'#3b1578');sky.addColorStop(.7,'#ff6644');sky.addColorStop(1,'#ffaa33');
+  X.fillStyle=sky;X.fillRect(0,0,W,H);
+
+  // Mountains (parallax)
+  drawMountains(.1,'#2d1b4e',H*.45,H*.35);
+  drawMountains(.2,'#4a2d6e',H*.55,H*.25);
+
+  // Hills
+  drawHills(.3,'#2d6b1e',H*.65,H*.15);
+  drawHills(.4,'#3d8b2e',H*.7,H*.1);
+
+  // Trees
+  X.fillStyle='#1a5510';
+  bgTrees.forEach(t=>{
+    const tx=(t.x-camX*.35)%((W+200)*2);
+    const bx=tx<-100?tx+((W+200)*2):tx;
+    X.beginPath();X.moveTo(bx,GY);X.lineTo(bx+t.w/2,GY-t.h);X.lineTo(bx+t.w,GY);X.fill();
+  });
+
+  // Platforms & ground
+  const screenOff=camX;
+  for(const pl of platforms){
+    const sx=pl.x-screenOff;
+    const sy=GY-pl.y;
+    if(sx>W+50||sx+pl.w<-50)continue;
+
+    if(pl.y<=0&&!pl.bonus){
+      // Ground-level: draw earth
+      X.fillStyle='#5c3a1e';X.fillRect(sx,sy,pl.w,H-sy);
+      X.fillStyle='#4a8c2a';X.fillRect(sx,sy,pl.w,6);
+      // Grass blades
+      X.fillStyle='#5aad35';
+      for(let gx=sx;gx<sx+pl.w;gx+=8){
+        X.fillRect(gx,sy-4+Math.sin(gx*.3)*2,2,6);
+      }
+    } else {
+      // Elevated platform
+      const ph=16;
+      // Stone look
+      X.fillStyle=pl.bonus?'#8844cc':'#8b7355';
+      X.fillRect(sx,sy-ph,pl.w,ph+4);
+      X.fillStyle=pl.bonus?'#aa66ee':'#a08868';
+      X.fillRect(sx+2,sy-ph+2,pl.w-4,3);
+      // Edge marks
+      X.fillStyle='#00000033';
+      X.fillRect(sx,sy+4,pl.w,2);
+    }
+  }
+
+  // Void/pit darkness
+  X.fillStyle='rgba(0,0,0,0.6)';
+  // Draw void below gaps (simple: fill below GY where no platform exists)
+  // Simplified: just darken below ground line in gap areas
+  // Actually let's draw pits between platforms
+  const sorted=[...platforms].sort((a,b)=>a.x-b.x);
+  for(let i=0;i<sorted.length-1;i++){
+    const end=sorted[i].x+sorted[i].w;
+    const start=sorted[i+1].x;
+    if(start>end+5){
+      const sx1=end-screenOff;
+      const sx2=start-screenOff;
+      X.fillStyle='rgba(0,0,0,0.5)';
+      X.fillRect(sx1,GY+6,sx2-sx1,H-GY);
+    }
+  }
+
+  // Particles (world coords)
+  particles.forEach(p=>{
+    const alpha=p.life/p.maxLife;
+    X.globalAlpha=alpha;
+    X.fillStyle=p.color;
+    const sz=3*alpha+1;
+    const sx=p.wx-camX;
+    X.beginPath();X.arc(sx,p.y,sz,0,Math.PI*2);X.fill();
+  });
+  X.globalAlpha=1;
+
+  // Player (flame)
+  if(state==='play'||state==='dead'){
+    const px=150;const py=player.y;
+    drawFlame(px,py,player.w,player.h);
+  }
+
+  // Floating texts
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y-=1;ft.life--;
+    X.globalAlpha=ft.life/60;
+    X.fillStyle=ft.color;X.font='bold 16px sans-serif';X.textAlign='center';
+    X.fillText(ft.text,ft.x,ft.y);
+    if(ft.life<=0)floatingTexts.splice(i,1);
+  }
+  X.globalAlpha=1;
+
+  // HUD
+  if(state==='play'){
+    X.fillStyle='#fff';X.font='bold 20px sans-serif';X.textAlign='left';
+    X.fillText(`Score: ${score}`,15,35);
+    X.font='14px sans-serif';
+    X.fillText(`Best: ${bestScore}`,15,55);
+
+    // Chain
+    X.textAlign='center';
+    if(chain>1){
+      X.font='bold 28px sans-serif';
+      X.fillStyle=`hsl(${(Date.now()/10)%360},100%,70%)`;
+      X.fillText(`×${Math.min(10,chain)} CHAIN`,W/2,40);
+    }
+
+    // Pattern progress
+    X.textAlign='right';X.fillStyle='#fff';X.font='bold 18px sans-serif';
+    const curPat=((totalPatterns)%20)+1;
+    X.fillText(`Pattern ${curPat}/20`,W-15,35);
+    X.font='14px sans-serif';
+    X.fillText(`Cycle ${cycle}`,W-15,55);
+
+    // Pattern label
+    if(patternLabelTimer>0){
+      X.textAlign='center';
+      X.globalAlpha=Math.min(1,patternLabelTimer/30);
+      X.font='bold 24px sans-serif';X.fillStyle='#ffdd44';
+      X.fillText(patternLabel,W/2,H*.4);
+      X.globalAlpha=1;
+    }
+  }
+}
+
+function drawFlame(x,y,w,h){
+  // Teardrop flame
+  const cx=x,cy=y;
   X.save();
-  X.translate(shakeX,shakeY);
+  // Body glow
+  X.shadowColor='#ff6600';X.shadowBlur=20;
 
-  // Sky gradient — bright vivid blue to warm gold
-  let skyGrad=X.createLinearGradient(0,0,0,H);
-  skyGrad.addColorStop(0,'#2196F3');
-  skyGrad.addColorStop(0.5,'#64B5F6');
-  skyGrad.addColorStop(0.85,'#FFD54F');
-  skyGrad.addColorStop(1,'#FFB300');
-  X.fillStyle=skyGrad;
-  X.fillRect(-20,-20,W+40,H+40);
+  // Main flame shape
+  const grad=X.createRadialGradient(cx,cy,2,cx,cy-5,h*.7);
+  grad.addColorStop(0,'#ffffff');
+  grad.addColorStop(.3,'#ffff00');
+  grad.addColorStop(.6,'#ff8800');
+  grad.addColorStop(1,'#ff2200');
 
-  // Parallax layers
-  drawMountains();
-  drawHills();
-  drawGround();
-
-  // Blaze overlay
-  if(activeEffects.blaze>0){
-    X.fillStyle='rgba(255,100,0,0.1)';
-    X.fillRect(0,0,W,H);
-  }
-
-  // Platforms
-  drawPlatforms();
-
-  // Obstacles
-  drawObstacles();
-
-  // Collectibles
-  drawCollectibles();
-
-  // Player
-  drawPlayer();
-
-  // Particles
-  drawParticles();
-
-  // Flash effects
-  if(flashAlpha>0.01){X.fillStyle=`rgba(255,0,0,${flashAlpha})`;X.fillRect(0,0,W,H)}
-  if(whiteFlash>0.01){X.fillStyle=`rgba(255,255,255,${whiteFlash})`;X.fillRect(0,0,W,H)}
-
-  // Blaze border glow
-  if(activeEffects.blaze>0){
-    let g=X.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.7);
-    g.addColorStop(0,'transparent');
-    g.addColorStop(1,'rgba(255,80,0,0.15)');
-    X.fillStyle=g;
-    X.fillRect(0,0,W,H);
-  }
-
-  X.restore();
-
-  // HUD (not affected by shake)
-  if(state==='play')drawHUD();
-
-  // Popups
-  drawPopups();
-}
-
-function drawMountains(){
-  let ox=-(bgOffset*0.1)%400;
-  X.fillStyle='#7E57C2';
-  X.beginPath();
-  X.moveTo(-20,H);
-  for(let x=ox-400;x<W+400;x+=200){
-    X.lineTo(x,H*0.35+Math.sin(x*0.005)*40+Math.cos(x*0.003)*20);
-  }
-  X.lineTo(W+20,H);X.closePath();X.fill();
-
-  X.fillStyle='#9575CD';
-  X.beginPath();X.moveTo(-20,H);
-  for(let x=ox-400;x<W+400;x+=160){
-    X.lineTo(x,H*0.4+Math.sin(x*0.007+1)*30);
-  }
-  X.lineTo(W+20,H);X.closePath();X.fill();
-}
-
-function drawHills(){
-  let ox=-(bgOffset*0.3)%300;
-  X.fillStyle='#43A047';
-  X.beginPath();X.moveTo(-20,H);
-  for(let x=ox-300;x<W+300;x+=150){
-    X.lineTo(x,H*0.55+Math.sin(x*0.01)*25);
-  }
-  X.lineTo(W+20,H);X.closePath();X.fill();
-
-  // Trees — dark green for contrast
-  X.fillStyle='#2E7D32';
-  let tx=-(bgOffset*0.35)%120;
-  for(let x=tx;x<W+120;x+=120){
-    let ty=H*0.52+Math.sin(x*0.01)*20;
-    X.beginPath();X.moveTo(x,ty);X.lineTo(x-15,ty+30);X.lineTo(x+15,ty+30);X.closePath();X.fill();
-    X.beginPath();X.moveTo(x,ty-12);X.lineTo(x-12,ty+15);X.lineTo(x+12,ty+15);X.closePath();X.fill();
-  }
-}
-
-function drawGround(){
-  let gy=H*0.82;
-  // Earth — rich warm brown
-  X.fillStyle='#A0522D';
-  X.fillRect(0,gy,W,H-gy);
-  // Darker sub-layer
-  X.fillStyle='#8B4513';
-  X.fillRect(0,gy+15,W,H-gy-15);
-  // Grass — bright vivid green strip
-  X.fillStyle='#4CAF50';
-  X.fillRect(0,gy-5,W,10);
-  // Grass blades
-  let gx=-(bgOffset*0.8)%30;
-  X.fillStyle='#66BB6A';
-  for(let x=gx;x<W+30;x+=30){
-    X.fillRect(x,gy-8,2,8);
-    X.fillRect(x+15,gy-6,2,6);
-  }
-  // Ground texture
-  let dx=-(bgOffset)%200;
-  X.fillStyle='#6D4C2A';
-  for(let x=dx;x<W+200;x+=200){
-    X.fillRect(x+20,gy+10,8,3);
-    X.fillRect(x+80,gy+20,12,3);
-    X.fillRect(x+140,gy+8,6,3);
-  }
-}
-
-function drawPlatforms(){
-  for(let p of platforms){
-    let y=laneY(p.lane);
-    if(p.lane===1){
-      // Stone platform — solid and visible
-      X.fillStyle='#795548';
-      X.fillRect(p.x,y+12,p.w,14);
-      X.fillStyle='#8D6E63';
-      X.fillRect(p.x,y+12,p.w,5);
-      // Stone lines
-      X.fillStyle='#5D4037';
-      X.fillRect(p.x+p.w*0.3,y+14,1,10);
-      X.fillRect(p.x+p.w*0.6,y+14,1,10);
-      // Moss top
-      X.fillStyle='#66BB6A';
-      X.fillRect(p.x+3,y+11,p.w-6,3);
-    }else{
-      // Sky crystal — bright white/blue
-      X.fillStyle='rgba(227,242,253,0.9)';
-      X.beginPath();
-      X.ellipse(p.x+p.w/2,y+18,p.w/2,9,0,0,Math.PI*2);
-      X.fill();
-      X.fillStyle='rgba(187,222,251,0.7)';
-      X.beginPath();
-      X.ellipse(p.x+p.w/2,y+15,p.w/3,5,0,0,Math.PI*2);
-      X.fill();
-      // Sparkle
-      X.fillStyle='rgba(255,255,255,0.6)';
-      X.beginPath();X.arc(p.x+p.w*0.3,y+16,2,0,Math.PI*2);X.fill();
-    }
-  }
-}
-
-function drawObstacles(){
-  for(let o of obstacles){
-    if(!o.active)continue;
-    let y=laneY(o.lane);
-    X.save();
-    if(o.type==='ice'){
-      // Bright cyan ice block with dark outline
-      X.fillStyle='#00BCD4';
-      X.fillRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-      X.fillStyle='#4DD0E1';
-      X.fillRect(o.x-o.w/2+4,y-o.h/2+4,o.w-8,o.h/3);
-      X.strokeStyle='#006064';X.lineWidth=2;
-      X.strokeRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-      // Shine
-      X.fillStyle='rgba(255,255,255,0.4)';
-      X.fillRect(o.x-o.w/2+3,y-o.h/2+3,6,o.h-6);
-    }else if(o.type==='water'){
-      X.fillStyle='rgba(21,101,192,0.85)';
-      X.fillRect(o.x-o.w/2,y-40,o.w,80);
-      // Bright ripple
-      X.fillStyle='rgba(66,165,245,0.7)';
-      let ry=Math.sin(frame*0.1+o.x)*10;
-      X.fillRect(o.x-o.w/2-3,y-40+ry,o.w+6,5);
-      X.fillStyle='rgba(144,202,249,0.5)';
-      X.fillRect(o.x-o.w/2-2,y-40+ry+5,o.w+4,3);
-    }else if(o.type==='wind'){
-      X.fillStyle='rgba(120,180,220,0.7)';
-      X.fillRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-      // Bold wind lines
-      X.strokeStyle='rgba(255,255,255,0.8)';X.lineWidth=3;
-      for(let l=0;l<3;l++){
-        let lx=o.x-o.w/2+Math.sin(frame*0.05+l)*10;
-        X.beginPath();X.moveTo(lx,y-o.h/2+10+l*15);X.lineTo(lx+o.w,y-o.h/2+10+l*15);X.stroke();
-      }
-      X.strokeStyle='#1565C0';X.lineWidth=2;
-      X.strokeRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-    }else if(o.type==='log'){
-      X.save();
-      X.fillStyle='#6D4C41';
-      X.translate(o.x,y);
-      X.rotate(Math.sin(o.swing)*0.3);
-      X.fillRect(-20,-8,40,16);
-      X.fillStyle='#4E342E';
-      X.fillRect(-18,-6,36,12);
-      X.strokeStyle='#3E2723';X.lineWidth=1;
-      X.beginPath();X.moveTo(-15,0);X.lineTo(15,0);X.stroke();
-      X.restore();
-    }else if(o.type==='golem'){
-      // Solid dark blue-gray golem with bright eyes
-      X.fillStyle='#546E7A';
-      X.fillRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-      X.strokeStyle='#263238';X.lineWidth=2;
-      X.strokeRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
-      // Bright red eyes
-      X.fillStyle='#FF1744';
-      X.beginPath();X.arc(o.x-8,y-8,5,0,Math.PI*2);X.fill();
-      X.beginPath();X.arc(o.x+8,y-8,5,0,Math.PI*2);X.fill();
-      X.fillStyle='#fff';
-      X.beginPath();X.arc(o.x-8,y-9,2,0,Math.PI*2);X.fill();
-      X.beginPath();X.arc(o.x+8,y-9,2,0,Math.PI*2);X.fill();
-      // Frost aura
-      X.fillStyle='rgba(41,182,246,0.2)';
-      X.beginPath();X.arc(o.x,y,35,0,Math.PI*2);X.fill();
-    }else if(o.type==='icicle'){
-      let iy=o.falling? o.fy : -60; // starts above screen, falls
-      // Shadow warning on target lane
-      if(!o.falling || o.fy<laneY(o.lane)){
-        X.fillStyle='rgba(100,150,200,'+(o.falling?0.5:0.25)+')';
-        X.beginPath();X.ellipse(o.x,laneY(o.lane)+5,18,6,0,0,Math.PI*2);X.fill();
-      }
-      X.fillStyle='#29B6F6';
-      X.beginPath();
-      X.moveTo(o.x,iy);X.lineTo(o.x-12,iy+o.h);X.lineTo(o.x+12,iy+o.h);
-      X.closePath();X.fill();
-      X.strokeStyle='#0277BD';X.lineWidth=2;
-      X.beginPath();X.moveTo(o.x,iy);X.lineTo(o.x-12,iy+o.h);X.lineTo(o.x+12,iy+o.h);X.closePath();X.stroke();
-      X.fillStyle='#B3E5FC';
-      X.beginPath();
-      X.moveTo(o.x,iy+5);X.lineTo(o.x-5,iy+o.h-5);X.lineTo(o.x+5,iy+o.h-5);
-      X.closePath();X.fill();
-    }
-    X.restore();
-  }
-}
-
-function drawCollectibles(){
-  for(let c of collectibles){
-    let y=laneY(c.lane)+Math.sin(c.bobTimer)*4+(c.magnetYOff||0);
-    if(c.type==='orb'){
-      // Bright glowing orange orb
-      X.fillStyle='rgba(255,152,0,0.3)';
-      X.beginPath();X.arc(c.x,y,14,0,Math.PI*2);X.fill();
-      X.fillStyle='#FF9800';
-      X.beginPath();X.arc(c.x,y,8,0,Math.PI*2);X.fill();
-      X.fillStyle='#FFF176';
-      X.beginPath();X.arc(c.x-2,y-2,4,0,Math.PI*2);X.fill();
-    }else if(c.type==='spark'){
-      // Bright golden star
-      X.fillStyle='rgba(255,235,59,0.3)';
-      X.beginPath();X.arc(c.x,y,14,0,Math.PI*2);X.fill();
-      X.fillStyle='#FFEB3B';
-      X.beginPath();
-      for(let i=0;i<5;i++){
-        let a=i*Math.PI*2/5-Math.PI/2;
-        let r=i%2===0?10:5;
-        X[i===0?'moveTo':'lineTo'](c.x+Math.cos(a)*r,y+Math.sin(a)*r);
-      }
-      X.closePath();X.fill();
-      X.fillStyle='#FFF9C4';
-      X.beginPath();X.arc(c.x,y,3,0,Math.PI*2);X.fill();
-    }else if(c.type==='brazier'){
-      // Base — dark iron
-      X.fillStyle='#424242';
-      X.fillRect(c.x-12,y+5,24,15);
-      X.fillRect(c.x-16,y+15,32,6);
-      X.strokeStyle='#616161';X.lineWidth=1;
-      X.strokeRect(c.x-12,y+5,24,15);
-      // Bowl
-      X.fillStyle='#333';
-      X.beginPath();X.ellipse(c.x,y+5,14,6,0,0,Math.PI*2);X.fill();
-      // Unlit indicator glow
-      if(!c.lit){
-        X.fillStyle='rgba(255,152,0,0.15)';
-        X.beginPath();X.arc(c.x,y,25,0,Math.PI*2);X.fill();
-      }
-      if(c.lit){
-        // Big bright fire
-        X.fillStyle='#FF3D00';
-        X.beginPath();X.ellipse(c.x,y-8,12,18,0,0,Math.PI*2);X.fill();
-        X.fillStyle='#FF9100';
-        X.beginPath();X.ellipse(c.x,y-5,8,12,0,0,Math.PI*2);X.fill();
-        X.fillStyle='#FFEB3B';
-        X.beginPath();X.ellipse(c.x,y-2,4,7,0,0,Math.PI*2);X.fill();
-        X.fillStyle='#fff';
-        X.beginPath();X.ellipse(c.x,y,2,4,0,0,Math.PI*2);X.fill();
-        // Big warm glow
-        X.fillStyle='rgba(255,111,0,0.2)';
-        X.beginPath();X.arc(c.x,y,50,0,Math.PI*2);X.fill();
-      }
-    }else if(c.type==='letter'){
-      // Bright glowing letter
-      X.fillStyle='rgba(255,215,0,0.3)';
-      X.beginPath();X.arc(c.x,y,16,0,Math.PI*2);X.fill();
-      X.fillStyle='#FFD600';
-      X.font='bold 22px sans-serif';
-      X.textAlign='center';X.textBaseline='middle';
-      X.fillText(c.letter,c.x,y);
-      X.strokeStyle='#FF6F00';X.lineWidth=2;
-      X.strokeText(c.letter,c.x,y);
-    }else if(c.isPowerup){
-      // Vivid colored bubble per type
-      let bubbleColors={magnet:'rgba(156,39,176,0.4)',blaze:'rgba(255,61,0,0.4)',fueltank:'rgba(76,175,80,0.4)',shield:'rgba(33,150,243,0.4)',superjump:'rgba(233,30,99,0.4)'};
-      let borderColors={magnet:'#AB47BC',blaze:'#FF6E40',fueltank:'#66BB6A',shield:'#42A5F5',superjump:'#EC407A'};
-      X.fillStyle=bubbleColors[c.type]||'rgba(255,255,255,0.3)';
-      X.beginPath();X.arc(c.x,y,18,0,Math.PI*2);X.fill();
-      X.strokeStyle=borderColors[c.type]||'#fff';X.lineWidth=2.5;
-      X.beginPath();X.arc(c.x,y,18,0,Math.PI*2);X.stroke();
-      // Shine
-      X.fillStyle='rgba(255,255,255,0.3)';
-      X.beginPath();X.arc(c.x-5,y-6,5,0,Math.PI*2);X.fill();
-      // Icon
-      X.font='16px sans-serif';X.textAlign='center';X.textBaseline='middle';
-      let icons={magnet:'🧲',blaze:'🔥',fueltank:'⛽',shield:'🛡️',superjump:'⬆️'};
-      X.fillText(icons[c.type]||'?',c.x,y);
-    }
-  }
-}
-
-function drawPlayer(){
-  let px=playerX(),py=playerY;
-  let sz=activeEffects.blaze>0?1.8:1;
-  let flicker=Math.sin(frame*0.3)*2;
-  X.save();
-  X.translate(px,py);
-  if(sliding){X.scale(1.4*sz,0.4*sz)}
-  else if(jumping){X.scale(0.8*sz,1.3*sz)}
-  else if(dashing){X.scale(1.2*sz,0.9*sz)}
-  else X.scale(sz,sz);
-
-  // Flame tail
-  let tailLen=3+speed*1.5;
-  X.fillStyle='rgba(255,100,0,0.4)';
-  X.beginPath();X.moveTo(0,10);X.lineTo(-tailLen-flicker*2,15);X.lineTo(-tailLen/2,5);X.closePath();X.fill();
-
-  // Main flame body (teardrop)
-  let grad=X.createRadialGradient(0,-2,3,0,5,22);
-  grad.addColorStop(0,'#fff');
-  grad.addColorStop(0.3,'#ffcc00');
-  grad.addColorStop(0.6,'#ff8800');
-  grad.addColorStop(1,'#ff4400');
   X.fillStyle=grad;
   X.beginPath();
-  X.moveTo(0,-22+flicker);
-  X.bezierCurveTo(14,-10,16,8,0,18);
-  X.bezierCurveTo(-16,8,-14,-10,0,-22+flicker);
+  X.moveTo(cx,cy-h*.6);
+  X.bezierCurveTo(cx+w*.6,cy-h*.3,cx+w*.5,cy+h*.4,cx,cy+h*.45);
+  X.bezierCurveTo(cx-w*.5,cy+h*.4,cx-w*.6,cy-h*.3,cx,cy-h*.6);
   X.fill();
 
-  // White core
-  X.fillStyle='rgba(255,255,255,0.8)';
-  X.beginPath();X.ellipse(0,2,5,8,0,0,Math.PI*2);X.fill();
-
+  X.shadowBlur=0;
   // Eyes
+  X.fillStyle='#000';
+  X.beginPath();X.arc(cx-5,cy-2,3,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(cx+5,cy-2,3,0,Math.PI*2);X.fill();
+  // Eye highlights
   X.fillStyle='#fff';
-  X.beginPath();X.arc(-4,-6,2.5,0,Math.PI*2);X.fill();
-  X.beginPath();X.arc(4,-6,2.5,0,Math.PI*2);X.fill();
-  X.fillStyle='#111';
-  X.beginPath();X.arc(-3.5,-6,1.2,0,Math.PI*2);X.fill();
-  X.beginPath();X.arc(4.5,-6,1.2,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(cx-4,cy-3,1.2,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(cx+6,cy-3,1.2,0,Math.PI*2);X.fill();
 
-  // Low fuel dim
-  if(fuel<30){
-    X.fillStyle=`rgba(0,0,0,${0.3*(1-fuel/30)*Math.abs(Math.sin(frame*0.1))})`;
-    X.beginPath();X.ellipse(0,0,20,25,0,0,Math.PI*2);X.fill();
-  }
-
-  X.restore();
-
-  // Shield aura
-  if(activeEffects.shield){
-    X.strokeStyle='rgba(68,136,255,0.5)';X.lineWidth=3;
-    X.beginPath();X.arc(px,py,28,0,Math.PI*2);X.stroke();
-  }
-  // Magnet glow
-  if(activeEffects.magnet>0){
-    X.fillStyle='rgba(170,68,255,0.1)';
-    X.beginPath();X.arc(px,py,80,0,Math.PI*2);X.fill();
-  }
-  // Blaze trail
-  if(activeEffects.blaze>0&&frame%2===0){
-    particles.push({x:px-15+Math.random()*10,y:py+Math.random()*10,vx:-2,vy:-1-Math.random(),life:20,color:'#ff4400',size:4+Math.random()*4,g:0});
-  }
-}
-
-function drawParticles(){
-  for(let p of particles){
-    X.globalAlpha=Math.min(1,p.life/15);
-    X.fillStyle=p.color;
-    X.beginPath();X.arc(p.x,p.y,p.size*(p.life/30),0,Math.PI*2);X.fill();
-  }
-  X.globalAlpha=1;
-}
-
-function drawHUD(){
-  let mult=getMult();
-  // Score
-  X.fillStyle='#fff';X.font='bold '+Math.min(28,W*0.05)+'px sans-serif';
-  X.textAlign='left';X.textBaseline='top';
-  X.fillText(Math.floor(score),12,12);
-  // Multiplier badge
-  if(mult>1){
-    let tx=X.measureText(Math.floor(score)).width+20;
-    X.fillStyle='#7c3aed';
-    X.beginPath();X.arc(tx+14,22,14,0,Math.PI*2);X.fill();
-    X.fillStyle='#fff';X.font='bold 13px sans-serif';X.textAlign='center';
-    X.fillText('×'+mult,tx+14,16);
-  }
-
-  // Fuel bar
-  let barW=Math.min(200,W*0.35),barH=14,barX=(W-barW)/2,barY=10;
-  X.fillStyle='rgba(0,0,0,0.4)';
-  X.fillRect(barX-1,barY-1,barW+2,barH+2);
-  let fuelPct=fuel/FUEL_MAX;
-  let fuelColor=fuel>60?'#4CAF50':fuel>30?'#FFC107':'#f44336';
-  if(fuel<30&&Math.sin(frame*0.2)>0)fuelColor='#ff0000';
-  X.fillStyle=fuelColor;
-  X.fillRect(barX,barY,barW*fuelPct,barH);
-  X.fillStyle='#fff';X.font='bold 10px sans-serif';X.textAlign='center';
-  X.fillText(Math.floor(fuel)+'%',barX+barW/2,barY+2);
-
-  // Distance
-  X.textAlign='right';X.font='bold '+Math.min(18,W*0.035)+'px sans-serif';
-  X.fillStyle='#fff';
-  X.fillText(Math.floor(dist)+'m',W-12,14);
-
-  // FIRE letters
-  let letters='FIRE';
-  X.textAlign='center';X.font='bold 16px sans-serif';
-  for(let i=0;i<4;i++){
-    X.fillStyle=fireLetters[i]?'#ff8800':'rgba(255,255,255,0.2)';
-    X.fillText(letters[i],(W-80)/2+i*22+11,barY+barH+8);
-  }
-
-  // Missions (bottom left, compact)
-  let my=H-10;
-  X.textAlign='left';X.font=Math.min(12,W*0.025)+'px sans-serif';
-  for(let i=missions.length-1;i>=0;i--){
-    let m=missions[i];
-    my-=20;
-    X.fillStyle=m.done?'rgba(100,255,100,0.6)':'rgba(255,255,255,0.5)';
-    let txt=m.icon+' '+m.text.replace('{n}',m.target);
-    let prog=Math.floor(m.progress||0)+'/'+m.target;
-    X.fillText(txt+' '+prog,8,my);
-  }
-
-  // Dash cooldown indicator
-  if(dashCooldown>0){
-    let cdPct=dashCooldown/180;
-    X.fillStyle='rgba(0,200,255,0.3)';
-    X.fillRect(W-62,H-85,50*cdPct,6);
-    X.strokeStyle='rgba(0,200,255,0.4)';X.lineWidth=1;
-    X.strokeRect(W-62,H-85,50,6);
-    X.fillStyle='rgba(255,255,255,0.4)';X.font='9px sans-serif';X.textAlign='right';
-    X.fillText('DASH',W-14,H-86);
-  }
-
-  // Active effects indicators
-  let ex=W-12;
-  X.textAlign='right';X.font='12px sans-serif';
-  if(activeEffects.magnet>0){X.fillStyle='#aa44ff';X.fillText('🧲 '+Math.ceil(activeEffects.magnet/60)+'s',ex,H-50)}
-  if(activeEffects.blaze>0){X.fillStyle='#ff4400';X.fillText('🔥 '+Math.ceil(activeEffects.blaze/60)+'s',ex,H-35)}
-  if(activeEffects.superJump>0){X.fillStyle='#ff88ff';X.fillText('⬆️ '+Math.ceil(activeEffects.superJump/60)+'s',ex,H-20)}
-  if(activeEffects.shield){X.fillStyle='#4488ff';X.fillText('🛡️',ex,H-65)}
-}
-
-function drawPopups(){
-  X.textAlign='center';X.textBaseline='middle';
-  for(let p of popups){
-    X.globalAlpha=p.alpha;
-    X.fillStyle=p.color;
-    X.font='bold '+Math.min(20,W*0.04)+'px sans-serif';
-    X.fillText(p.text,p.x,p.y);
-  }
-  X.globalAlpha=1;
-}
-
-// ===== MENU DRAW =====
-function drawMenu(){
-  // Animated flame character on menu
-  let cx=W/2,cy=H*0.42;
-  let t=Date.now()*0.003;
-  let bob=Math.sin(t)*8;
-  X.save();
-  X.translate(cx,cy+bob);
-  let s=1.5;X.scale(s,s);
-  // Glow
-  X.fillStyle='rgba(255,120,0,0.1)';
-  X.beginPath();X.arc(0,0,40,0,Math.PI*2);X.fill();
-  // Flame
-  let grad=X.createRadialGradient(0,-2,5,0,5,30);
-  grad.addColorStop(0,'#fff');grad.addColorStop(0.3,'#ffcc00');grad.addColorStop(0.7,'#ff6600');grad.addColorStop(1,'#ff2200');
-  X.fillStyle=grad;
-  let fl=Math.sin(t*5)*3;
-  X.beginPath();X.moveTo(0,-28+fl);X.bezierCurveTo(18,-12,20,10,0,24);X.bezierCurveTo(-20,10,-18,-12,0,-28+fl);X.fill();
-  X.fillStyle='rgba(255,255,255,0.8)';X.beginPath();X.ellipse(0,4,7,10,0,0,Math.PI*2);X.fill();
-  X.fillStyle='#fff';X.beginPath();X.arc(-5,-8,3,0,Math.PI*2);X.fill();X.beginPath();X.arc(5,-8,3,0,Math.PI*2);X.fill();
-  X.fillStyle='#111';X.beginPath();X.arc(-4,-8,1.5,0,Math.PI*2);X.fill();X.beginPath();X.arc(6,-8,1.5,0,Math.PI*2);X.fill();
   X.restore();
 }
 
-// ===== MAIN LOOP =====
+function drawMountains(parallax,color,baseY,height){
+  X.fillStyle=color;X.beginPath();X.moveTo(0,H);
+  const off=camX*parallax;
+  for(let x=0;x<=W+100;x+=60){
+    const wx=x+off;
+    const my=baseY-Math.abs(Math.sin(wx*.003)*height+Math.sin(wx*.007)*height*.5);
+    X.lineTo(x,my);
+  }
+  X.lineTo(W,H);X.closePath();X.fill();
+}
+function drawHills(parallax,color,baseY,height){
+  X.fillStyle=color;X.beginPath();X.moveTo(0,H);
+  const off=camX*parallax;
+  for(let x=0;x<=W+50;x+=30){
+    const wx=x+off;
+    const my=baseY-Math.abs(Math.sin(wx*.005)*height+Math.sin(wx*.012)*height*.4);
+    X.lineTo(x,my);
+  }
+  X.lineTo(W,H);X.closePath();X.fill();
+}
+
+// ---- LOOP ----
 function loop(){
-  X.clearRect(0,0,W,H);
-  if(state==='menu'){
-    X.fillStyle='#0e0e12';X.fillRect(0,0,W,H);
-    drawMenu();
-  }else{
-    update();
-    draw();
-  }
+  update();draw();
   requestAnimationFrame(loop);
 }
 
-// ===== INPUT =====
-function switchLane(dir){
-  if(state!=='play')return;
-  let newLane=playerTargetLane+dir;
-  if(newLane<0||newLane>2)return;
-  playerTargetLane=newLane;
-  playerTargetY=laneY(newLane);
-  runStats.laneSwitches++;
-}
-function jump(){
-  if(state!=='play'||jumping)return;
-  jumping=true;
-  let power=activeEffects.superJump>0?-12:-8;
-  playerVY=power;
-  runStats.jumps++;
-}
-function slide(){
-  if(state!=='play'||sliding)return;
-  sliding=true;slideTimer=20;
-  runStats.slides++;
-}
-function dash(){
-  if(state!=='play'||dashCooldown>0)return;
-  dashing=true;dashTimer=6;dashCooldown=180;
-}
-function startGame(){
-  document.getElementById('menu').classList.add('hidden');
-  document.getElementById('gameover').classList.add('hidden');
-  state='play';
-  initGame();
-}
+// ---- UI ----
 function showMenu(){
   state='menu';
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('menu').classList.remove('hidden');
-  document.getElementById('menuBest').textContent=Math.floor(bestScore);
-  document.getElementById('menuMult').textContent='×'+getMult();
-  renderMissionList('menuMissions');
+  loadBest();
+  document.getElementById('menuBest').textContent=bestScore?`Best Score: ${bestScore}`:'';
 }
-
-// Keyboard
-document.addEventListener('keydown',e=>{
-  if(e.repeat)return;
-  if(e.code==='ArrowUp'||e.code==='KeyW')switchLane(1);
-  else if(e.code==='ArrowDown'||e.code==='KeyS'){if(playerTargetLane===0)slide();else switchLane(-1)}
-  else if(e.code==='Space'){e.preventDefault();if(state==='play')jump();else if(state==='over')startGame()}
-  else if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyE')dash();
+document.getElementById('btnPlay').addEventListener('click',()=>{
+  document.getElementById('menu').classList.add('hidden');
+  initGame();
 });
-
-// Touch
-let touchStartX=0,touchStartY=0,touchStartTime=0;
-C.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  let t=e.touches[0];
-  touchStartX=t.clientX;touchStartY=t.clientY;touchStartTime=Date.now();
-},{passive:false});
-C.addEventListener('touchend',e=>{
-  e.preventDefault();
-  let t=e.changedTouches[0];
-  let dx=t.clientX-touchStartX,dy=t.clientY-touchStartY;
-  let dt=Date.now()-touchStartTime;
-  let dist2=Math.sqrt(dx*dx+dy*dy);
-  if(state==='play'){
-    if(dist2<20&&dt<300){jump();return}
-    if(Math.abs(dx)>Math.abs(dy)){
-      if(dx>30)dash();
-    }else{
-      if(dy<-30)switchLane(1);
-      else if(dy>30){if(playerTargetLane===0)slide();else switchLane(-1)}
-    }
-  }else if(state==='over'){
-    // Tap anywhere to restart quickly
-    if(dist2<20&&dt<300)startGame();
-  }
-},{passive:false});
-
-// Mouse click zones (desktop only — won't fire with touch)
-C.addEventListener('click',e=>{
-  if(state==='over'){startGame();return}
-  if(state!=='play')return;
-  let x=e.clientX/W;
-  if(x<0.33){if(playerTargetLane===0)slide();else switchLane(-1)}
-  else if(x>0.66)switchLane(1);
-  else jump();
+document.getElementById('btnRetry').addEventListener('click',()=>{
+  document.getElementById('gameover').classList.add('hidden');
+  initGame();
 });
-
-// Buttons
-document.getElementById('btnPlay').addEventListener('click',startGame);
-document.getElementById('btnAgain').addEventListener('click',startGame);
 document.getElementById('btnMenu').addEventListener('click',showMenu);
 
-// ===== START =====
-loadData();
 showMenu();
 loop();
 </script>
