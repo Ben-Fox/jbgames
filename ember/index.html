@@ -63,7 +63,8 @@ canvas{display:block;width:100%;height:100%}
 const C=document.getElementById('c'),X=C.getContext('2d');
 let W,H,DPR;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;C.width=W*DPR;C.height=H*DPR;X.setTransform(DPR,0,0,DPR,0,0)}
-resize();window.addEventListener('resize',resize);
+resize();cacheLanePositions();
+window.addEventListener('resize',function(){resize();if(state!=='play')cacheLanePositions()});
 
 // ===== CONSTANTS =====
 const LANE_COUNT=3;
@@ -123,10 +124,13 @@ let obstacles=[],collectibles=[],particles=[],platforms=[],popups=[];
 let bgOffset=0;
 let gameDiff=0; // current difficulty 0-1, updated each frame
 
-// Lane Y positions (computed on resize)
+// Lane Y positions — cached at game start to prevent shifting
+let lanePositions=[0,0,0];
+function cacheLanePositions(){
+  lanePositions=[H*0.78, H*0.52, H*0.28];
+}
 function laneY(lane){
-  const ground=H*0.78, mid=H*0.52, sky=H*0.28;
-  return [ground,mid,sky][lane]||ground;
+  return lanePositions[lane]||lanePositions[0];
 }
 function playerX(){return W*0.22}
 
@@ -184,6 +188,7 @@ function initGame(){
   obstacles.length=0;collectibles.length=0;particles.length=0;platforms.length=0;popups.length=0;
   bgOffset=0;gameDiff=0;
   recentLaneObs=[0,0,0];
+  cacheLanePositions(); // lock lane positions for this run
   runStats={orbsCollected:0,braziersLit:0,distance:0,dashThrough:0,fireComplete:0,
     score:0,powerupsUsed:0,noDmgDist:0,sparksCollected:0,nearMisses:0,brazierStreak:0,
     jumps:0,slides:0,skyOrbs:0,magnetUsed:0,blazeUsed:0,shieldUsed:0,fueltankUsed:0,
@@ -287,8 +292,10 @@ function spawnCollectible(type,x,lane){
 function spawnOrbLine(){
   let lane=safeCollectLane();
   let count=3+Math.floor(Math.random()*3); // 3-5
+  let bobPhase=Math.random()*100;
   for(let i=0;i<count;i++){
-    spawnCollectible('orb',W+60+i*35,lane);
+    let l=lane;
+    collectibles.push({x:W+60+i*35,lane:l,type:'orb',w:20,h:20,active:true,bobTimer:bobPhase+i*0.3,magnetYOff:0});
   }
 }
 
@@ -543,25 +550,29 @@ function update(){
     c.bobTimer+=0.05;
     if(c.x<-80){collectibles.splice(i,1);continue}
 
-    let cy=laneY(c.lane)+Math.sin(c.bobTimer)*5;
+    // Each collectible has a smooth Y offset for magnet pull
+    if(c.magnetYOff==null) c.magnetYOff=0;
+    let baseY=laneY(c.lane)+Math.sin(c.bobTimer)*4;
+    let cy=baseY+c.magnetYOff;
     let magnetRange=activeEffects.magnet>0?200:0;
     let autoCollect=activeEffects.blaze>0;
 
-    // Magnet pull — actually move collectible toward player
+    // Magnet pull — smoothly attract X and Y toward player
     if(magnetRange>0&&(c.type==='orb'||c.type==='spark')){
       let mdx=c.x-px,mdy=cy-py;
       let md=Math.sqrt(mdx*mdx+mdy*mdy);
       if(md<magnetRange){
         c.x+=(px-c.x)*0.12;
-        // Pull toward player's lane
-        if(c.lane!==playerLane){
-          c.lane=playerLane; // snap lane to player for collection
-        }
+        c.magnetYOff+=(py-baseY-c.magnetYOff)*0.12;
+        cy=baseY+c.magnetYOff;
       }
+    } else {
+      // Decay magnet offset when magnet is off
+      c.magnetYOff*=0.9;
+      if(Math.abs(c.magnetYOff)<0.5) c.magnetYOff=0;
+      cy=baseY+c.magnetYOff;
     }
 
-    // Recalculate after magnet pull
-    cy=laneY(c.lane)+Math.sin(c.bobTimer)*5;
     let dx=c.x-px,dy=cy-py;
     let d=Math.sqrt(dx*dx+dy*dy);
 
@@ -898,16 +909,16 @@ function drawObstacles(){
       X.strokeStyle='#1565C0';X.lineWidth=2;
       X.strokeRect(o.x-o.w/2,y-o.h/2,o.w,o.h);
     }else if(o.type==='log'){
+      X.save();
       X.fillStyle='#6D4C41';
       X.translate(o.x,y);
       X.rotate(Math.sin(o.swing)*0.3);
       X.fillRect(-20,-8,40,16);
       X.fillStyle='#4E342E';
       X.fillRect(-18,-6,36,12);
-      // Wood grain
       X.strokeStyle='#3E2723';X.lineWidth=1;
       X.beginPath();X.moveTo(-15,0);X.lineTo(15,0);X.stroke();
-      X.setTransform(DPR,0,0,DPR,0,0);
+      X.restore();
     }else if(o.type==='golem'){
       // Solid dark blue-gray golem with bright eyes
       X.fillStyle='#546E7A';
@@ -948,7 +959,7 @@ function drawObstacles(){
 
 function drawCollectibles(){
   for(let c of collectibles){
-    let y=laneY(c.lane)+Math.sin(c.bobTimer)*5;
+    let y=laneY(c.lane)+Math.sin(c.bobTimer)*4+(c.magnetYOff||0);
     if(c.type==='orb'){
       // Bright glowing orange orb
       X.fillStyle='rgba(255,152,0,0.3)';
