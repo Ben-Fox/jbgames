@@ -156,217 +156,218 @@ function gs(n){return Math.round(n*gapScale())}
 const PATTERNS={
   1:function(){ // Clean Gap — steep lip, big air, land BELOW takeoff
     pushFlat(baseY,10);
-    pushRamp(baseY,baseY-120,5); // steep takeoff lip
+    pushRamp(baseY,baseY-120,10); // takeoff lip
     pushGap(gs(22));
-    pushRamp(baseY+100,baseY+60,6); // landing well below takeoff — big vertical drop
-    pushRamp(baseY+60,baseY,6); // roll back to ground
+    pushRamp(baseY+60,baseY+30,10); // gentle landing slope below takeoff
+    pushRamp(baseY+30,baseY,8);
     pushFlat(baseY,6);
   },
   2:function(){ // Double Hop — two big jumps, landings slope down
     pushFlat(baseY,8);
-    pushRamp(baseY,baseY-100,4);
+    pushRamp(baseY,baseY-100,8);
     pushGap(gs(18));
-    pushRamp(baseY+80,baseY+40,5); // land below
-    pushRamp(baseY+40,baseY,5); // roll up to ground
-    pushFlat(baseY,10); // good recovery gap
-    pushRamp(baseY,baseY-100,4);
+    pushRamp(baseY+50,baseY+20,10); // gentle catch
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,12); // good recovery
+    pushRamp(baseY,baseY-100,8);
     pushGap(gs(18));
-    pushRamp(baseY+80,baseY+40,5);
-    pushRamp(baseY+40,baseY,5);
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
     pushFlat(baseY,6);
   },
   3:function(){ // Step Up — launch to high plateau, ride across, massive drop off edge
     pushFlat(baseY,8);
-    pushRamp(baseY,baseY-150,5);
-    pushFlat(baseY-150,14); // long elevated plateau
-    pushGap(gs(28)); // enormous drop — 150px above ground + gap
-    pushRamp(baseY+120,baseY+60,6); // catch ramp way below
-    pushRamp(baseY+60,baseY,6);
+    pushRamp(baseY,baseY-150,12);
+    pushFlat(baseY-150,14);
+    pushGap(gs(28));
+    pushRamp(baseY+80,baseY+40,12); // long gentle catch far below
+    pushRamp(baseY+40,baseY,10);
     pushFlat(baseY,6);
   },
   4:function(){ // Step Down — start high, lip up, land WAY below
-    pushRamp(baseY,baseY-120,6);
+    pushRamp(baseY,baseY-120,10);
     pushFlat(baseY-120,12);
-    pushRamp(baseY-120,baseY-150,4); // lip up from plateau
+    pushRamp(baseY-120,baseY-150,6); // lip up from plateau
     pushGap(gs(20));
-    pushRamp(baseY+100,baseY+50,5); // land deep below takeoff
-    pushRamp(baseY+50,baseY,5);
+    pushRamp(baseY+60,baseY+30,12); // gentle land deep below
+    pushRamp(baseY+30,baseY,10);
     pushFlat(baseY,6);
   },
   5:function(){ // Triple Quick — three punchy jumps with drops
     for(let i=0;i<3;i++){
       pushFlat(baseY,5);
-      pushRamp(baseY,baseY-80,4);
+      pushRamp(baseY,baseY-80,7);
       pushGap(gs(14));
-      pushRamp(baseY+60,baseY+20,4); // land below
-      pushRamp(baseY+20,baseY,3);
+      pushRamp(baseY+40,baseY+15,8); // gentle catch below
+      pushRamp(baseY+15,baseY,6);
     }
     pushFlat(baseY,6);
   },
   6:function(){ // High Rise — climb to massive height, insane vertical drop
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-220,10); // huge climb
-    pushFlat(baseY-220,10); // high plateau — terrifying height
-    pushGap(gs(32)); // enormous drop
-    pushRamp(baseY+140,baseY+80,7); // catch ramp far below
-    pushRamp(baseY+80,baseY,6);
+    pushRamp(baseY,baseY-220,16); // long gradual climb
+    pushFlat(baseY-220,10);
+    pushGap(gs(32));
+    pushRamp(baseY+100,baseY+50,14); // very long gentle catch far below
+    pushRamp(baseY+50,baseY,10);
     pushFlat(baseY,6);
   },
   7:function(){ // Cliff Drop — long flat at height, edge just disappears. Free fall.
-    pushRamp(baseY,baseY-180,7);
-    pushFlat(baseY-180,18); // long flat run — false security
-    pushGap(gs(28)); // cliff edge, pure vertical drop
-    pushRamp(baseY+100,baseY,8); // far below catch
+    pushRamp(baseY,baseY-180,14);
+    pushFlat(baseY-180,18);
+    pushGap(gs(28));
+    pushRamp(baseY+60,baseY+20,14); // long gentle catch
+    pushRamp(baseY+20,baseY,10);
     pushFlat(baseY,6);
   },
   8:function(){ // Staircase Up — ascending steps, huge final drop
     let levels=[baseY, baseY-80, baseY-160, baseY-240];
     for(let i=0;i<3;i++){
       pushFlat(levels[i],6);
-      pushRamp(levels[i],levels[i]-50,4);
+      pushRamp(levels[i],levels[i]-50,7);
       pushGap(gs(12));
-      pushRamp(levels[i+1]+25,levels[i+1],3);
+      pushRamp(levels[i+1]+20,levels[i+1],6); // gentle step landing
     }
     pushFlat(levels[3],8);
-    pushGap(gs(34)); // massive drop from 240px up
-    pushRamp(baseY+140,baseY+60,7);
-    pushRamp(baseY+60,baseY,6);
+    pushGap(gs(34));
+    pushRamp(baseY+100,baseY+40,14); // very long catch from height
+    pushRamp(baseY+40,baseY,10);
     pushFlat(baseY,6);
   },
   9:function(){ // Staircase Down — start high, each drop gets bigger
-    pushRamp(baseY,baseY-180,7);
+    pushRamp(baseY,baseY-180,14);
     let levels=[baseY-180, baseY-110, baseY-40, baseY+40];
     for(let i=0;i<3;i++){
       pushFlat(levels[i],6);
-      pushRamp(levels[i],levels[i]-30,3);
+      pushRamp(levels[i],levels[i]-30,5);
       pushGap(gs(12+i*4));
-      pushRamp(levels[i+1]+20,levels[i+1],3);
+      pushRamp(levels[i+1]+15,levels[i+1],6); // gentle step catch
     }
-    pushRamp(baseY+40,baseY,4);
+    pushRamp(baseY+40,baseY,8);
     pushFlat(baseY,6);
   },
   10:function(){ // Valley — drop deep, build speed, massive launch out
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY+150,8); // deep valley drop
-    pushFlat(baseY+150,10); // valley floor
-    pushRamp(baseY+150,baseY-80,12); // massive uphill — builds insane speed
-    pushGap(gs(22)); // launch off the top
-    pushRamp(baseY+80,baseY+30,5);
-    pushRamp(baseY+30,baseY,4);
+    pushRamp(baseY,baseY+150,12); // gradual valley drop
+    pushFlat(baseY+150,10);
+    pushRamp(baseY+150,baseY-80,16); // long uphill — builds speed
+    pushGap(gs(22));
+    pushRamp(baseY+50,baseY+20,10); // gentle catch
+    pushRamp(baseY+20,baseY,8);
     pushFlat(baseY,6);
   },
   11:function(){ // Long Send — THE gap. Full charge or die.
     pushFlat(baseY,8);
-    pushRamp(baseY,baseY-140,5); // massive steep lip
-    pushGap(gs(36)); // ~650px — terrifying
-    pushRamp(baseY+120,baseY+60,6); // land deep below
-    pushRamp(baseY+60,baseY,6);
+    pushRamp(baseY,baseY-140,10); // big lip
+    pushGap(gs(36));
+    pushRamp(baseY+80,baseY+40,12); // long gentle catch below
+    pushRamp(baseY+40,baseY,10);
     pushFlat(baseY,6);
   },
   12:function(){ // Stepping Stone — two gaps with tiny island between
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-100,5);
+    pushRamp(baseY,baseY-100,8);
     pushGap(gs(14));
-    pushFlat(baseY+20,4); // tiny stepping stone below takeoff
-    pushRamp(baseY+20,baseY-40,4); // small lip off stone
+    pushFlat(baseY+20,5); // stepping stone below takeoff
+    pushRamp(baseY+20,baseY-40,7);
     pushGap(gs(14));
-    pushRamp(baseY+80,baseY+30,5);
-    pushRamp(baseY+30,baseY,4);
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
     pushFlat(baseY,6);
   },
   13:function(){ // Double Decker — high bonus path or low safe path
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-130,5); // big lip
+    pushRamp(baseY,baseY-130,10);
     pushGap(gs(12));
-    pushFlat(baseY-160,4); // HIGH platform (hard to reach, bonus)
+    pushFlat(baseY-160,5); // HIGH platform (bonus)
     pushGap(gs(8));
-    pushRamp(baseY+80,baseY+30,6); // LOW landing far below (safe)
-    pushRamp(baseY+30,baseY,5);
+    pushRamp(baseY+50,baseY+20,12); // LOW gentle landing
+    pushRamp(baseY+20,baseY,8);
     pushFlat(baseY,6);
   },
   14:function(){ // Quick-Stop — gap to tiny platform, instantly launch again
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-100,5);
+    pushRamp(baseY,baseY-100,8);
     pushGap(gs(16));
-    pushFlat(baseY+30,4); // tiny platform below takeoff
-    pushRamp(baseY+30,baseY-70,4); // launch again
+    pushFlat(baseY+30,5); // tiny platform below takeoff
+    pushRamp(baseY+30,baseY-70,8);
     pushGap(gs(16));
-    pushRamp(baseY+80,baseY+30,5);
-    pushRamp(baseY+30,baseY,4);
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
     pushFlat(baseY,6);
   },
   15:function(){ // Hang Time — highest launch, maximum air, land way way down
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-200,6); // enormous lip
-    pushGap(gs(38)); // biggest gap in the game ~684px
-    pushRamp(baseY+150,baseY+80,7); // landing is 200+80=280px below takeoff
-    pushRamp(baseY+80,baseY,6);
+    pushRamp(baseY,baseY-200,12); // enormous lip
+    pushGap(gs(38));
+    pushRamp(baseY+100,baseY+50,14); // very long gentle catch way below
+    pushRamp(baseY+50,baseY,10);
     pushFlat(baseY,6);
   },
-  16:function(){ // Zigzag — up/down/up/down, 4 jumps alternating heights
+  16:function(){ // Zigzag — up/down/up/down, 4 jumps
     pushFlat(baseY,5);
-    pushRamp(baseY,baseY-90,4);
+    pushRamp(baseY,baseY-90,8);
     pushGap(gs(12));
-    pushRamp(baseY+60,baseY+40,4); // land low
-    pushFlat(baseY+40,4);
-    pushRamp(baseY+40,baseY-70,5); // ramp back up high
-    pushGap(gs(12));
-    pushRamp(baseY+50,baseY+20,4); // land low again
+    pushRamp(baseY+40,baseY+20,8); // gentle land low
     pushFlat(baseY+20,4);
-    pushRamp(baseY+20,baseY-90,5);
+    pushRamp(baseY+20,baseY-70,10);
     pushGap(gs(12));
-    pushRamp(baseY+60,baseY+30,4);
-    pushFlat(baseY+30,4);
-    pushRamp(baseY+30,baseY-70,5);
+    pushRamp(baseY+40,baseY+15,8);
+    pushFlat(baseY+15,4);
+    pushRamp(baseY+15,baseY-90,10);
     pushGap(gs(12));
-    pushRamp(baseY+50,baseY,5);
+    pushRamp(baseY+40,baseY+20,8);
+    pushFlat(baseY+20,4);
+    pushRamp(baseY+20,baseY-70,10);
+    pushGap(gs(12));
+    pushRamp(baseY+30,baseY,10);
     pushFlat(baseY,6);
   },
   17:function(){ // Gap Train — 4 identical big jumps, rhythm
     for(let i=0;i<4;i++){
       pushFlat(baseY,6);
-      pushRamp(baseY,baseY-100,4);
+      pushRamp(baseY,baseY-100,8);
       pushGap(gs(20));
-      pushRamp(baseY+80,baseY+30,5); // land below
-      pushRamp(baseY+30,baseY,4);
+      pushRamp(baseY+50,baseY+20,10); // gentle catch below
+      pushRamp(baseY+20,baseY,8);
     }
     pushFlat(baseY,6);
   },
   18:function(){ // Leap of Faith — high platform, gap, tiny narrow landing far below
-    pushRamp(baseY,baseY-160,7);
-    pushFlat(baseY-160,14); // long high run
-    pushRamp(baseY-160,baseY-180,3); // slight lip
-    pushGap(gs(30)); // huge gap
-    pushFlat(baseY+30,4); // narrow landing BELOW ground level
-    pushRamp(baseY+30,baseY,5);
+    pushRamp(baseY,baseY-160,12);
+    pushFlat(baseY-160,14);
+    pushRamp(baseY-160,baseY-180,5);
+    pushGap(gs(30));
+    pushFlat(baseY+30,5); // narrow landing BELOW ground
+    pushRamp(baseY+30,baseY,8);
     pushFlat(baseY,6);
   },
   19:function(){ // Island Hopping — 3 tiny islands over the void, descending
     pushFlat(baseY,6);
-    pushRamp(baseY,baseY-100,4);
+    pushRamp(baseY,baseY-100,8);
     pushGap(gs(14));
-    pushFlat(baseY-30,3); // island 1
-    pushRamp(baseY-30,baseY-60,3);
+    pushFlat(baseY-30,4); // island 1
+    pushRamp(baseY-30,baseY-60,5);
     pushGap(gs(14));
-    pushFlat(baseY+10,3); // island 2 — lower
-    pushRamp(baseY+10,baseY-30,3);
+    pushFlat(baseY+10,4); // island 2 — lower
+    pushRamp(baseY+10,baseY-30,5);
     pushGap(gs(14));
-    pushRamp(baseY+60,baseY+20,3); // island 3 — lowest
-    pushRamp(baseY+20,baseY,4);
+    pushRamp(baseY+40,baseY+10,6); // island 3
+    pushRamp(baseY+10,baseY,6);
     pushFlat(baseY,6);
   },
   20:function(){ // The Gauntlet — the ultimate combo run
     pushFlat(baseY,5);
-    pushRamp(baseY,baseY-120,5); // big launch
+    pushRamp(baseY,baseY-120,10);
     pushGap(gs(16));
-    pushFlat(baseY+40,5); // platform below takeoff
-    pushRamp(baseY+40,baseY-90,5); // launch again
+    pushFlat(baseY+40,5);
+    pushRamp(baseY+40,baseY-90,10);
     pushGap(gs(14));
-    pushRamp(baseY-160,baseY-180,3); // land on high platform
-    pushFlat(baseY-180,8); // ride high
-    pushGap(gs(34)); // massive final drop — 180px above ground
-    pushRamp(baseY+140,baseY+70,7); // deep catch ramp
-    pushRamp(baseY+70,baseY,6);
+    pushRamp(baseY-140,baseY-160,5);
+    pushFlat(baseY-160,8);
+    pushGap(gs(34));
+    pushRamp(baseY+100,baseY+40,14); // very long gentle catch
+    pushRamp(baseY+40,baseY,10);
     pushFlat(baseY,6);
   }
 };
@@ -608,7 +609,7 @@ function updateBike(){
       let angleDiff=Math.abs(bike.angle-surfAngle);
       while(angleDiff>Math.PI)angleDiff=Math.abs(angleDiff-Math.PI*2);
       // crash check
-      if(angleDiff>Math.PI/4||bike.vy>18||(trickInProgress!==null)){
+      if(angleDiff>Math.PI/2.5||bike.vy>22||(trickInProgress!==null)){
         // CRASH
         addPopup("WIPEOUT!",bike.x,bike.y-60,'#e74c3c',30,60);
         addStars(bike.x,bike.y-20);
