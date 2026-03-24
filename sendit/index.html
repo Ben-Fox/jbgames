@@ -402,7 +402,7 @@ function releaseCharge(){
   if(!charging)return;
   charging=false;
   if(bike.grounded&&charge>0.05){
-    let spd=bike.vx+charge*6;
+    let spd=bike.vx+charge*10;
     let ang=terrainAngleAt(bike.x);
     bike.vx=Math.cos(ang)*spd;
     bike.vy=Math.sin(ang)*spd;
@@ -475,7 +475,7 @@ function updateRagdoll(){
   if(!ragdoll)return;
   ragdollTimer++;
   ragdoll.forEach(p=>{
-    p.vy+=0.35;p.x+=p.vx;p.y+=p.vy;p.angle+=p.angVel;
+    p.vy+=0.22;p.x+=p.vx;p.y+=p.vy;p.angle+=p.angVel;
     let gy=terrainYAt(p.x);
     if(p.y+p.r>gy){p.y=gy-p.r;p.vy*=-0.3;p.vx*=0.85;p.angVel*=0.8;
       if(Math.abs(p.vy)<0.5)p.vy=0;}
@@ -507,16 +507,15 @@ function handleInput(){
     if(bike.grounded){charging=true;charge=Math.min(charge+1/90,1)}
   }
   if(charging&&bike.grounded) charge=Math.min(charge+1/90,1);
-  // air tricks
+  // air tricks — number keys/dedicated keys ONLY (arrows/WASD = lean only)
   if(airborne&&!bike.grounded){
-    // check nothing trick (W+S)
-    if((keys['KeyW']||keys['ArrowUp'])&&(keys['KeyS']||keys['ArrowDown'])){startTrick('nothing')}
-    else if(keys['KeyA']||keys['ArrowLeft']){startTrick('backflip')}
-    else if(keys['KeyD']||keys['ArrowRight']){startTrick('frontflip')}
-    else if(keys['KeyW']||keys['ArrowUp']){startTrick('nohander')}
-    else if(keys['KeyS']||keys['ArrowDown']){startTrick('superman')}
-    if(keys['ShiftLeft']||keys['ShiftRight']||keys['KeyE']){startTrick('whip')}
-    // lean
+    if(keys['Digit1']||keys['Numpad1'])startTrick('backflip');
+    else if(keys['Digit2']||keys['Numpad2'])startTrick('frontflip');
+    else if(keys['Digit3']||keys['Numpad3'])startTrick('nohander');
+    else if(keys['Digit4']||keys['Numpad4'])startTrick('superman');
+    else if(keys['Digit5']||keys['Numpad5'])startTrick('nothing');
+    if(keys['ShiftLeft']||keys['ShiftRight']||keys['KeyE'])startTrick('whip');
+    // lean (arrows/WASD) — does NOT trigger tricks
     if(keys['KeyA']||keys['ArrowLeft'])bike.angVel-=0.003;
     if(keys['KeyD']||keys['ArrowRight'])bike.angVel+=0.003;
   }
@@ -538,13 +537,13 @@ function updateBike(){
     if(aheadY>bike.y+40){
       // auto-launch
       bike.grounded=false;airborne=true;
-      bike.vy=-2;
+      bike.vy=-4;
     }
     // near ramp detection
     nearRamp=terrainAngleAt(bike.x+60)<-0.15;
   } else {
     // airborne
-    bike.vy+=0.35;
+    bike.vy+=0.22;
     bike.vx*=0.998;
     bike.x+=bike.vx;
     bike.y+=bike.vy;
@@ -565,7 +564,7 @@ function updateBike(){
       let angleDiff=Math.abs(bike.angle-surfAngle);
       while(angleDiff>Math.PI)angleDiff=Math.abs(angleDiff-Math.PI*2);
       // crash check
-      if(angleDiff>Math.PI/4||bike.vy>13||(trickInProgress!==null)){
+      if(angleDiff>Math.PI/4||bike.vy>18||(trickInProgress!==null)){
         // CRASH
         addPopup("WIPEOUT!",bike.x,bike.y-60,'#e74c3c',30,60);
         addStars(bike.x,bike.y-20);
@@ -941,7 +940,7 @@ function drawMenu(){
   
   // controls
   X.fillStyle='#555';X.font='12px system-ui';
-  X.fillText('Space/Tap=Charge | WASD=Tricks | Swipe on mobile',W/2,H-40);
+  X.fillText('Space/Tap=Charge | A/D=Lean | 1-5=Tricks | Shift=Whip | Swipe on mobile',W/2,H-40);
   
   // home link
   X.fillStyle='#7c3aed';X.font='14px system-ui';X.textAlign='left';
