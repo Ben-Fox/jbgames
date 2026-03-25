@@ -520,7 +520,7 @@ function updateRagdoll(){
   if(!ragdoll)return;
   ragdollTimer++;
   ragdoll.forEach(p=>{
-    p.vy+=0.18;p.x+=p.vx;p.y+=p.vy;p.angle+=p.angVel;
+    p.vy+=0.12;p.x+=p.vx;p.y+=p.vy;p.angle+=p.angVel;
     let gy=terrainYAt(p.x);
     if(p.y+p.r>gy){p.y=gy-p.r;p.vy*=-0.3;p.vx*=0.85;p.angVel*=0.8;
       if(Math.abs(p.vy)<0.5)p.vy=0;}
@@ -588,7 +588,7 @@ function updateBike(){
     nearRamp=terrainAngleAt(bike.x+60)<-0.15;
   } else {
     // airborne
-    bike.vy+=0.18;
+    bike.vy+=0.12;
     bike.vx*=0.998;
     bike.x+=bike.vx;
     bike.y+=bike.vy;
