@@ -4,624 +4,649 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GridLock — BrainSmacks</title>
-<meta name="description" content="Solve beautiful 3D puzzle boxes by sliding panels in the correct sequence. Inspired by Japanese Himitsu-Bako secret boxes.">
+<meta name="description" content="Slide cars and trucks to free the red car from a jammed parking lot. 8 BFS-verified puzzles with increasing difficulty.">
 <link rel="canonical" href="https://brainsmacks.com/gridlock/">
 <meta property="og:title" content="GridLock — BrainSmacks">
-<meta property="og:description" content="Solve beautiful 3D puzzle boxes by sliding wooden panels in the correct sequence.">
+<meta property="og:description" content="Slide cars and trucks to free the red car from a jammed parking lot.">
 <meta property="og:url" content="https://brainsmacks.com/gridlock/">
 <meta property="og:type" content="website">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#1a1118;color:#e8dfd5;font-family:'Segoe UI',Roboto,'Helvetica Neue',sans-serif;overflow:hidden;height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
-#homeBtn{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(255,255,255,.12);color:#e8dfd5;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:.7;transition:opacity .2s;backdrop-filter:blur(4px)}
-#homeBtn:hover{opacity:1}
-#wrap{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:600px}
-#hud{display:flex;gap:24px;align-items:center;margin-bottom:12px;height:32px}
-#hud span{font-size:13px;color:#a09888;font-weight:500}
-#hud .val{color:#d4a56a;font-weight:800;font-size:15px}
-#actions{display:flex;gap:10px;margin-top:12px}
-.btn{background:#8b5e3c;color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:13px;cursor:pointer;font-weight:700;transition:all .2s;box-shadow:0 3px 0 #5a3825;letter-spacing:.5px}
-.btn:hover{background:#a06b42;transform:translateY(-1px)}
-.btn:active{transform:translateY(1px);box-shadow:0 1px 0 #5a3825}
-.btn.sm{background:#6b5b4e;box-shadow:0 3px 0 #4a3d33;padding:7px 16px;font-size:12px}
-.btn.sm:hover{background:#7d6b5c}
-
-/* 3D Scene */
-#scene{width:300px;height:300px;perspective:800px;margin:0 auto;cursor:grab}
-#scene:active{cursor:grabbing}
-#box{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .1s ease-out;transform:rotateX(-25deg) rotateY(-35deg)}
-
-.face{position:absolute;width:300px;height:300px;backface-visibility:visible;overflow:hidden;border:1px solid rgba(0,0,0,.3)}
-
-/* Wood grain base - each face slightly different shade */
-.face-front{transform:translateZ(150px);background:linear-gradient(180deg,#c8956e 0%,#b07d58 20%,#c49168 40%,#a8734f 60%,#be8b62 80%,#b5805a 100%)}
-.face-back{transform:rotateY(180deg) translateZ(150px);background:linear-gradient(180deg,#ba8a62 0%,#a67550 20%,#b88660 40%,#9e6d48 60%,#b28058 80%,#a87852 100%)}
-.face-right{transform:rotateY(90deg) translateZ(150px);background:linear-gradient(180deg,#c49168 0%,#ae7b56 20%,#c08d64 40%,#a6714e 60%,#bc8960 80%,#b27e58 100%)}
-.face-left{transform:rotateY(-90deg) translateZ(150px);background:linear-gradient(180deg,#be8b62 0%,#a87852 20%,#ba8760 40%,#a2704c 60%,#b6835c 80%,#ac7a54 100%)}
-.face-top{transform:rotateX(90deg) translateZ(150px);background:linear-gradient(180deg,#d4a478 0%,#c09060 20%,#cc9c70 40%,#b88660 60%,#c89868 80%,#be8e62 100%)}
-.face-bottom{transform:rotateX(-90deg) translateZ(150px);background:linear-gradient(180deg,#a87852 0%,#946848 20%,#a07050 40%,#8c6040 60%,#9c6c4c 80%,#926444 100%)}
-
-/* Wood grain overlay */
-.face::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(92deg,transparent,transparent 8px,rgba(0,0,0,.04) 8px,rgba(0,0,0,.04) 9px,transparent 9px,transparent 20px);pointer-events:none;z-index:1}
-.face::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(88deg,transparent,transparent 14px,rgba(255,255,255,.03) 14px,rgba(255,255,255,.03) 15px,transparent 15px,transparent 32px);pointer-events:none;z-index:1}
-
-/* Sliding panels */
-.panel{position:absolute;border-radius:2px;cursor:pointer;transition:transform .35s cubic-bezier(.25,.46,.45,.94);z-index:5;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 -1px 0 rgba(0,0,0,.2),0 2px 6px rgba(0,0,0,.3)}
-.panel:hover{filter:brightness(1.08)}
-.panel.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 -1px 0 rgba(0,0,0,.2),0 2px 6px rgba(0,0,0,.3),0 0 12px rgba(212,165,106,.5)}
-.panel.locked{cursor:default;opacity:.95}
-.panel .pmark{font-size:11px;color:rgba(255,255,255,.5);font-weight:700;pointer-events:none;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,.4)}
-
-/* Panel wood varieties */
-.pw-dark{background:linear-gradient(180deg,#6b4226,#5a3520,#6b4226)}
-.pw-medium{background:linear-gradient(180deg,#8b5e3c,#7a4e30,#8b5e3c)}
-.pw-light{background:linear-gradient(180deg,#c49168,#b07d58,#c49168)}
-.pw-red{background:linear-gradient(180deg,#8b3a3a,#6e2c2c,#8b3a3a)}
-.pw-ebony{background:linear-gradient(180deg,#3d2b1f,#2e1f15,#3d2b1f)}
-.pw-maple{background:linear-gradient(180deg,#d4a56a,#c09050,#d4a56a)}
-.pw-cherry{background:linear-gradient(180deg,#7b3f3f,#6a3232,#7b3f3f)}
-.pw-walnut{background:linear-gradient(180deg,#5c4033,#4a3228,#5c4033)}
-
-/* Decorative inlays on panels */
-.panel::before{content:'';position:absolute;inset:4px;border:1px solid rgba(255,255,255,.08);border-radius:1px;pointer-events:none}
-
-/* Lid indicator */
-.lid-seam{position:absolute;z-index:10;pointer-events:none}
-.lid-seam.top-seam{top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(0,0,0,.4),rgba(0,0,0,.2),rgba(0,0,0,.4))}
-
-/* Level intro / win overlay */
-#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,10,8,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(6px)}
+body{background:#6bb8e0;color:#333;font-family:'Segoe UI',Roboto,'Helvetica Neue',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+#wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+#hud{display:flex;gap:20px;align-items:center;margin-bottom:8px;height:36px}
+#hud span{font-size:14px;color:#556;font-weight:500}
+#hud .val{color:#d9534f;font-weight:800;font-size:16px}
+#actions{display:flex;gap:10px;margin-top:10px}
+.btn{background:#e85d4a;color:#fff;border:none;padding:8px 20px;border-radius:20px;font-size:13px;cursor:pointer;font-weight:700;transition:all .2s;box-shadow:0 3px 0 #b8392a;letter-spacing:.5px}
+.btn:hover{background:#f06b58;transform:translateY(-1px)}
+.btn:active{transform:translateY(1px);box-shadow:0 1px 0 #b8392a}
+.btn.sm{background:#5b9bd5;box-shadow:0 3px 0 #3a7ab8;padding:7px 16px;font-size:12px}
+.btn.sm:hover{background:#6babdf}
+canvas{display:block;border-radius:4px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+canvas:active{cursor:grabbing}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;z-index:20;backdrop-filter:blur(4px)}
 #overlay.hidden{display:none}
-#overlay h1{font-size:42px;color:#d4a56a;margin-bottom:4px;text-shadow:2px 2px 0 rgba(0,0,0,.3);letter-spacing:-1px}
-#overlay h2{font-size:22px;color:#d4a56a;margin-bottom:8px}
-#overlay .sub{color:#a09888;font-size:14px;margin-bottom:20px;text-align:center;max-width:340px;line-height:1.6}
-#overlay .stars{font-size:36px;margin-bottom:12px;letter-spacing:6px;color:#d4a56a}
-#overlay .stat{color:#8a7e72;font-size:13px;margin-bottom:4px}
-
+#overlay h1{font-size:44px;color:#e85d4a;margin-bottom:2px;text-shadow:2px 2px 0 rgba(0,0,0,.08);letter-spacing:-1px}
+#overlay h2{font-size:24px;color:#e85d4a;margin-bottom:8px}
+#overlay .sub{color:#667;font-size:14px;margin-bottom:18px;text-align:center;max-width:340px;line-height:1.6}
+#overlay .stars{font-size:36px;margin-bottom:12px;letter-spacing:6px;color:#f5a623}
+#overlay .stat{color:#778;font-size:13px;margin-bottom:4px}
 #lvlSelect{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:320px;margin-top:14px}
-#lvlSelect .lbtn{width:54px;height:54px;background:rgba(255,255,255,.05);border:3px solid rgba(255,255,255,.1);border-radius:12px;color:#d4a56a;font-size:17px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.2)}
-#lvlSelect .lbtn:hover{border-color:#d4a56a;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
-#lvlSelect .lbtn.done{border-color:#6b8b5e;background:rgba(107,139,94,.1)}
+#lvlSelect .lbtn{width:54px;height:54px;background:#fff;border:3px solid #dde;border-radius:12px;color:#e85d4a;font-size:17px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+#lvlSelect .lbtn:hover{border-color:#e85d4a;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+#lvlSelect .lbtn.done{border-color:#4caf50;background:#f0fff0}
 #lvlSelect .lbtn.locked{opacity:.35;cursor:default}
-#lvlSelect .lbtn .best{font-size:9px;color:#6b8b5e;font-weight:700}
-
-/* Hint glow */
-@keyframes hintPulse{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 8px rgba(212,165,106,.3)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 20px rgba(212,165,106,.7)}}
-.panel.hint{animation:hintPulse 1.2s ease-in-out infinite}
-
-/* Win animation */
-@keyframes lidOpen{0%{transform:rotateX(0)}100%{transform:rotateX(-120deg)}}
-@keyframes boxGlow{0%{box-shadow:0 0 20px rgba(212,165,106,.3)}100%{box-shadow:0 0 60px rgba(212,165,106,.8)}}
-#box.won{animation:boxGlow 1s ease-in-out}
-
-/* Recommended cards */
+#lvlSelect .lbtn .best{font-size:9px;color:#4caf50;font-weight:700}
+#homeBtn{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,.45);color:#fff;text-decoration:none;padding:6px 12px;border-radius:20px;font-size:14px;font-family:sans-serif;opacity:.7;transition:opacity .2s}
+#homeBtn:hover{opacity:1}
 .rec-wrap{margin-top:16px;text-align:center}
-.rec-wrap h3{font-size:13px;color:#6b5e50;margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.rec-wrap h3{font-size:13px;color:#888;margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
 .rec-cards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.rec-card{width:130px;border-radius:14px;overflow:hidden;text-decoration:none;color:#fff;transition:transform .25s;cursor:pointer;display:flex;flex-direction:column;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.rec-card{width:140px;border-radius:14px;overflow:hidden;text-decoration:none;color:#fff;transition:transform .25s,box-shadow .25s;cursor:pointer;display:flex;flex-direction:column}
 .rec-card:hover{transform:translateY(-4px) scale(1.03)}
-.rec-card .rc-thumb{height:60px;display:flex;align-items:center;justify-content:center;font-size:24px}
-.rec-card .rc-body{padding:8px 10px}
-.rec-card .rc-title{font-size:12px;font-weight:700;margin-bottom:2px;color:#d4a56a}
-.rec-card .rc-desc{font-size:10px;color:#8a7e72}
-
-/* Responsive */
-@media(max-width:480px){
-  #scene{width:240px;height:240px}
-  .face{width:240px;height:240px}
-  .face-front{transform:translateZ(120px)}
-  .face-back{transform:rotateY(180deg) translateZ(120px)}
-  .face-right{transform:rotateY(90deg) translateZ(120px)}
-  .face-left{transform:rotateY(-90deg) translateZ(120px)}
-  .face-top{transform:rotateX(90deg) translateZ(120px)}
-  .face-bottom{transform:rotateX(-90deg) translateZ(120px)}
-  #overlay h1{font-size:32px}
-}
-@media(max-width:360px){
-  #scene{width:200px;height:200px}
-  .face{width:200px;height:200px}
-  .face-front{transform:translateZ(100px)}
-  .face-back{transform:rotateY(180deg) translateZ(100px)}
-  .face-right{transform:rotateY(90deg) translateZ(100px)}
-  .face-left{transform:rotateY(-90deg) translateZ(100px)}
-  .face-top{transform:rotateX(90deg) translateZ(100px)}
-  .face-bottom{transform:rotateX(-90deg) translateZ(100px)}
-}
-
-/* Instruction tooltip */
-#instruct{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#a09888;padding:8px 16px;border-radius:20px;font-size:12px;z-index:40;backdrop-filter:blur(4px);transition:opacity .5s;text-align:center}
-#instruct.fade{opacity:0}
+.rec-card .rc-thumb{height:70px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.rec-card .rc-body{padding:8px 10px;background:rgba(0,0,0,.15)}
+.rec-card .rc-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.rec-card .rc-desc{font-size:10px;opacity:.75;line-height:1.3}
 </style>
 </head>
 <body>
-<a id="homeBtn" href="/">← BrainSmacks</a>
+<a href="../" id="homeBtn"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
 <div id="wrap">
   <div id="hud">
     <span>Level <span class="val" id="lvlNum">1</span></span>
-    <span>Moves <span class="val" id="moveCount">0</span></span>
-    <span>Par <span class="val" id="parCount">0</span></span>
+    <span>Moves: <span class="val" id="moveCount">0</span></span>
+    <span>Par: <span class="val" id="parCount">—</span></span>
   </div>
-  <div id="scene">
-    <div id="box">
-      <div class="face face-front" data-face="front"></div>
-      <div class="face face-back" data-face="back"></div>
-      <div class="face face-right" data-face="right"></div>
-      <div class="face face-left" data-face="left"></div>
-      <div class="face face-top" data-face="top"></div>
-      <div class="face face-bottom" data-face="bottom"></div>
-    </div>
-  </div>
+  <canvas id="c"></canvas>
   <div id="actions">
-    <button class="btn sm" onclick="showHint()">Hint</button>
-    <button class="btn sm" onclick="resetLevel()">Reset</button>
-    <button class="btn sm" onclick="showMenu()">Levels</button>
+    <button class="btn sm" onclick="Game.undo()">Undo</button>
+    <button class="btn sm" onclick="Game.restart()">Restart</button>
+    <button class="btn sm" onclick="Game.showMenu()">Levels</button>
+  </div>
+  <div id="overlay">
+    <h1>GridLock</h1>
+    <div class="sub">Slide the vehicles to clear a path for the red car to escape!</div>
+    <div id="lvlSelect"></div>
   </div>
 </div>
-<div id="overlay">
-  <h1>GridLock</h1>
-  <div class="sub">Slide the wooden panels in the correct sequence to unlock each puzzle box.<br>Drag to rotate. Tap a panel to slide it.</div>
-  <div id="lvlSelect"></div>
-</div>
-<div id="instruct">Drag to rotate the box — tap a panel to slide it</div>
 
 <script>
-var Game = (function(){
-  // ---- Box size (responsive) ----
-  var BOX = 300;
-  function getBoxSize(){
-    if(window.innerWidth <= 360) return 200;
-    if(window.innerWidth <= 480) return 240;
-    return 300;
-  }
+var Game=(function(){
+var canvas=document.getElementById('c');
+var ctx=canvas.getContext('2d');
+var GRID=6,CELL,PAD_TOP,PAD_SIDE,ROAD_H,W,H,EXIT_ROW=2;
+var levels=[],level=0,vehicles=[],moves=0,history=[];
+var dragId=-1,dragStart=0,dragOrig=0,dragMin=0,dragMax=0;
+var animating=false,solved=false,bestMoves={};
+var grassDots=[],asphaltDots=[],asphaltLight=[];
+function genStaticDots(){
+  grassDots=[];asphaltDots=[];asphaltLight=[];
+  for(var i=0;i<16;i++)grassDots.push({x:Math.random(),y:Math.random(),w:Math.random()*30+10});
+  for(var i=0;i<60;i++)asphaltDots.push({x:Math.random(),y:Math.random()});
+  for(var i=0;i<40;i++)asphaltLight.push({x:Math.random(),y:Math.random()});
+}
 
-  // ---- Level definitions ----
-  // Each panel: {face, id, x, y, w, h, dir, dist, wood, seq, label}
-  //   face: which box face
-  //   x,y,w,h: position/size as fraction of face (0-1)
-  //   dir: 'x'|'y' slide direction
-  //   dist: how far to slide (fraction, positive = right/down)
-  //   wood: CSS class for wood type
-  //   seq: solve order (1-based, 0=decoy)
-  //   label: optional marking
-  var LEVELS = [
-    // Level 1: 3 steps — simple intro
-    { name:"Beginner's Box", par:3, panels:[
-      {face:'front',id:'a',x:.1,y:.35,w:.35,h:.15,dir:'x',dist:.45,wood:'pw-dark',seq:1},
-      {face:'right',id:'b',x:.55,y:.2,w:.15,h:.4,dir:'y',dist:.38,wood:'pw-maple',seq:2},
-      {face:'top',id:'c',x:.3,y:.1,w:.4,h:.15,dir:'y',dist:.7,wood:'pw-red',seq:3},
-    ]},
-    // Level 2: 4 steps
-    { name:"Traveler's Cache", par:4, panels:[
-      {face:'front',id:'a',x:.6,y:.3,w:.3,h:.12,dir:'x',dist:-.5,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.1,y:.6,w:.25,h:.12,dir:'x',dist:.55,wood:'pw-ebony',seq:3},
-      {face:'right',id:'c',x:.1,y:.15,w:.12,h:.35,dir:'y',dist:.45,wood:'pw-maple',seq:2},
-      {face:'top',id:'d',x:.25,y:.25,w:.5,h:.12,dir:'x',dist:.2,wood:'pw-cherry',seq:4},
-    ]},
-    // Level 3: 5 steps
-    { name:"Merchant's Secret", par:5, panels:[
-      {face:'front',id:'a',x:.05,y:.25,w:.35,h:.12,dir:'x',dist:.55,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.05,y:.6,w:.25,h:.12,dir:'x',dist:.65,wood:'pw-light',seq:4},
-      {face:'right',id:'c',x:.7,y:.1,w:.12,h:.3,dir:'y',dist:.55,wood:'pw-maple',seq:2},
-      {face:'right',id:'d',x:.2,y:.55,w:.3,h:.12,dir:'x',dist:.4,wood:'pw-ebony',seq:5},
-      {face:'left',id:'e',x:.15,y:.2,w:.12,h:.35,dir:'y',dist:.4,wood:'pw-cherry',seq:3},
-    ]},
-    // Level 4: 7 steps
-    { name:"Artisan's Craft", par:7, panels:[
-      {face:'front',id:'a',x:.55,y:.15,w:.35,h:.1,dir:'x',dist:-.48,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.1,y:.5,w:.3,h:.1,dir:'x',dist:.5,wood:'pw-walnut',seq:4},
-      {face:'right',id:'c',x:.15,y:.1,w:.1,h:.3,dir:'y',dist:.55,wood:'pw-maple',seq:2},
-      {face:'right',id:'d',x:.6,y:.55,w:.3,h:.1,dir:'x',dist:-.48,wood:'pw-red',seq:5},
-      {face:'left',id:'e',x:.55,y:.2,w:.1,h:.25,dir:'y',dist:.5,wood:'pw-cherry',seq:3},
-      {face:'back',id:'f',x:.1,y:.35,w:.35,h:.1,dir:'x',dist:.48,wood:'pw-ebony',seq:6},
-      {face:'top',id:'g',x:.2,y:.15,w:.55,h:.1,dir:'x',dist:.2,wood:'pw-light',seq:7},
-    ]},
-    // Level 5: 9 steps
-    { name:"Hakone Classic", par:9, panels:[
-      {face:'front',id:'a',x:.1,y:.1,w:.3,h:.1,dir:'x',dist:.5,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.6,y:.45,w:.3,h:.1,dir:'x',dist:-.5,wood:'pw-maple',seq:5},
-      {face:'front',id:'c',x:.1,y:.75,w:.25,h:.1,dir:'x',dist:.6,wood:'pw-walnut',seq:8},
-      {face:'right',id:'d',x:.7,y:.1,w:.1,h:.25,dir:'y',dist:.6,wood:'pw-cherry',seq:2},
-      {face:'right',id:'e',x:.2,y:.5,w:.25,h:.1,dir:'x',dist:.45,wood:'pw-ebony',seq:6},
-      {face:'left',id:'f',x:.2,y:.15,w:.1,h:.3,dir:'y',dist:.5,wood:'pw-red',seq:3},
-      {face:'left',id:'g',x:.55,y:.6,w:.3,h:.1,dir:'x',dist:-.42,wood:'pw-light',seq:7},
-      {face:'back',id:'h',x:.35,y:.2,w:.3,h:.1,dir:'y',dist:.6,wood:'pw-dark',seq:4},
-      {face:'top',id:'i',x:.15,y:.2,w:.65,h:.1,dir:'x',dist:.15,wood:'pw-maple',seq:9},
-    ]},
-    // Level 6: 12 steps
-    { name:"Master's Puzzle", par:12, panels:[
-      {face:'front',id:'a',x:.05,y:.1,w:.3,h:.1,dir:'x',dist:.6,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.65,y:.35,w:.28,h:.1,dir:'x',dist:-.58,wood:'pw-maple',seq:4},
-      {face:'front',id:'c',x:.1,y:.6,w:.25,h:.1,dir:'x',dist:.58,wood:'pw-walnut',seq:7},
-      {face:'front',id:'d',x:.55,y:.8,w:.35,h:.1,dir:'x',dist:-.48,wood:'pw-light',seq:10},
-      {face:'right',id:'e',x:.75,y:.05,w:.1,h:.25,dir:'y',dist:.65,wood:'pw-cherry',seq:2},
-      {face:'right',id:'f',x:.2,y:.4,w:.25,h:.1,dir:'x',dist:.45,wood:'pw-ebony',seq:5},
-      {face:'right',id:'g',x:.6,y:.7,w:.1,h:.2,dir:'y',dist:-.55,wood:'pw-red',seq:8},
-      {face:'left',id:'h',x:.15,y:.1,w:.1,h:.3,dir:'y',dist:.55,wood:'pw-maple',seq:3},
-      {face:'left',id:'i',x:.5,y:.5,w:.3,h:.1,dir:'x',dist:-.38,wood:'pw-dark',seq:6},
-      {face:'left',id:'j',x:.1,y:.75,w:.25,h:.1,dir:'x',dist:.55,wood:'pw-walnut',seq:9},
-      {face:'back',id:'k',x:.3,y:.3,w:.4,h:.1,dir:'x',dist:.25,wood:'pw-cherry',seq:11},
-      {face:'top',id:'l',x:.1,y:.15,w:.75,h:.1,dir:'x',dist:.12,wood:'pw-ebony',seq:12},
-    ]},
-    // Level 7: 16 steps
-    { name:"Grandmaster's Lock", par:16, panels:[
-      {face:'front',id:'a',x:.05,y:.08,w:.25,h:.09,dir:'x',dist:.65,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.6,y:.25,w:.3,h:.09,dir:'x',dist:-.55,wood:'pw-maple',seq:5},
-      {face:'front',id:'c',x:.1,y:.45,w:.28,h:.09,dir:'x',dist:.55,wood:'pw-walnut',seq:8},
-      {face:'front',id:'d',x:.55,y:.65,w:.35,h:.09,dir:'x',dist:-.5,wood:'pw-light',seq:12},
-      {face:'front',id:'e',x:.1,y:.82,w:.25,h:.09,dir:'x',dist:.6,wood:'pw-red',seq:15},
-      {face:'right',id:'f',x:.78,y:.05,w:.09,h:.22,dir:'y',dist:.68,wood:'pw-cherry',seq:2},
-      {face:'right',id:'g',x:.15,y:.35,w:.22,h:.09,dir:'x',dist:.55,wood:'pw-ebony',seq:6},
-      {face:'right',id:'h',x:.6,y:.6,w:.09,h:.22,dir:'y',dist:-.48,wood:'pw-maple',seq:9},
-      {face:'right',id:'i',x:.1,y:.8,w:.3,h:.09,dir:'x',dist:.52,wood:'pw-dark',seq:13},
-      {face:'left',id:'j',x:.15,y:.08,w:.09,h:.25,dir:'y',dist:.6,wood:'pw-walnut',seq:3},
-      {face:'left',id:'k',x:.55,y:.4,w:.3,h:.09,dir:'x',dist:-.42,wood:'pw-red',seq:7},
-      {face:'left',id:'l',x:.2,y:.65,w:.09,h:.2,dir:'y',dist:-.45,wood:'pw-cherry',seq:10},
-      {face:'back',id:'m',x:.1,y:.15,w:.35,h:.09,dir:'x',dist:.48,wood:'pw-light',seq:4},
-      {face:'back',id:'n',x:.5,y:.5,w:.35,h:.09,dir:'x',dist:-.38,wood:'pw-ebony',seq:11},
-      {face:'back',id:'o',x:.15,y:.78,w:.3,h:.09,dir:'x',dist:.48,wood:'pw-maple',seq:14},
-      {face:'top',id:'p',x:.08,y:.1,w:.8,h:.1,dir:'x',dist:.08,wood:'pw-dark',seq:16},
-    ]},
-    // Level 8: 20 steps
-    { name:"Himitsu-Bako", par:20, panels:[
-      {face:'front',id:'a',x:.05,y:.06,w:.22,h:.08,dir:'x',dist:.68,wood:'pw-dark',seq:1},
-      {face:'front',id:'b',x:.65,y:.2,w:.28,h:.08,dir:'x',dist:-.58,wood:'pw-maple',seq:5},
-      {face:'front',id:'c',x:.08,y:.35,w:.25,h:.08,dir:'x',dist:.6,wood:'pw-walnut',seq:9},
-      {face:'front',id:'d',x:.55,y:.5,w:.35,h:.08,dir:'x',dist:-.5,wood:'pw-light',seq:13},
-      {face:'front',id:'e',x:.05,y:.65,w:.3,h:.08,dir:'x',dist:.58,wood:'pw-red',seq:16},
-      {face:'front',id:'f',x:.6,y:.82,w:.3,h:.08,dir:'x',dist:-.55,wood:'pw-cherry',seq:19},
-      {face:'right',id:'g',x:.8,y:.04,w:.08,h:.2,dir:'y',dist:.7,wood:'pw-ebony',seq:2},
-      {face:'right',id:'h',x:.12,y:.3,w:.2,h:.08,dir:'x',dist:.6,wood:'pw-dark',seq:6},
-      {face:'right',id:'i',x:.65,y:.5,w:.08,h:.2,dir:'y',dist:-.42,wood:'pw-maple',seq:10},
-      {face:'right',id:'j',x:.1,y:.72,w:.25,h:.08,dir:'x',dist:.55,wood:'pw-walnut',seq:14},
-      {face:'right',id:'k',x:.55,y:.85,w:.3,h:.08,dir:'x',dist:-.48,wood:'pw-light',seq:17},
-      {face:'left',id:'l',x:.12,y:.06,w:.08,h:.22,dir:'y',dist:.65,wood:'pw-cherry',seq:3},
-      {face:'left',id:'m',x:.6,y:.35,w:.25,h:.08,dir:'x',dist:-.48,wood:'pw-red',seq:7},
-      {face:'left',id:'n',x:.18,y:.55,w:.08,h:.2,dir:'y',dist:-.42,wood:'pw-ebony',seq:11},
-      {face:'left',id:'o',x:.5,y:.75,w:.3,h:.08,dir:'x',dist:-.42,wood:'pw-dark',seq:15},
-      {face:'back',id:'q',x:.08,y:.12,w:.3,h:.08,dir:'x',dist:.55,wood:'pw-maple',seq:4},
-      {face:'back',id:'r',x:.55,y:.35,w:.3,h:.08,dir:'x',dist:-.42,wood:'pw-walnut',seq:8},
-      {face:'back',id:'s',x:.1,y:.58,w:.25,h:.08,dir:'x',dist:.55,wood:'pw-cherry',seq:12},
-      {face:'back',id:'t',x:.5,y:.78,w:.35,h:.08,dir:'x',dist:-.45,wood:'pw-light',seq:18},
-      {face:'top',id:'u',x:.05,y:.1,w:.85,h:.1,dir:'x',dist:.06,wood:'pw-ebony',seq:20},
-    ]},
+/* ═══ AMBIENT TRAFFIC ═══ */
+var ambientCars=[];
+var AMB_COLORS=['#1565c0','#2e7d32','#f57f17','#6a1b9a','#c62828','#00838f','#e65100','#ad1457','#283593','#4e342e'];
+var ambientTimer=0;
+function spawnAmbient(){
+  // Don't spawn if any car hasn't fully entered yet
+  for(var i=0;i<ambientCars.length;i++){
+    if(ambientCars[i].x<CELL*3)return;
+  }
+  var spd=1.5+Math.random()*1.0;
+  ambientCars.push({
+    x:-CELL*2.5,
+    speed:spd,
+    color:AMB_COLORS[Math.floor(Math.random()*AMB_COLORS.length)],
+    len:Math.random()<0.2?3:2
+  });
+  ambientTimer=0;
+}
+function updateAmbient(){
+  for(var i=ambientCars.length-1;i>=0;i--){
+    ambientCars[i].x+=ambientCars[i].speed;
+    if(ambientCars[i].x>W+CELL*3)ambientCars.splice(i,1);
+  }
+  ambientTimer++;
+  // Only try to spawn every ~8 seconds (480 frames at 60fps), max 1 on screen
+  if(ambientCars.length===0&&ambientTimer>480&&Math.random()<0.02)spawnAmbient();
+}
+
+var COLORS=[
+  '#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa',
+  '#d81b60','#00acc1','#f4511e','#7cb342','#5c6bc0',
+  '#00897b','#c62828','#ab47bc','#039be5','#e040fb'
+];
+
+function buildLevels(){
+  levels=[
+    {par:2, v:[[0,2,2,'h'],[3,0,3,'v']]},
+    {par:4, v:[[0,2,2,'h'],[5,2,2,'v'],[4,2,2,'v'],[3,2,2,'v']]},
+    {par:7, v:[[1,2,2,'h'],[0,1,2,'v'],[1,0,3,'h'],[3,4,2,'h'],[4,1,2,'v'],[2,3,2,'v'],[4,0,2,'h']]},
+    {par:10, v:[[1,2,2,'h'],[4,1,3,'v'],[2,3,2,'v'],[3,4,3,'h'],[0,1,2,'v'],[3,5,2,'h'],[1,1,3,'h'],[1,5,2,'h']]},
+    {par:14, v:[[0,2,2,'h'],[2,0,2,'h'],[2,4,2,'v'],[3,2,2,'v'],[1,0,2,'v'],[2,1,2,'v'],[1,3,2,'h'],[4,1,2,'v'],[3,4,3,'h']]},
+    {par:20, v:[[0,2,2,'h'],[0,0,2,'h'],[0,4,2,'v'],[2,3,2,'v'],[4,2,2,'v'],[0,1,3,'h'],[1,4,2,'v'],[4,0,2,'v'],[3,4,2,'h'],[5,1,2,'v']]},
+    {par:24, v:[[0,2,2,'h'],[4,4,2,'h'],[3,5,3,'h'],[4,1,2,'h'],[0,5,2,'h'],[3,1,2,'v'],[3,3,2,'v'],[2,0,3,'h'],[2,2,2,'v'],[4,2,2,'v'],[0,0,2,'v']]},
+    {par:29, v:[[1,2,2,'h'],[1,3,2,'h'],[5,1,2,'v'],[4,0,2,'h'],[2,0,2,'v'],[3,4,2,'v'],[0,4,3,'h'],[4,3,3,'v'],[3,2,2,'v'],[5,4,2,'v'],[0,2,2,'v'],[1,5,2,'h']]}
   ];
+}
 
-  // ---- State ----
-  var curLevel = 0;
-  var moves = 0;
-  var nextSeq = 1;     // which sequence step is next
-  var maxSeq = 0;      // total steps in current level
-  var panelEls = [];   // DOM elements
-  var panelData = [];  // current level panel data with state
-  var progress = [];   // per-level best moves (0 = not done)
-  var rotX = -25, rotY = -35;
-  var dragging = false, dragX, dragY;
-  var won = false;
-  var hintUsed = false;
+function resize(){
+  // Total height budget: hud(36+8) + canvas + actions(10+34) = canvas + 88
+  var availH=window.innerHeight-88;
+  var availW=window.innerWidth-20;
+  // Canvas aspect: width ≈ GRID*CELL + padding, height ≈ GRID*CELL + road + padding
+  // Road = 1 CELL + 8, pad top = 20, gap = 12, grass = 10, sidewalk = 24
+  // Total cells vertically ≈ GRID + 1.8
+  var cellFromH=Math.floor(availH/(GRID+2.2));
+  var cellFromW=Math.floor((availW)/(GRID+1.2));
+  CELL=Math.min(cellFromH,cellFromW,90);
+  CELL=Math.max(CELL,40);
+  PAD_TOP=16;PAD_SIDE=16;ROAD_H=CELL+8;
+  var exitW=Math.floor(CELL*0.7);
+  W=PAD_SIDE*2+CELL*GRID+exitW;
+  H=PAD_TOP+CELL*GRID+12+ROAD_H+14;
+  canvas.width=W;canvas.height=H;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  genStaticDots();
+}
 
-  // ---- Init ----
-  function init(){
-    // Load progress
-    try{ progress = JSON.parse(localStorage.getItem('gridlock_progress3')) || []; }catch(e){ progress = []; }
-    while(progress.length < LEVELS.length) progress.push(0);
-
-    // Touch/mouse rotation
-    var scene = document.getElementById('scene');
-    scene.addEventListener('mousedown', onDragStart);
-    scene.addEventListener('mousemove', onDragMove);
-    scene.addEventListener('mouseup', onDragEnd);
-    scene.addEventListener('mouseleave', onDragEnd);
-    scene.addEventListener('touchstart', onDragStart, {passive:false});
-    scene.addEventListener('touchmove', onDragMove, {passive:false});
-    scene.addEventListener('touchend', onDragEnd);
-
-    showMenu();
-    // Fade instruction
-    setTimeout(function(){ var el=document.getElementById('instruct'); if(el) el.classList.add('fade'); }, 5000);
+function loadLevel(n){
+  level=n;var lv=levels[n];vehicles=[];
+  for(var i=0;i<lv.v.length;i++){
+    var d=lv.v[i];
+    vehicles.push({id:i,x:d[0],y:d[1],len:d[2],dir:d[3],color:COLORS[i%COLORS.length]});
   }
+  vehicles[0].color=COLORS[0];
+  moves=0;history=[];solved=false;ambientCars=[];ambientTimer=0;
+  updateHud();draw();
+}
 
-  // ---- Rotation ----
-  function onDragStart(e){
-    if(won) return;
-    var t = e.target;
-    // Don't start drag on panels
-    if(t.classList && t.classList.contains('panel')) return;
-    dragging = true;
-    var p = e.touches ? e.touches[0] : e;
-    dragX = p.clientX; dragY = p.clientY;
-    document.getElementById('box').style.transition = 'none';
-    if(e.touches) e.preventDefault();
-  }
-  function onDragMove(e){
-    if(!dragging) return;
-    var p = e.touches ? e.touches[0] : e;
-    var dx = p.clientX - dragX;
-    var dy = p.clientY - dragY;
-    rotY += dx * 0.5;
-    rotX -= dy * 0.5;
-    rotX = Math.max(-80, Math.min(80, rotX));
-    dragX = p.clientX; dragY = p.clientY;
-    updateBoxRotation();
-    if(e.touches) e.preventDefault();
-  }
-  function onDragEnd(){
-    dragging = false;
-    document.getElementById('box').style.transition = 'transform .1s ease-out';
-  }
-  function updateBoxRotation(){
-    document.getElementById('box').style.transform = 'rotateX('+rotX+'deg) rotateY('+rotY+'deg)';
-  }
-
-  // ---- Level loading ----
-  function loadLevel(idx){
-    curLevel = idx;
-    moves = 0;
-    nextSeq = 1;
-    won = false;
-    hintUsed = false;
-    var lvl = LEVELS[idx];
-    maxSeq = lvl.panels.filter(function(p){return p.seq>0}).length;
-
-    document.getElementById('lvlNum').textContent = idx+1;
-    document.getElementById('moveCount').textContent = '0';
-    document.getElementById('parCount').textContent = lvl.par;
-    document.getElementById('overlay').classList.add('hidden');
-    document.getElementById('box').classList.remove('won');
-
-    // Reset rotation to nice angle
-    rotX = -25; rotY = -35;
-    updateBoxRotation();
-
-    // Clear old panels
-    panelEls.forEach(function(el){ el.remove(); });
-    panelEls = [];
-    panelData = [];
-
-    // Get box size
-    var box = getBoxSize();
-
-    // Create panel elements on each face
-    lvl.panels.forEach(function(p, i){
-      var face = document.querySelector('.face-'+p.face);
-      if(!face) return;
-      var el = document.createElement('div');
-      el.className = 'panel ' + p.wood + (p.seq === nextSeq ? ' active' : ' locked');
-      el.style.left = (p.x * box) + 'px';
-      el.style.top = (p.y * box) + 'px';
-      el.style.width = (p.w * box) + 'px';
-      el.style.height = (p.h * box) + 'px';
-
-      // Small decorative mark
-      var mark = document.createElement('span');
-      mark.className = 'pmark';
-      // Show a subtle dot pattern based on sequence
-      el.appendChild(mark);
-
-      el.addEventListener('click', function(e){
-        e.stopPropagation();
-        trySlide(i);
-      });
-      el.addEventListener('touchend', function(e){
-        e.stopPropagation();
-        e.preventDefault();
-        trySlide(i);
-      });
-
-      face.appendChild(el);
-      panelEls.push(el);
-      panelData.push({slid:false, def:p});
-    });
-
-    updatePanelStates();
-  }
-
-  // ---- Panel interaction ----
-  function trySlide(idx){
-    if(won) return;
-    var pd = panelData[idx];
-    if(pd.slid) return; // already moved
-    if(pd.def.seq !== nextSeq) {
-      // Wrong panel — subtle shake
-      var el = panelEls[idx];
-      el.style.transition = 'transform .05s';
-      var dir = pd.def.dir;
-      el.style.transform = 'translate('+(dir==='x'?'4px':'0')+','+(dir==='y'?'4px':'0')+')';
-      setTimeout(function(){
-        el.style.transform = 'translate('+(dir==='x'?'-4px':'0')+','+(dir==='y'?'-4px':'0')+')';
-      },50);
-      setTimeout(function(){
-        el.style.transition = 'transform .35s cubic-bezier(.25,.46,.45,.94)';
-        el.style.transform = 'translate(0,0)';
-      },100);
-      moves++;
-      document.getElementById('moveCount').textContent = moves;
-      return;
+function occupied(skipId){
+  var g=[];for(var r=0;r<GRID;r++){g[r]=[];for(var c=0;c<GRID;c++)g[r][c]=-1;}
+  for(var i=0;i<vehicles.length;i++){
+    if(i===skipId)continue;var v=vehicles[i];
+    for(var s=0;s<v.len;s++){
+      var c=v.dir==='h'?v.x+s:v.x,r=v.dir==='v'?v.y+s:v.y;
+      if(c>=0&&c<GRID&&r>=0&&r<GRID)g[r][c]=i;
     }
+  }return g;
+}
 
-    // Correct panel — slide it
-    var box = getBoxSize();
-    var el = panelEls[idx];
-    var dx = pd.def.dir === 'x' ? pd.def.dist * box : 0;
-    var dy = pd.def.dir === 'y' ? pd.def.dist * box : 0;
-    el.style.transform = 'translate('+dx+'px,'+dy+'px)';
-    el.classList.remove('active','hint');
-    el.classList.add('locked');
-    el.style.opacity = '.6';
-    pd.slid = true;
-    moves++;
-    nextSeq++;
-    document.getElementById('moveCount').textContent = moves;
+function getDragLimits(vid){
+  var v=vehicles[vid],g=occupied(vid),mn,mx;
+  if(v.dir==='h'){
+    mn=v.x;mx=v.x;
+    while(mn>0&&g[v.y][mn-1]===-1)mn--;
+    while(mx+v.len<GRID&&g[v.y][mx+v.len]===-1)mx++;
+    if(vid===0&&v.y===EXIT_ROW){
+      var clear=true;
+      for(var c=v.x+v.len;c<GRID;c++)if(g[v.y][c]!==-1){clear=false;break;}
+      if(clear)mx=GRID;
+    }
+  }else{
+    mn=v.y;mx=v.y;
+    while(mn>0&&g[mn-1][v.x]===-1)mn--;
+    while(mx+v.len<GRID&&g[mx+v.len][v.x]===-1)mx++;
+  }
+  return{min:mn,max:mx};
+}
 
-    if(nextSeq > maxSeq){
-      // WIN!
-      won = true;
-      setTimeout(winAnimation, 400);
-    } else {
-      updatePanelStates();
+/* ════════ DRAWING ════════ */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawScene();
+  var ox=PAD_SIDE,oy=PAD_TOP;
+  for(var i=0;i<vehicles.length;i++){if(i===dragId)continue;drawVehicle(vehicles[i],ox,oy);}
+  if(dragId>=0)drawVehicle(vehicles[dragId],ox,oy);
+}
+
+function drawScene(){
+  var ox=PAD_SIDE,oy=PAD_TOP,gw=CELL*GRID,gh=CELL*GRID;
+  var exitW=Math.floor(CELL*0.7);
+
+  // ── SKY ──
+  var sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#7ec8e3');sky.addColorStop(0.6,'#a8ddf0');sky.addColorStop(1,'#c4eaf5');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Clouds
+  drawCloud(W*0.12,18,28);drawCloud(W*0.55,8,22);drawCloud(W*0.82,24,18);
+
+  // ── GRASS AREA (behind lot and around) ──
+  ctx.fillStyle='#5daa3a';
+  ctx.fillRect(0,oy-10,W,gh+22+12);
+  // Grass highlights
+  ctx.fillStyle='#6abf4b';
+  for(var i=0;i<grassDots.length;i++){
+    ctx.fillRect(grassDots[i].x*W,oy-8+grassDots[i].y*(gh+28),grassDots[i].w,3);
+  }
+
+  // ── SIDEWALKS on all sides ──
+  var sw=12;
+  ctx.fillStyle='#cdc8bc';
+  // top sidewalk
+  ctx.fillRect(ox-sw,oy-sw,gw+sw*2+exitW,sw);
+  // bottom sidewalk
+  ctx.fillRect(ox-sw,oy+gh,gw+sw*2+exitW,sw);
+  // left sidewalk
+  ctx.fillRect(ox-sw,oy,sw,gh);
+  // right sidewalk (with gap for exit driveway connecting to road)
+  ctx.fillRect(ox+gw,oy,exitW+sw,EXIT_ROW*CELL);
+  ctx.fillRect(ox+gw,oy+(EXIT_ROW+1)*CELL,exitW+sw,gh-(EXIT_ROW+1)*CELL);
+  // sidewalk cracks
+  ctx.strokeStyle='#b5b0a3';ctx.lineWidth=1;
+  // horizontal cracks on top/bottom
+  for(var i=0;i<Math.ceil((gw+sw*2+exitW)/40);i++){
+    var cx2=ox-sw+i*40;
+    ctx.beginPath();ctx.moveTo(cx2,oy-sw);ctx.lineTo(cx2,oy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx2,oy+gh);ctx.lineTo(cx2,oy+gh+sw);ctx.stroke();
+  }
+  // vertical cracks on left
+  for(var i=0;i<Math.ceil(gh/40);i++){
+    var cy2=oy+i*40;
+    ctx.beginPath();ctx.moveTo(ox-sw,cy2);ctx.lineTo(ox,cy2);ctx.stroke();
+  }
+
+  // ── PARKING LOT SURFACE ──
+  var asp=ctx.createLinearGradient(ox,oy,ox,oy+gh);
+  asp.addColorStop(0,'#9e9e9e');asp.addColorStop(0.5,'#929292');asp.addColorStop(1,'#888');
+  ctx.fillStyle=asp;ctx.fillRect(ox,oy,gw,gh);
+
+  // Asphalt speckle
+  ctx.fillStyle='rgba(0,0,0,0.04)';
+  for(var i=0;i<asphaltDots.length;i++)ctx.fillRect(ox+asphaltDots[i].x*gw,oy+asphaltDots[i].y*gh,2,2);
+  ctx.fillStyle='rgba(255,255,255,0.03)';
+  for(var i=0;i<asphaltLight.length;i++)ctx.fillRect(ox+asphaltLight[i].x*gw,oy+asphaltLight[i].y*gh,2,2);
+
+  // ── PARKING LINES (white) ──
+  ctx.strokeStyle='rgba(255,255,255,0.75)';ctx.lineWidth=2;
+  for(var i=1;i<GRID;i++){
+    ctx.beginPath();ctx.moveTo(ox+i*CELL,oy);ctx.lineTo(ox+i*CELL,oy+gh);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ox,oy+i*CELL);ctx.lineTo(ox+gw,oy+i*CELL);ctx.stroke();
+  }
+
+  // ── LOT WALLS ──
+  ctx.strokeStyle='#555';ctx.lineWidth=4;ctx.lineJoin='round';
+  // top
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+gw,oy);ctx.stroke();
+  // bottom
+  ctx.beginPath();ctx.moveTo(ox,oy+gh);ctx.lineTo(ox+gw,oy+gh);ctx.stroke();
+  // left
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+gh);ctx.stroke();
+  // right with exit gap
+  ctx.beginPath();ctx.moveTo(ox+gw,oy);ctx.lineTo(ox+gw,oy+EXIT_ROW*CELL);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox+gw,oy+(EXIT_ROW+1)*CELL);ctx.lineTo(ox+gw,oy+gh);ctx.stroke();
+
+  // ── RED/WHITE CURBS (left wall) ──
+  var curbW=6;
+  ctx.save();
+  for(var i=0;i<Math.ceil(gh/10);i++){
+    ctx.fillStyle=i%2===0?'#d32f2f':'#fff';
+    ctx.fillRect(ox-curbW,oy+i*10,curbW,10);
+  }
+  ctx.restore();
+
+  // ── EXIT DRIVEWAY ──
+  var ex=ox+gw,ey=oy+EXIT_ROW*CELL;
+  ctx.fillStyle='#888';
+  ctx.fillRect(ex,ey,exitW,CELL);
+  // dashed center line
+  ctx.strokeStyle='#f5d442';ctx.lineWidth=2;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(ex,ey+CELL/2);ctx.lineTo(ex+exitW,ey+CELL/2);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // EXIT sign
+  var sx=ex+2,sy=ey-22;
+  ctx.fillStyle='#777';ctx.fillRect(sx+14,sy+16,3,24);
+  ctx.fillStyle='#1b5e20';
+  roundRect(ctx,sx,sy,34,17,3);ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1;
+  roundRect(ctx,sx+2,sy+2,30,13,2);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('EXIT',sx+17,sy+9);
+
+  // Pulsing arrow
+  var pulse=0.4+Math.sin(Date.now()*0.004)*0.4;
+  ctx.fillStyle='rgba(76,175,80,'+pulse+')';
+  var ax=ex+exitW*0.4,ay=ey+CELL*0.7;
+  ctx.beginPath();ctx.moveTo(ax-6,ay-10);ctx.lineTo(ax+10,ay);ctx.lineTo(ax-6,ay+10);ctx.closePath();ctx.fill();
+
+  // ── BOLLARDS at lot entrance ──
+  drawBollard(ex+1,ey-2);
+  drawBollard(ex+1,ey+CELL);
+
+  // ── TRAFFIC CONES ──
+  drawCone(ox+6,oy+gh-2);
+  drawCone(ox+gw-10,oy+gh-2);
+
+  // P sign (parking)
+  ctx.fillStyle='#1565c0';
+  ctx.beginPath();ctx.arc(ox+gw/2,oy-2,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('P',ox+gw/2,oy-1);
+
+  // ── ROAD (bottom, single lane, same scale as puzzle) ──
+  var roadY=oy+gh+12;
+  // Road surface
+  ctx.fillStyle='#555';
+  ctx.fillRect(0,roadY,W,ROAD_H);
+  // Road edge lines (white)
+  ctx.fillStyle='#fff';
+  ctx.fillRect(0,roadY,W,3);
+  ctx.fillRect(0,roadY+ROAD_H-3,W,3);
+
+  // ── AMBIENT CARS on road (same scale as puzzle cars) ──
+  for(var i=0;i<ambientCars.length;i++){
+    var ac=ambientCars[i];
+    var cy=roadY+ROAD_H/2;
+    drawAmbientCar(ac.x,cy,ac.color,ac.len);
+  }
+
+  // ── GREEN STRIP below road ──
+  ctx.fillStyle='#5daa3a';
+  ctx.fillRect(0,roadY+ROAD_H,W,20);
+  ctx.fillStyle='#6abf4b';
+  for(var i=0;i<8;i++)ctx.fillRect(grassDots[i].x*W,roadY+ROAD_H+grassDots[i].y*10,20,2);
+}
+
+function drawCloud(cx,cy,size){
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(cx,cy,size*0.5,0,Math.PI*2);
+  ctx.arc(cx-size*0.4,cy+size*0.1,size*0.35,0,Math.PI*2);
+  ctx.arc(cx+size*0.45,cy+size*0.08,size*0.38,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawBollard(bx,by){
+  ctx.fillStyle='#fdd835';
+  roundRect(ctx,bx,by-8,6,8,2);ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=1;
+  roundRect(ctx,bx,by-8,6,8,2);ctx.stroke();
+}
+
+function drawCone(cx,cy){
+  ctx.fillStyle='#ff7043';
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+8,cy);ctx.lineTo(cx+4,cy-12);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillRect(cx+1,cy-6,6,2);
+  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+8,cy);ctx.lineTo(cx+4,cy-12);ctx.closePath();ctx.stroke();
+}
+
+function drawAmbientCar(ax,ay,color,cellLen){
+  // Draw using same style as puzzle vehicles, horizontal, CELL-scaled
+  var m=4,r=8;
+  var w=cellLen*CELL-m*2,h=CELL-m*2;
+  var x=ax+m,y=ay-CELL/2+m;
+
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  roundRect(ctx,x+2,y+3,w,h,r);ctx.fill();
+  ctx.fillStyle=color;
+  roundRect(ctx,x,y,w,h,r);ctx.fill();
+  var shade=ctx.createLinearGradient(x,y,x,y+h);
+  shade.addColorStop(0,'rgba(255,255,255,0.35)');shade.addColorStop(0.35,'rgba(255,255,255,0.1)');
+  shade.addColorStop(0.65,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,0.15)');
+  ctx.fillStyle=shade;roundRect(ctx,x,y,w,h,r);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=2;
+  roundRect(ctx,x,y,w,h,r);ctx.stroke();
+  // window
+  ctx.fillStyle='rgba(135,206,235,0.65)';ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1.5;
+  var cabX=x+w*0.25,cabW=w*0.5,cabY=y+3,cabH=h-6;
+  roundRect(ctx,cabX,cabY,cabW,cabH,5);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cabX+cabW/2,cabY);ctx.lineTo(cabX+cabW/2,cabY+cabH);ctx.stroke();
+  // headlights
+  ctx.fillStyle='#fff9c4';ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(x+w-7,y+8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(x+w-7,y+h-8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ff5252';
+  ctx.beginPath();ctx.arc(x+7,y+8,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+7,y+h-8,3,0,Math.PI*2);ctx.fill();
+  // wheels
+  ctx.fillStyle='#333';
+  var wh2=Math.min(7,CELL*0.09),woff3=w*0.18;
+  roundRect(ctx,x+woff3-2,y-2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+woff3-2,y+h-wh2+2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+w-woff3-7,y-2,9,wh2,2);ctx.fill();
+  roundRect(ctx,x+w-woff3-7,y+h-wh2+2,9,wh2,2);ctx.fill();
+}
+
+function drawVehicle(v,ox,oy){
+  var px=ox+v.x*CELL,py=oy+v.y*CELL;
+  var vw=v.dir==='h'?v.len*CELL:CELL;
+  var vh=v.dir==='v'?v.len*CELL:CELL;
+  var m=4,r=8;
+  var x=px+m,y=py+m,w=vw-m*2,h=vh-m*2;
+
+  // Drop shadow
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  roundRect(ctx,x+2,y+3,w,h,r);ctx.fill();
+
+  // Car body
+  ctx.fillStyle=v.color;
+  roundRect(ctx,x,y,w,h,r);ctx.fill();
+
+  // Cartoon shading
+  var shade=ctx.createLinearGradient(x,y,x,y+h);
+  shade.addColorStop(0,'rgba(255,255,255,0.35)');
+  shade.addColorStop(0.35,'rgba(255,255,255,0.1)');
+  shade.addColorStop(0.65,'rgba(0,0,0,0)');
+  shade.addColorStop(1,'rgba(0,0,0,0.15)');
+  ctx.fillStyle=shade;
+  roundRect(ctx,x,y,w,h,r);ctx.fill();
+
+  // Outline
+  ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=2;
+  roundRect(ctx,x,y,w,h,r);ctx.stroke();
+
+  // Windows
+  ctx.fillStyle='rgba(135,206,235,0.65)';
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1.5;
+  if(v.dir==='h'){
+    var cabX=x+w*0.25,cabW=w*0.5,cabY=y+3,cabH=h-6;
+    roundRect(ctx,cabX,cabY,cabW,cabH,5);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cabX+cabW/2,cabY);ctx.lineTo(cabX+cabW/2,cabY+cabH);ctx.stroke();
+  }else{
+    var cabY2=y+h*0.25,cabH2=h*0.5,cabX2=x+3,cabW2=w-6;
+    roundRect(ctx,cabX2,cabY2,cabW2,cabH2,5);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cabX2,cabY2+cabH2/2);ctx.lineTo(cabX2+cabW2,cabY2+cabH2/2);ctx.stroke();
+  }
+
+  // Headlights
+  ctx.fillStyle='#fff9c4';ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
+  if(v.dir==='h'){
+    ctx.beginPath();ctx.arc(x+w-7,y+8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(x+w-7,y+h-8,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff5252';
+    ctx.beginPath();ctx.arc(x+7,y+8,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(x+7,y+h-8,3,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.beginPath();ctx.arc(x+8,y+h-7,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(x+w-8,y+h-7,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff5252';
+    ctx.beginPath();ctx.arc(x+8,y+7,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(x+w-8,y+7,3,0,Math.PI*2);ctx.fill();
+  }
+
+  // Wheels
+  ctx.fillStyle='#333';
+  if(v.dir==='h'){
+    var wh=Math.min(7,CELL*0.09),woff=w*0.18;
+    roundRect(ctx,x+woff-2,y-2,9,wh,2);ctx.fill();
+    roundRect(ctx,x+woff-2,y+h-wh+2,9,wh,2);ctx.fill();
+    roundRect(ctx,x+w-woff-7,y-2,9,wh,2);ctx.fill();
+    roundRect(ctx,x+w-woff-7,y+h-wh+2,9,wh,2);ctx.fill();
+  }else{
+    var wr2=Math.min(7,CELL*0.09),woff2=h*0.18;
+    roundRect(ctx,x-2,y+woff2-2,wr2,9,2);ctx.fill();
+    roundRect(ctx,x+w-wr2+2,y+woff2-2,wr2,9,2);ctx.fill();
+    roundRect(ctx,x-2,y+h-woff2-7,wr2,9,2);ctx.fill();
+    roundRect(ctx,x+w-wr2+2,y+h-woff2-7,wr2,9,2);ctx.fill();
+  }
+
+  // Player star
+  if(v.id===0){
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.font='bold '+Math.floor(CELL*0.22)+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('★',x+w/2,y+h/2);
+  }
+
+  // Truck cargo lines
+  if(v.len===3){
+    ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;
+    if(v.dir==='h'){
+      for(var i=1;i<=3;i++){ctx.beginPath();ctx.moveTo(x+w*0.06,y+h*(i*0.2+0.1));ctx.lineTo(x+w*0.18,y+h*(i*0.2+0.1));ctx.stroke();}
+    }else{
+      for(var i=1;i<=3;i++){ctx.beginPath();ctx.moveTo(x+w*(i*0.2+0.1),y+h*0.06);ctx.lineTo(x+w*(i*0.2+0.1),y+h*0.18);ctx.stroke();}
     }
   }
+}
 
-  function updatePanelStates(){
-    panelData.forEach(function(pd,i){
-      if(pd.slid) return;
-      var el = panelEls[i];
-      if(pd.def.seq === nextSeq){
-        el.classList.remove('locked');
-        el.classList.add('active');
-      } else {
-        el.classList.remove('active');
-        el.classList.add('locked');
-      }
-    });
-  }
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);
+  c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();
+}
 
-  // ---- Win ----
-  function winAnimation(){
-    var box = document.getElementById('box');
-    box.classList.add('won');
+/* ════════ INPUT ════════ */
+function getPos(e){
+  var rect=canvas.getBoundingClientRect();
+  var raw=e.touches?e.touches[0]:e;
+  return{x:(raw.clientX-rect.left)*(canvas.width/rect.width)-PAD_SIDE,
+         y:(raw.clientY-rect.top)*(canvas.height/rect.height)-PAD_TOP};
+}
+function hitVehicle(px,py){
+  for(var i=vehicles.length-1;i>=0;i--){
+    var v=vehicles[i],vx=v.x*CELL,vy=v.y*CELL;
+    var vw=v.dir==='h'?v.len*CELL:CELL,vh=v.dir==='v'?v.len*CELL:CELL;
+    if(px>=vx&&px<vx+vw&&py>=vy&&py<vy+vh)return i;
+  }return-1;
+}
+function onDown(e){
+  if(solved||animating)return;e.preventDefault();
+  var p=getPos(e),hit=hitVehicle(p.x,p.y);
+  if(hit<0)return;
+  dragId=hit;var v=vehicles[hit];
+  dragStart=v.dir==='h'?p.x:p.y;
+  dragOrig=v.dir==='h'?v.x:v.y;
+  var lim=getDragLimits(hit);dragMin=lim.min;dragMax=lim.max;
+}
+function onMove(e){
+  if(dragId<0)return;e.preventDefault();
+  var p=getPos(e),v=vehicles[dragId];
+  var cur=v.dir==='h'?p.x:p.y;
+  var delta=(cur-dragStart)/CELL;
+  var newPos=dragOrig+delta;
+  newPos=Math.max(dragMin,Math.min(dragMax,newPos));
+  if(v.dir==='h')v.x=newPos;else v.y=newPos;
+  draw();
+}
+function onUp(e){
+  if(dragId<0)return;e.preventDefault();
+  var v=vehicles[dragId];
+  var snapped=Math.round(v.dir==='h'?v.x:v.y);
+  snapped=Math.max(dragMin,Math.min(dragMax,snapped));
+  if(dragId===0&&v.dir==='h'&&snapped>=GRID-1){animateExit();dragId=-1;return;}
+  var origVal=dragOrig;
+  if(v.dir==='h')v.x=snapped;else v.y=snapped;
+  if(snapped!==origVal){history.push({id:dragId,from:origVal,to:snapped});moves++;updateHud();}
+  dragId=-1;draw();
+}
+function animateExit(){
+  animating=true;var v=vehicles[0],start=v.x,target=GRID+1,t0=performance.now();
+  function tick(ts){var p=Math.min(1,(ts-t0)/400);p=1-(1-p)*(1-p);v.x=start+(target-start)*p;draw();
+    if(p<1)requestAnimationFrame(tick);else{animating=false;solved=true;onWin();}}
+  requestAnimationFrame(tick);
+}
+canvas.addEventListener('mousedown',onDown);
+canvas.addEventListener('mousemove',onMove);
+canvas.addEventListener('mouseup',onUp);
+canvas.addEventListener('mouseleave',function(){if(dragId>=0)onUp({preventDefault:function(){}});});
+canvas.addEventListener('touchstart',onDown,{passive:false});
+canvas.addEventListener('touchmove',onMove,{passive:false});
+canvas.addEventListener('touchend',onUp,{passive:false});
 
-    // Animate to show top
-    var startRX = rotX, startRY = rotY;
-    var targetRX = 50, targetRY = rotY;
-    var t0 = performance.now();
-    function animRot(now){
-      var p = Math.min(1, (now-t0)/800);
-      var ease = 1 - Math.pow(1-p, 3);
-      rotX = startRX + (targetRX-startRX)*ease;
-      updateBoxRotation();
-      if(p<1) requestAnimationFrame(animRot);
-      else showWinOverlay();
+/* ════════ WIN / SCORES ════════ */
+function onWin(){
+  var par=levels[level].par;
+  var stars=moves<=par?3:moves<=par+3?2:1;
+  saveBest(level,moves);
+  var ov=document.getElementById('overlay');ov.className='';
+  var ss='';for(var i=0;i<3;i++)ss+=i<stars?'★':'☆';
+  ov.innerHTML='<h2>Escaped!</h2><div class="stars">'+ss+'</div>'+
+    '<div class="stat">Moves: '+moves+' (Par: '+par+')</div>'+
+    '<div class="stat">Best: '+(bestMoves[level]||moves)+' moves</div>'+
+    (level<levels.length-1?'<button class="btn" onclick="Game.play('+(level+1)+')" style="margin-top:14px">Next Level</button>':
+    '<div class="sub" style="margin-top:6px">You beat every level!</div>'+recHTML())+
+    '<button class="btn sm" onclick="Game.showMenu()" style="margin-top:8px">Level Select</button>';
+}
+function recHTML(){
+  return '<div class="rec-wrap"><h3>Play Next</h3><div class="rec-cards">'+
+    '<a href="../circle/" class="rec-card" style="background:linear-gradient(160deg,#1e293b,#334155)">'+
+      '<div class="rc-thumb">◎</div><div class="rc-body"><div class="rc-title" style="color:#e2e8f0">Circle</div><div class="rc-desc">Draw a perfect circle freehand</div></div></a>'+
+    '<a href="../breakpoint/" class="rec-card" style="background:linear-gradient(160deg,#1a0a0a,#0a1a0e)">'+
+      '<div class="rc-thumb">🃏</div><div class="rc-body"><div class="rc-title" style="background:linear-gradient(90deg,#ef4444,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent">BreakPoint</div><div class="rc-desc">Tactical card duel</div></div></a>'+
+    '<a href="../likelihood/" class="rec-card" style="background:linear-gradient(160deg,#1a0a2e,#2e1065)">'+
+      '<div class="rc-thumb" style="color:#c4b5fd">%</div><div class="rc-body"><div class="rc-title" style="color:#c4b5fd">Likelihood</div><div class="rc-desc">Guess the probability</div></div></a>'+
+    '</div></div>';
+}
+function saveBest(lvl,m){
+  try{bestMoves=JSON.parse(localStorage.getItem('gridlock_best'))||{};}catch(e){}
+  if(!bestMoves[lvl]||m<bestMoves[lvl])bestMoves[lvl]=m;
+  localStorage.setItem('gridlock_best',JSON.stringify(bestMoves));
+}
+function updateHud(){
+  document.getElementById('lvlNum').textContent=level+1;
+  document.getElementById('moveCount').textContent=moves;
+  document.getElementById('parCount').textContent=levels[level].par;
+}
+function animLoop(){
+  updateAmbient();
+  draw();
+  requestAnimationFrame(animLoop);
+}
+
+/* ════════ PUBLIC API ════════ */
+return{
+  play:function(n){document.getElementById('overlay').className='hidden';loadLevel(n);},
+  undo:function(){
+    if(!history.length||solved)return;
+    var h=history.pop(),v=vehicles[h.id];
+    if(v.dir==='h')v.x=h.from;else v.y=h.from;
+    moves--;updateHud();draw();
+  },
+  restart:function(){loadLevel(level);},
+  showMenu:function(){
+    try{bestMoves=JSON.parse(localStorage.getItem('gridlock_best'))||{};}catch(e){bestMoves={};}
+    var ov=document.getElementById('overlay');ov.className='';
+    var html='<h1>GridLock</h1><div class="sub">Slide vehicles to free the red car!<br>Drag cars and trucks along their lane.</div><div id="lvlSelect">';
+    for(var i=0;i<levels.length;i++){
+      var done=bestMoves[i]!==undefined;
+      var unlocked=i===0||bestMoves[i-1]!==undefined;
+      var cls=done?'lbtn done':unlocked?'lbtn':'lbtn locked';
+      if(unlocked){
+        html+='<div class="'+cls+'" onclick="Game.play('+i+')">'+(i+1);
+        if(done)html+='<span class="best">'+bestMoves[i]+'</span>';
+        html+='</div>';
+      }else html+='<div class="'+cls+'">'+(i+1)+'</div>';
     }
-    requestAnimationFrame(animRot);
-
-    // "Open" the top face
-    var topFace = document.querySelector('.face-top');
-    topFace.style.transformOrigin = 'top center';
-    topFace.style.transition = 'transform 1s cubic-bezier(.25,.46,.45,.94)';
-    setTimeout(function(){
-      topFace.style.transform = 'rotateX(90deg) translateZ('+getBoxSize()/2+'px) rotateX(-110deg)';
-    }, 300);
+    html+='</div>';ov.innerHTML=html;
+  },
+  init:function(){
+    buildLevels();resize();
+    window.addEventListener('resize',function(){resize();draw();});
+    try{bestMoves=JSON.parse(localStorage.getItem('gridlock_best'))||{};}catch(e){bestMoves={};}
+    this.showMenu();animLoop();
   }
-
-  function showWinOverlay(){
-    var lvl = LEVELS[curLevel];
-    var par = lvl.par;
-    var stars = moves <= par ? 3 : moves <= par+3 ? 2 : 1;
-    var starStr = '';
-    for(var i=0;i<3;i++) starStr += i<stars ? '★' : '☆';
-
-    // Save progress
-    if(!progress[curLevel] || moves < progress[curLevel]) progress[curLevel] = moves;
-    localStorage.setItem('gridlock_progress3', JSON.stringify(progress));
-
-    var ov = document.getElementById('overlay');
-    var isLast = curLevel >= LEVELS.length-1;
-    var html = '<h2>Box Opened!</h2>';
-    html += '<div class="stars">'+starStr+'</div>';
-    html += '<div class="stat">'+moves+' moves (par: '+par+')</div>';
-    html += '<div class="stat" style="margin-bottom:16px">'+lvl.name+'</div>';
-    if(!isLast){
-      html += '<button class="btn" onclick="Game.loadLevel('+(curLevel+1)+')">Next Box →</button>';
-    } else {
-      html += '<div class="sub">You\'ve mastered all the puzzle boxes!</div>';
-      html += '<div class="rec-wrap"><h3>More Games</h3><div class="rec-cards">';
-      html += '<a class="rec-card" href="/circle/" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"><div class="rc-thumb" style="background:radial-gradient(circle,#e94560 30%,transparent 70%)">●</div><div class="rc-body"><div class="rc-title">Circle</div><div class="rc-desc">Precision timing</div></div></a>';
-      html += '<a class="rec-card" href="/breakpoint/" style="background:linear-gradient(135deg,#1a0a2e,#2d1b4e)"><div class="rc-thumb">⚔️</div><div class="rc-body"><div class="rc-title">BreakPoint</div><div class="rc-desc">Tactical card duel</div></div></a>';
-      html += '<a class="rec-card" href="/likelihood/" style="background:linear-gradient(135deg,#0a1a2e,#1b3a4e)"><div class="rc-thumb">📊</div><div class="rc-body"><div class="rc-title">Likelihood</div><div class="rc-desc">Probability puzzles</div></div></a>';
-      html += '</div></div>';
-    }
-    html += '<button class="btn sm" style="margin-top:12px" onclick="Game.showMenu()">All Levels</button>';
-    ov.innerHTML = html;
-    ov.classList.remove('hidden');
-  }
-
-  // ---- Menu ----
-  function showMenu(){
-    var ov = document.getElementById('overlay');
-    var html = '<h1>GridLock</h1>';
-    html += '<div class="sub">Slide the wooden panels in the correct sequence to unlock each puzzle box.<br>Drag to rotate. Tap a panel to slide it.</div>';
-    html += '<div id="lvlSelect">';
-    for(var i=0;i<LEVELS.length;i++){
-      var locked = i>0 && !progress[i-1];
-      var done = progress[i] > 0;
-      var cls = done ? 'done' : locked ? 'locked' : '';
-      html += '<button class="lbtn '+cls+'" '+(locked?'disabled':'')+' onclick="Game.loadLevel('+i+')">';
-      html += (i+1);
-      if(done) html += '<span class="best">'+progress[i]+'</span>';
-      html += '</button>';
-    }
-    html += '</div>';
-    ov.innerHTML = html;
-    ov.classList.remove('hidden');
-  }
-
-  // ---- Hint ----
-  function showHint(){
-    if(won) return;
-    hintUsed = true;
-    // Find the next panel and pulse it
-    panelData.forEach(function(pd,i){
-      if(pd.def.seq === nextSeq && !pd.slid){
-        var el = panelEls[i];
-        el.classList.add('hint');
-        // Also rotate box to show that face
-        var face = pd.def.face;
-        var targets = {front:[-25,-35],back:[-25,145],right:[-25,-125],left:[-25,55],top:[55,-35],bottom:[-55,-35]};
-        var t = targets[face] || [-25,-35];
-        var startRX = rotX, startRY = rotY;
-        var t0 = performance.now();
-        function animHint(now){
-          var p = Math.min(1,(now-t0)/600);
-          var ease = 1-Math.pow(1-p,3);
-          rotX = startRX+(t[0]-startRX)*ease;
-          rotY = startRY+(t[1]-startRY)*ease;
-          updateBoxRotation();
-          if(p<1) requestAnimationFrame(animHint);
-        }
-        requestAnimationFrame(animHint);
-        setTimeout(function(){ el.classList.remove('hint'); }, 3000);
-      }
-    });
-  }
-
-  // ---- Reset ----
-  function resetLevel(){
-    loadLevel(curLevel);
-  }
-
-  // ---- Resize ----
-  function onResize(){
-    var box = getBoxSize();
-    var scene = document.getElementById('scene');
-    scene.style.width = box+'px';
-    scene.style.height = box+'px';
-    var half = box/2;
-    // Update face sizes and transforms
-    document.querySelectorAll('.face').forEach(function(f){
-      f.style.width = box+'px';
-      f.style.height = box+'px';
-    });
-    document.querySelector('.face-front').style.transform = 'translateZ('+half+'px)';
-    document.querySelector('.face-back').style.transform = 'rotateY(180deg) translateZ('+half+'px)';
-    document.querySelector('.face-right').style.transform = 'rotateY(90deg) translateZ('+half+'px)';
-    document.querySelector('.face-left').style.transform = 'rotateY(-90deg) translateZ('+half+'px)';
-    document.querySelector('.face-top').style.transform = 'rotateX(90deg) translateZ('+half+'px)';
-    document.querySelector('.face-bottom').style.transform = 'rotateX(-90deg) translateZ('+half+'px)';
-    // Reload level if playing
-    if(!document.getElementById('overlay').classList.contains('hidden')) return;
-    loadLevel(curLevel);
-  }
-  window.addEventListener('resize', onResize);
-
-  // ---- Start ----
-  init();
-
-  return {loadLevel:loadLevel, showMenu:showMenu, showHint:showHint, resetLevel:resetLevel};
+};
 })();
-
-function showHint(){ Game.showHint(); }
-function resetLevel(){ Game.resetLevel(); }
-function showMenu(){ Game.showMenu(); }
+Game.init();
 </script>
 </body>
 </html>
