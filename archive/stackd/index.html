@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack'd | BrainSmacks</title>
+<meta name="description" content="Stack'd — a 3D block stacking physics game. Stack random shapes as high as you can!">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#1a1520}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#e2e2e6;display:flex;flex-direction:column;align-items:center}
+#top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:rgba(14,14,18,0.8);z-index:10;position:relative}
+#top-bar a{color:#a78bfa;text-decoration:none;font-size:13px}
+#top-bar h1{font-size:20px;color:#c4b5fd;letter-spacing:2px}
+#game-container{flex:1;width:100%;position:relative;min-height:0}
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;font-size:15px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,0.6);z-index:5;pointer-events:none}
+.hud-item{display:flex;align-items:center;gap:6px}
+#height-display{color:#c4b5fd}
+#blocks-display{color:#60a5fa}
+#best-display{color:#fbbf24}
+#shape-preview{position:absolute;top:10px;right:16px;background:rgba(20,20,30,0.85);border:1px solid #333;border-radius:10px;padding:10px 14px;z-index:5;text-align:center;backdrop-filter:blur(8px)}
+#shape-preview .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+#shape-preview .name{font-size:14px;font-weight:700;color:#c4b5fd}
+#controls-guide{position:absolute;bottom:12px;left:12px;background:rgba(14,14,18,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;z-index:5;backdrop-filter:blur(8px);pointer-events:none;font-size:11px;line-height:1.7;color:#9ca3af}
+#controls-guide .cg-title{font-size:10px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+#controls-guide kbd{display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:1px 5px;font-family:inherit;font-size:10px;color:#e2e2e6;min-width:18px;text-align:center}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20;transition:opacity .3s}
+#overlay.hidden{opacity:0;pointer-events:none;visibility:hidden}
+#overlay h2{font-size:36px;color:#c4b5fd;margin-bottom:10px;letter-spacing:2px}
+#overlay p{color:#9ca3af;font-size:15px;margin-bottom:16px;max-width:440px;text-align:center;line-height:1.6}
+#overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
+#overlay button:hover{background:#6d28d9}
+#game-over-overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,18,0.92);z-index:20}
+#game-over-overlay.show{display:flex}
+#game-over-overlay h2{font-size:32px;color:#f87171;margin-bottom:8px}
+#game-over-overlay .stat{font-size:18px;color:#e2e2e6;margin:4px 0}
+#game-over-overlay button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.170.0",
+    "three/addons/": "https://esm.sh/three@0.170.0/examples/jsm/",
+    "cannon-es": "https://esm.sh/cannon-es@0.20.0"
+  }
+}
+</script>
+</head>
+<body>
+<div id="top-bar">
+  <a href="/">BrainSmacks</a>
+  <h1>STACK'D</h1>
+  <span id="best-display" class="hud-item">Best: 0</span>
+</div>
+<div id="game-container">
+  <div id="hud">
+    <span id="height-display" class="hud-item">Height: 0</span>
+    <span id="blocks-display" class="hud-item">Blocks: 0</span>
+  </div>
+  <div id="shape-preview">
+    <div class="label">Next Shape</div>
+    <div class="name" id="shape-name">—</div>
+  </div>
+  <div id="controls-guide">
+    <div class="cg-title">Controls</div>
+    <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> Move block<br>
+    <kbd>Shift</kbd>+<kbd>↑</kbd> <kbd>↓</kbd> Raise / Lower<br>
+    <kbd>Q</kbd> <kbd>E</kbd> Rotate block<br>
+    <kbd>Space</kbd> Drop block<br>
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Orbit camera
+  </div>
+  <div id="overlay">
+    <h2>STACK'D</h2>
+    <p>Stack random 3D blocks as high as you can! Arrow keys to move, Shift+Up/Down to raise/lower, Q/E to rotate, Space to drop. WASD to orbit camera. If anything falls off the edge — game over!</p>
+    <div id="diff-buttons" style="display:flex;gap:10px;margin-top:8px">
+      <button onclick="GAME.start('easy')" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Easy</button>
+      <button onclick="GAME.start('medium')" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Medium</button>
+      <button onclick="GAME.start('hard')" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer">Hard</button>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#6b7280">Easy = big platform · Medium = standard · Hard = tiny platform, no shadows</div>
+  </div>
+  <div id="game-over-overlay">
+    <h2>TOPPLED!</h2>
+    <div class="stat" id="go-height">Height: 0</div>
+    <div class="stat" id="go-blocks">Blocks: 0</div>
+    <div class="stat" id="go-best">Best: 0</div>
+    <div id="go-diff-buttons" style="display:flex;gap:10px;margin-top:12px">
+      <button onclick="GAME.start('easy')" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Easy</button>
+      <button onclick="GAME.start('medium')" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Medium</button>
+      <button onclick="GAME.start('hard')" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">Hard</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+
+// ==================== DIFFICULTY ====================
+const DIFFICULTIES = {
+  easy:   { half: 4, label: 'Easy',   color: '#22c55e', shadows: true },
+  medium: { half: 3, label: 'Medium', color: '#f59e0b', shadows: true },
+  hard:   { half: 2, label: 'Hard',   color: '#ef4444', shadows: false },
+};
+
+// ==================== SHAPE DEFINITIONS ====================
+const SHAPES = [
+  { name:'Cube', w:1, h:1, d:1, color:0xe74c3c, mass:1.0 },
+  { name:'Flat Brick', w:2, h:0.5, d:1, color:0x3498db, mass:1.5 },
+  { name:'Long Plank', w:3, h:0.5, d:1, color:0x2ecc71, mass:2.2 },
+  { name:'Tall Block', w:1, h:2, d:1, color:0xf39c12, mass:2.0 },
+  { name:'Wide Slab', w:2, h:0.5, d:2, color:0x9b59b6, mass:2.5 },
+  { name:'L-Shape', w:1, h:1, d:1, color:0xe67e22, mass:2.0, compound:'L' },
+  { name:'T-Shape', w:1, h:1, d:1, color:0x1abc9c, mass:2.8, compound:'T' },
+  { name:'Thin Beam', w:3, h:0.4, d:0.6, color:0xf1c40f, mass:1.2 },
+  { name:'Pillar', w:0.6, h:2.5, d:0.6, color:0xe91e63, mass:1.8 },
+  { name:'Step Block', w:1, h:1, d:1, color:0x00bcd4, mass:2.0, compound:'step' },
+];
+
+// ==================== MATERIALS ====================
+function createToyMaterial(color) {
+  return new THREE.MeshStandardMaterial({
+    color, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.6,
+  });
+}
+
+function createWoodMaterial() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#c4a265';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 40; i++) {
+    ctx.strokeStyle = `rgba(139,90,43,${0.05 + Math.random() * 0.1})`;
+    ctx.lineWidth = 1 + Math.random() * 2;
+    ctx.beginPath();
+    const y = Math.random() * 256;
+    ctx.moveTo(0, y);
+    for (let x = 0; x < 256; x += 10) {
+      ctx.lineTo(x, y + Math.sin(x * 0.05) * 3 + (Math.random() - 0.5) * 2);
+    }
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0 });
+}
+
+// ==================== GAME ====================
+const GAME = {
+  scene: null, camera: null, renderer: null,
+  world: null, clock: new THREE.Clock(),
+  bodies: [], meshes: [],
+  currentBlock: null, currentBody: null, currentMesh: null,
+  phase: 'idle', // idle | placing | dropping | settling | gameover
+  blocksPlaced: 0, maxHeight: 0, best: 0,
+  dropY: 8, settleTimer: 0,
+  difficulty: 'medium',
+  platformHalf: 3,
+  groundMeshes: [], groundBody: null, dirLight: null,
+
+  // Camera orbit (manual, no OrbitControls — we want WASD)
+  camTheta: Math.PI / 4,   // horizontal angle
+  camPhi: Math.PI / 5,     // vertical angle (from top)
+  camDist: 14,
+  camTarget: new THREE.Vector3(0, 3, 0),
+  keysDown: {},
+
+  moveStep: 0.5, // grid movement step
+
+  init() {
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x1a1520);
+    // No fog — keep it clean
+
+    const container = document.getElementById('game-container');
+    const aspect = container.clientWidth / container.clientHeight;
+    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
+    this.updateCamera();
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.domElement.style.display = 'block';
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    container.insertBefore(this.renderer.domElement, container.firstChild);
+
+    // Lighting
+    this.scene.add(new THREE.AmbientLight(0xfff5e6, 0.6));
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    this.dirLight.position.set(0, 20, 0);
+    this.dirLight.castShadow = true;
+    this.dirLight.shadow.mapSize.set(2048, 2048);
+    this.dirLight.shadow.camera.left = -10; this.dirLight.shadow.camera.right = 10;
+    this.dirLight.shadow.camera.top = 15; this.dirLight.shadow.camera.bottom = -5;
+    this.dirLight.shadow.camera.near = 0.5; this.dirLight.shadow.camera.far = 30;
+    this.dirLight.shadow.bias = -0.001;
+    this.scene.add(this.dirLight);
+    const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
+    fill.position.set(-4, 6, -4);
+    this.scene.add(fill);
+    const rim = new THREE.PointLight(0xff8844, 0.4, 20);
+    rim.position.set(-3, 8, 5);
+    this.scene.add(rim);
+
+    // Hemisphere light for ambient fill
+    this.scene.add(new THREE.HemisphereLight(0xfff5e6, 0x1a1520, 0.4));
+
+    // Physics
+    this.world = new CANNON.World();
+    this.world.gravity.set(0, -20, 0);
+    this.world.broadphase = new CANNON.NaiveBroadphase();
+    this.world.solver.iterations = 20;
+    this.world.solver.tolerance = 0.0001;
+
+    this.blockMaterial = new CANNON.Material('block');
+    this.world.addContactMaterial(new CANNON.ContactMaterial(this.blockMaterial, this.blockMaterial, { friction: 0.6, restitution: 0.02 }));
+
+    this.createGround();
+
+    this.best = parseInt(localStorage.getItem('stackd_best_medium')) || 0;
+    document.getElementById('best-display').textContent = 'Best: ' + this.best;
+
+    // Input
+    document.addEventListener('keydown', e => { this.keysDown[e.key.toLowerCase()] = true; this.onKey(e); });
+    document.addEventListener('keyup', e => { this.keysDown[e.key.toLowerCase()] = false; });
+    const cvs = this.renderer.domElement;
+    cvs.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+
+    window.addEventListener('resize', () => {
+      const c = document.getElementById('game-container');
+      this.camera.aspect = c.clientWidth / c.clientHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(c.clientWidth, c.clientHeight);
+    });
+
+    this.animate();
+  },
+
+  // ==================== CAMERA ====================
+  updateCamera() {
+    // Spherical coordinates around camTarget
+    const x = this.camTarget.x + this.camDist * Math.sin(this.camPhi) * Math.sin(this.camTheta);
+    const y = this.camTarget.y + this.camDist * Math.cos(this.camPhi);
+    const z = this.camTarget.z + this.camDist * Math.sin(this.camPhi) * Math.cos(this.camTheta);
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(this.camTarget);
+  },
+
+  processKeys(dt) {
+    const speed = 1.8 * dt;
+    let changed = false;
+    if (this.keysDown['w']) { this.camPhi = Math.max(0.05, this.camPhi - speed); changed = true; }
+    if (this.keysDown['s']) { this.camPhi = Math.min(Math.PI * 0.48, this.camPhi + speed); changed = true; }
+    if (this.keysDown['a']) { this.camTheta += speed; changed = true; }
+    if (this.keysDown['d']) { this.camTheta -= speed; changed = true; }
+    if (changed) this.updateCamera();
+  },
+
+  onWheel(e) {
+    e.preventDefault();
+    this.camDist = Math.max(5, Math.min(25, this.camDist + e.deltaY * 0.01));
+    this.updateCamera();
+  },
+
+  // ==================== GROUND ====================
+  clearGround() {
+    this.groundMeshes.forEach(m => this.scene.remove(m));
+    this.groundMeshes = [];
+    if (this.groundBody) { this.world.removeBody(this.groundBody); this.groundBody = null; }
+  },
+
+  createGround() {
+    this.clearGround();
+    const half = this.platformHalf;
+    const size = half * 2;
+
+    const woodMat = createWoodMaterial();
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(size, 1, size), woodMat);
+    floor.position.y = -0.5;
+    floor.receiveShadow = true;
+    this.scene.add(floor);
+    this.groundMeshes.push(floor);
+
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7, metalness: 0 });
+    [
+      { pos: [0, 0.075, -half], size: [size + 0.2, 0.15, 0.1] },
+      { pos: [0, 0.075, half], size: [size + 0.2, 0.15, 0.1] },
+      { pos: [-half, 0.075, 0], size: [0.1, 0.15, size + 0.2] },
+      { pos: [half, 0.075, 0], size: [0.1, 0.15, size + 0.2] },
+    ].forEach(w => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...w.size), edgeMat);
+      m.position.set(...w.pos);
+      this.scene.add(m);
+      this.groundMeshes.push(m);
+    });
+
+    const voidPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100),
+      new THREE.MeshBasicMaterial({ color: 0x0a0a10 })
+    );
+    voidPlane.rotation.x = -Math.PI / 2;
+    voidPlane.position.y = -15;
+    this.scene.add(voidPlane);
+    this.groundMeshes.push(voidPlane);
+
+    // Physics ground
+    const groundMat = new CANNON.Material('ground');
+    this.groundBody = new CANNON.Body({ mass: 0, material: groundMat });
+    this.groundBody.addShape(new CANNON.Box(new CANNON.Vec3(half, 0.5, half)));
+    this.groundBody.position.set(0, -0.5, 0);
+    this.world.addBody(this.groundBody);
+    this.world.addContactMaterial(new CANNON.ContactMaterial(groundMat, this.blockMaterial, { friction: 0.7, restitution: 0.01 }));
+  },
+
+  // ==================== GAME FLOW ====================
+  start(diff) {
+    // Set difficulty
+    if (diff) this.difficulty = diff;
+    const d = DIFFICULTIES[this.difficulty];
+    this.platformHalf = d.half;
+
+    // Shadows on/off based on difficulty
+    this.renderer.shadowMap.enabled = d.shadows;
+    this.dirLight.castShadow = d.shadows;
+
+    // Clear old blocks
+    this.bodies.forEach(b => this.world.removeBody(b));
+    this.meshes.forEach(m => this.scene.remove(m));
+    this.bodies = []; this.meshes = [];
+    if (this.currentMesh) this.scene.remove(this.currentMesh);
+    if (this.currentBody) this.world.removeBody(this.currentBody);
+    this.currentMesh = null; this.currentBody = null;
+
+    // Rebuild ground for new size
+    this.createGround();
+
+    this.blocksPlaced = 0; this.maxHeight = 0;
+    this.phase = 'idle';
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('game-over-overlay').classList.remove('show');
+
+    // Load best for this difficulty
+    this.best = parseInt(localStorage.getItem('stackd_best_' + this.difficulty)) || 0;
+    document.getElementById('best-display').textContent = 'Best: ' + this.best + ' (' + d.label + ')';
+    this.updateHUD();
+
+    // Reset camera
+    this.camTheta = Math.PI / 4;
+    this.camPhi = Math.PI / 5;
+    this.camDist = this.difficulty === 'hard' ? 10 : this.difficulty === 'easy' ? 16 : 14;
+    this.camTarget.set(0, 3, 0);
+    this.updateCamera();
+
+    this.spawnNextBlock();
+  },
+
+  spawnNextBlock() {
+    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    this.currentBlock = shape;
+    document.getElementById('shape-name').textContent = shape.name;
+    document.getElementById('shape-name').style.color = '#' + shape.color.toString(16).padStart(6, '0');
+
+    let mesh, body;
+    if (shape.compound === 'L') { mesh = this.compoundMesh_L(shape); body = this.compoundBody_L(shape); }
+    else if (shape.compound === 'T') { mesh = this.compoundMesh_T(shape); body = this.compoundBody_T(shape); }
+    else if (shape.compound === 'step') { mesh = this.compoundMesh_Step(shape); body = this.compoundBody_Step(shape); }
+    else {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(shape.w, shape.h, shape.d), createToyMaterial(shape.color));
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      body = new CANNON.Body({
+        mass: shape.mass, material: this.blockMaterial,
+        shape: new CANNON.Box(new CANNON.Vec3(shape.w/2, shape.h/2, shape.d/2)),
+        linearDamping: 0.1, angularDamping: 0.15
+      });
+    }
+    // Enable shadows on compound groups
+    if (mesh.isGroup) mesh.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+
+    const spawnY = Math.max(this.maxHeight + 4, 8);
+    this.dropY = spawnY;
+    // Random spawn position within platform bounds
+    const spawnRange = Math.max(this.platformHalf * 2 - 2, 1);
+    const rx = (Math.random() - 0.5) * spawnRange;
+    const rz = (Math.random() - 0.5) * spawnRange;
+    mesh.position.set(rx, spawnY, rz);
+    body.position.set(rx, spawnY, rz);
+
+    // Auto-track camera to keep the spawned block visible
+    this.camTarget.y = spawnY * 0.5;
+    this.updateCamera();
+    body.type = CANNON.Body.KINEMATIC;
+    body.velocity.set(0, 0, 0);
+    body.angularVelocity.set(0, 0, 0);
+
+    this.scene.add(mesh);
+    this.world.addBody(body);
+    this.currentMesh = mesh;
+    this.currentBody = body;
+    this.phase = 'placing';
+  },
+
+  // ==================== COMPOUND SHAPES ====================
+  compoundMesh_L(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m2.position.set(1,0,0); g.add(m2);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(0,1,0); g.add(m3);
+    return g;
+  },
+  compoundBody_L(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.1, angularDamping: 0.15 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,1,0));
+    return b;
+  },
+  compoundMesh_T(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m1.position.set(-1,0,0); g.add(m1);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(1,0,0); g.add(m3);
+    const m4 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m4.position.set(0,1,0); g.add(m4);
+    return g;
+  },
+  compoundBody_T(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.1, angularDamping: 0.15 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(-1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,1,0));
+    return b;
+  },
+  compoundMesh_Step(s) {
+    const g = new THREE.Group(), mat = createToyMaterial(s.color);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat));
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m2.position.set(1,0,0); g.add(m2);
+    const m3 = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat); m3.position.set(1,1,0); g.add(m3);
+    return g;
+  },
+  compoundBody_Step(s) {
+    const b = new CANNON.Body({ mass: s.mass, material: this.blockMaterial, linearDamping: 0.1, angularDamping: 0.15 });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(0,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,0,0));
+    b.addShape(new CANNON.Box(new CANNON.Vec3(.5,.5,.5)), new CANNON.Vec3(1,1,0));
+    return b;
+  },
+
+  // ==================== CONTROLS ====================
+  rotateBlock(dir = 1) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    const rot = new CANNON.Quaternion();
+    rot.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), dir * Math.PI / 4);
+    this.currentBody.quaternion.copy(rot.mult(this.currentBody.quaternion));
+    this.syncMesh();
+  },
+
+  dropBlock() {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    this.phase = 'dropping';
+    this.currentBody.type = CANNON.Body.DYNAMIC;
+    this.currentBody.wakeUp();
+    this.settleTimer = 0;
+  },
+
+  commitBlock() {
+    if (this.phase !== 'settling') return;
+    this.bodies.push(this.currentBody);
+    this.meshes.push(this.currentMesh);
+
+    const h = this.currentBody.position.y + 1;
+    if (h > this.maxHeight) this.maxHeight = h;
+    this.blocksPlaced++;
+    this.currentMesh = null;
+    this.currentBody = null;
+    this.phase = 'idle';
+
+    // Pan camera up with stack
+    if (this.maxHeight > 5) {
+      this.camTarget.y = this.maxHeight * 0.5;
+      this.updateCamera();
+    }
+
+    this.updateHUD();
+    setTimeout(() => this.spawnNextBlock(), 500);
+  },
+
+  // ==================== STABILITY ====================
+  checkStability() {
+    for (const body of this.bodies) {
+      if (body.position.y < -2) return 'fallen';
+      if (Math.abs(body.position.x) > this.platformHalf + 1 || Math.abs(body.position.z) > this.platformHalf + 1) return 'fallen';
+    }
+    if (this.currentBody && this.currentBody.position.y < -2) return 'fallen';
+
+    let vel = 0;
+    for (const body of this.bodies) { vel += body.velocity.length() + body.angularVelocity.length(); }
+    if (this.currentBody && this.currentBody.type === CANNON.Body.DYNAMIC) {
+      vel += this.currentBody.velocity.length() + this.currentBody.angularVelocity.length();
+    }
+    return vel < 0.3 ? 'stable' : 'moving';
+  },
+
+  gameOver() {
+    this.phase = 'gameover';
+    if (this.blocksPlaced > this.best) {
+      this.best = this.blocksPlaced;
+      localStorage.setItem('stackd_best_' + this.difficulty, this.best);
+      const d = DIFFICULTIES[this.difficulty];
+      document.getElementById('best-display').textContent = 'Best: ' + this.best + ' (' + d.label + ')';
+    }
+    document.getElementById('go-height').textContent = 'Height: ' + this.maxHeight.toFixed(1);
+    document.getElementById('go-blocks').textContent = 'Blocks: ' + this.blocksPlaced;
+    document.getElementById('go-best').textContent = 'Best: ' + this.best + ' blocks';
+    document.getElementById('game-over-overlay').classList.add('show');
+  },
+
+  // ==================== SYNC ====================
+  syncMesh() {
+    if (!this.currentMesh || !this.currentBody) return;
+    this.currentMesh.position.copy(this.currentBody.position);
+    this.currentMesh.quaternion.copy(this.currentBody.quaternion);
+  },
+  syncAllMeshes() {
+    for (let i = 0; i < this.bodies.length; i++) {
+      this.meshes[i].position.copy(this.bodies[i].position);
+      this.meshes[i].quaternion.copy(this.bodies[i].quaternion);
+    }
+    this.syncMesh();
+  },
+  updateHUD() {
+    document.getElementById('height-display').textContent = 'Height: ' + this.maxHeight.toFixed(1);
+    document.getElementById('blocks-display').textContent = 'Blocks: ' + this.blocksPlaced;
+  },
+
+  moveBlock(dx, dz) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    this.currentBody.position.x += dx * this.moveStep;
+    this.currentBody.position.z += dz * this.moveStep;
+    this.syncMesh();
+  },
+
+  // Move block up/down (Y axis), stopping just above obstacles below
+  moveBlockY(dy) {
+    if (this.phase !== 'placing' || !this.currentBody) return;
+    const step = this.moveStep;
+    const pos = this.currentBody.position;
+    const newY = pos.y + dy * step;
+
+    if (dy < 0) {
+      // Moving down — find the floor below
+      const minY = this.getFloorBelow(pos.x, pos.z) + 1.5; // 1.5 units above surface
+      pos.y = Math.max(newY, minY);
+    } else {
+      // Moving up — cap at reasonable height
+      pos.y = Math.min(newY, this.maxHeight + 12);
+    }
+    this.dropY = pos.y; // update float center
+    this.syncMesh();
+  },
+
+  // Find the highest surface directly below a given x,z position
+  getFloorBelow(x, z) {
+    let highest = 0; // ground level
+    for (const body of this.bodies) {
+      const p = body.position;
+      // Simple proximity check — if block is roughly above this body
+      const dx = Math.abs(p.x - x);
+      const dz = Math.abs(p.z - z);
+      if (dx < 2 && dz < 2) {
+        // Estimate top of this body (position.y + ~half height)
+        const top = p.y + 1;
+        if (top > highest) highest = top;
+      }
+    }
+    return highest;
+  },
+
+  onKey(e) {
+    if (this.phase === 'placing') {
+      if (e.shiftKey) {
+        // Shift + arrows = raise/lower
+        switch(e.key) {
+          case 'ArrowUp': e.preventDefault(); this.moveBlockY(1); return;
+          case 'ArrowDown': e.preventDefault(); this.moveBlockY(-1); return;
+        }
+      }
+      switch(e.key) {
+        case 'ArrowLeft': e.preventDefault(); this.moveBlock(-1, 0); return;
+        case 'ArrowRight': e.preventDefault(); this.moveBlock(1, 0); return;
+        case 'ArrowUp': e.preventDefault(); this.moveBlock(0, -1); return;
+        case 'ArrowDown': e.preventDefault(); this.moveBlock(0, 1); return;
+        case 'q': case 'Q': this.rotateBlock(1); return;
+        case 'e': case 'E': this.rotateBlock(-1); return;
+        case ' ': e.preventDefault(); this.dropBlock(); return;
+      }
+    }
+    // WASD handled continuously in processKeys
+  },
+
+  // ==================== LOOP ====================
+  animate() {
+    requestAnimationFrame(() => this.animate());
+    const dt = Math.min(this.clock.getDelta(), 0.05);
+
+    // WASD camera orbit (continuous)
+    this.processKeys(dt);
+
+    // Smooth camera tracking — follow the current block
+    if (this.currentBody && (this.phase === 'placing' || this.phase === 'dropping')) {
+      const bp = this.currentBody.position;
+      const lerp = 0.08;
+      this.camTarget.x += (bp.x - this.camTarget.x) * lerp;
+      this.camTarget.y += (bp.y * 0.5 - this.camTarget.y) * lerp;
+      this.camTarget.z += (bp.z - this.camTarget.z) * lerp;
+      this.updateCamera();
+    }
+
+    if (this.phase !== 'idle' && this.phase !== 'gameover') {
+      this.world.step(1/60, dt, 3);
+      this.syncAllMeshes();
+    }
+
+    if (this.phase === 'dropping') {
+      this.settleTimer += dt;
+      const st = this.checkStability();
+      if (st === 'fallen') this.gameOver();
+      else if (st === 'stable' && this.settleTimer > 0.5) { this.phase = 'settling'; this.commitBlock(); }
+      else if (this.settleTimer > 8) {
+        if (this.checkStability() === 'fallen') this.gameOver();
+        else { this.phase = 'settling'; this.commitBlock(); }
+      }
+    }
+
+    if (this.phase === 'settling') {
+      this.settleTimer += dt;
+      if (this.checkStability() === 'fallen') this.gameOver();
+    }
+
+    // Float animation
+    if (this.phase === 'placing' && this.currentMesh) {
+      const t = performance.now() * 0.001;
+      this.currentMesh.position.y = this.dropY + Math.sin(t * 2) * 0.15;
+      this.currentBody.position.y = this.currentMesh.position.y;
+      if (this.currentMesh.material) {
+        this.currentMesh.material.emissive = new THREE.Color(this.currentBlock.color);
+        this.currentMesh.material.emissiveIntensity = 0.1 + Math.sin(t * 3) * 0.05;
+      }
+    }
+
+    this.renderer.render(this.scene, this.camera);
+  }
+};
+
+window.GAME = GAME;
+try { GAME.init(); console.log('Stack\'d init OK'); }
+catch(e) { console.error('Stack\'d init failed:', e); }
+</script>
+</body>
+</html>

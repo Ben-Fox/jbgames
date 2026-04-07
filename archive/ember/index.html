@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ember — Side Runner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif}
+canvas{display:block;width:100%;height:100%}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff;text-align:center}
+.overlay.hidden{display:none}
+.overlay h1{font-size:3em;background:linear-gradient(180deg,#fff 0%,#ffd700 30%,#ff6600 70%,#ff2200 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.2em;text-shadow:none}
+.overlay .sub{color:#ffaa44;font-size:1.1em;margin-bottom:1.2em}
+.overlay .info{color:#ccc;font-size:.95em;margin-bottom:.5em}
+.overlay button{padding:14px 40px;font-size:1.15em;border:none;border-radius:8px;cursor:pointer;margin:8px;background:linear-gradient(135deg,#ff6600,#ff2200);color:#fff;font-weight:bold;transition:transform .1s}
+.overlay button:hover{transform:scale(1.05)}
+.overlay button:active{transform:scale(.97)}
+.overlay .controls{color:#999;font-size:.85em;margin-top:1em}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="overlay" id="menu">
+<h1>🔥 EMBER</h1>
+<div class="sub">Side Runner</div>
+<div class="info" id="menuBest"></div>
+<button id="btnPlay">PLAY</button>
+<div class="controls">Space / Tap / Click to Jump<br>Hold for higher jump</div>
+</div>
+<div class="overlay hidden" id="gameover">
+<h1>GAME OVER</h1>
+<div class="info" id="goScore"></div>
+<div class="info" id="goPatterns"></div>
+<div class="info" id="goBest"></div>
+<button id="btnRetry">PLAY AGAIN</button>
+<button id="btnMenu">MENU</button>
+</div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H,GY;
+function resize(){W=C.width=window.innerWidth;H=C.height=window.innerHeight;GY=H*.78}
+resize();window.addEventListener('resize',resize);
+
+// ---- PATTERNS ----
+// Each pattern: {name, platforms:[{x,y,w},...], points}
+// x=relative offset from chunk start, y=pixels above ground (0=ground), w=width
+// Gap between last platform of prev chunk and first of this chunk is implicit
+// We define entry ground, pattern content, exit ground
+function P(name,pts,platforms){return{name,points:pts,platforms}}
+const PATTERNS=[
+// 1 Clean Gap
+P('Clean Gap',10,[{x:0,y:0,w:200},{x:380,y:0,w:200}]),
+// 2 Double Hop
+P('Double Hop',15,[{x:0,y:0,w:150},{x:250,y:0,w:120},{x:420,y:0,w:150}]),
+// 3 Step Up
+P('Step Up',20,[{x:0,y:0,w:150},{x:220,y:80,w:200},{x:490,y:0,w:150}]),
+// 4 Step Down
+P('Step Down',15,[{x:0,y:80,w:200},{x:270,y:0,w:150},{x:470,y:0,w:150}]),
+// 5 Triple Quick
+P('Triple Quick',20,[{x:0,y:0,w:100},{x:180,y:0,w:100},{x:360,y:0,w:100},{x:540,y:0,w:150}]),
+// 6 High Rise
+P('High Rise',25,[{x:0,y:0,w:150},{x:220,y:60,w:120},{x:410,y:130,w:120},{x:600,y:0,w:150}]),
+// 7 Cliff Drop
+P('Cliff Drop',25,[{x:0,y:120,w:250},{x:480,y:0,w:180}]),
+// 8 Staircase Up
+P('Staircase Up',25,[{x:0,y:0,w:120},{x:190,y:50,w:110},{x:370,y:100,w:110},{x:550,y:150,w:120}]),
+// 9 Staircase Down
+P('Staircase Down',25,[{x:0,y:150,w:120},{x:210,y:100,w:110},{x:420,y:50,w:110},{x:630,y:0,w:150}]),
+// 10 Valley
+P('Valley',30,[{x:0,y:0,w:150},{x:250,y:-60,w:80},{x:430,y:0,w:150}]),
+// 11 Long Send
+P('Long Send',35,[{x:0,y:0,w:200},{x:480,y:0,w:200}]),
+// 12 Stepping Stone
+P('Stepping Stone',30,[{x:0,y:0,w:150},{x:280,y:40,w:60},{x:470,y:0,w:150}]),
+// 13 Double Decker
+P('Double Decker',30,[{x:0,y:0,w:150},{x:280,y:0,w:150},{x:280,y:110,w:150,bonus:true},{x:500,y:0,w:150}]),
+// 14 Quick-Stop
+P('Quick-Stop',35,[{x:0,y:0,w:150},{x:280,y:30,w:50},{x:460,y:0,w:150}]),
+// 15 Hang Time
+P('Hang Time',35,[{x:0,y:140,w:200},{x:480,y:0,w:200}]),
+// 16 Zigzag
+P('Zigzag',40,[{x:0,y:0,w:100},{x:170,y:80,w:90},{x:330,y:0,w:90},{x:490,y:80,w:90},{x:650,y:0,w:120}]),
+// 17 Gap Train
+P('Gap Train',35,[{x:0,y:0,w:100},{x:200,y:0,w:100},{x:400,y:0,w:100},{x:600,y:0,w:100},{x:800,y:0,w:120}]),
+// 18 Leap of Faith
+P('Leap of Faith',40,[{x:0,y:140,w:180},{x:500,y:-30,w:100}]),
+// 19 Island Hopping
+P('Island Hopping',45,[{x:0,y:0,w:150},{x:250,y:30,w:55},{x:405,y:60,w:55},{x:560,y:30,w:55},{x:720,y:0,w:150}]),
+// 20 The Gauntlet
+P('The Gauntlet',50,[{x:0,y:0,w:120},{x:190,y:90,w:100},{x:370,y:90,w:50},{x:520,y:0,w:100},{x:700,y:0,w:150}]),
+];
+
+// ---- GAME STATE ----
+let state='menu'; // menu, play, dead, gameover
+let score,chain,bestScore,cycle,patIdx,speed;
+let platforms,camX,player,particles,jumpHeld,jumpTime;
+let patternLabel,patternLabelTimer,totalPatterns;
+let deathTimer;
+let bgTrees=[];
+
+function loadBest(){bestScore=parseInt(localStorage.getItem('ember6_best'))||0}
+function saveBest(){if(score>bestScore){bestScore=score;localStorage.setItem('ember6_best',bestScore)}}
+loadBest();
+
+// ---- PLATFORM GENERATION ----
+let nextX; // world X where next chunk starts
+function genChunk(idx){
+  const pat=PATTERNS[idx%20];
+  const base=nextX;
+  const out=[];
+  // breathing room ground before pattern
+  out.push({x:base,y:0,w:200,pattern:-1});
+  const pStart=base+200;
+  pat.platforms.forEach(p=>{
+    out.push({x:pStart+p.x,y:p.y,w:p.w,pattern:idx,bonus:!!p.bonus});
+  });
+  // figure out end
+  const last=pat.platforms[pat.platforms.length-1];
+  nextX=pStart+last.x+last.w;
+  return{platforms:out,name:pat.name,points:pat.points,idx};
+}
+
+// ---- PARTICLES ----
+function spawnParticles(wx,y,count,color,vx,vy,life){
+  for(let i=0;i<count;i++){
+    particles.push({wx,y,vx:(Math.random()-.5)*vx,vy:-Math.random()*vy,life:life||30,maxLife:life||30,
+      color:color||`hsl(${30+Math.random()*20},100%,${50+Math.random()*30}%)`});
+  }
+}
+
+// ---- INIT GAME ----
+function initGame(){
+  score=0;chain=0;cycle=1;patIdx=0;totalPatterns=0;
+  speed=4;camX=0;
+  platforms=[];nextX=0;
+  particles=[];jumpHeld=false;jumpTime=0;
+  patternLabel='';patternLabelTimer=0;deathTimer=0;lastScoredPattern=-1;floatingTexts=[];
+  // gen initial chunks
+  // start with a long ground
+  platforms.push({x:0,y:0,w:400,pattern:-1});
+  nextX=400;
+  for(let i=0;i<5;i++){
+    const c=genChunk(patIdx);
+    c.platforms.forEach(p=>platforms.push(p));
+    patIdx++;
+  }
+  player={x:200,y:GY-40,vy:0,onGround:false,w:28,h:36,dead:false,_wasOnGround:false};
+  // gen trees
+  bgTrees=[];
+  for(let i=0;i<40;i++)bgTrees.push({x:Math.random()*W*3,h:40+Math.random()*60,w:20+Math.random()*15});
+  showPattern(0);
+  state='play';
+}
+
+function showPattern(idx){
+  patternLabel=PATTERNS[idx%20].name;
+  patternLabelTimer=120;
+}
+
+// ---- INPUT ----
+let jumpPressed=false;
+function jDown(){if(state==='play'&&!player.dead)jumpPressed=true;}
+function jUp(){jumpPressed=false;jumpHeld=false;}
+window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jDown()}});
+window.addEventListener('keyup',e=>{if(e.code==='Space')jUp()});
+C.addEventListener('mousedown',e=>{e.preventDefault();jDown()});
+C.addEventListener('mouseup',jUp);
+C.addEventListener('touchstart',e=>{e.preventDefault();jDown()},{passive:false});
+C.addEventListener('touchend',jUp);
+
+// ---- UPDATE ----
+function update(){
+  if(state!=='play')return;
+  if(player.dead){
+    deathTimer++;
+    player.vy+=.6;player.y+=player.vy;
+    if(deathTimer>60)showGameOver();
+    return;
+  }
+  const maxJumpTime=12;
+  const jumpPower=-11;
+  const gravity=.55;
+
+  // Move camera (player stays at fixed screen X)
+  camX+=speed;
+  const px=camX+150; // player world X (fixed screen pos = 150)
+
+  // Jump logic - variable height
+  if(jumpPressed&&player.onGround&&!jumpHeld){
+    player.vy=jumpPower;player.onGround=false;jumpHeld=true;jumpTime=0;
+    spawnParticles(px,player.y+player.h/2,5,null,3,2,20);
+  }
+  if(jumpHeld&&jumpPressed&&jumpTime<maxJumpTime){
+    player.vy+=-0.5;jumpTime++;
+  }
+  if(!jumpPressed)jumpHeld=false;
+
+  // Gravity
+  if(!player.onGround)player.vy+=gravity;
+  player.y+=player.vy;
+
+  // Platform collision
+  player.onGround=false;
+  let onAny=false;
+  const playerWorldLeft=px-player.w/2;
+  const playerWorldRight=px+player.w/2;
+  const playerBottom=player.y+player.h/2;
+
+  for(const pl of platforms){
+    const plTop=GY-pl.y;
+    const plLeft=pl.x;
+    const plRight=pl.x+pl.w;
+    // Check if player is over this platform
+    if(playerWorldRight>plLeft+4&&playerWorldLeft<plRight-4){
+      // Landing on top
+      if(player.vy>=0&&playerBottom>=plTop-5&&playerBottom<=plTop+12){
+        player.y=plTop-player.h/2;
+        player.vy=0;player.onGround=true;onAny=true;
+
+        // Check if just landed (was in air)
+        if(!player._wasOnGround){
+          // Score for pattern completion check
+          handleLanding(pl,playerWorldLeft-plLeft);
+          spawnParticles(camX+150,plTop,8,null,4,3,25);
+        }
+        break;
+      }
+    }
+  }
+  player._wasOnGround=player.onGround;
+
+  // Fall death
+  if(player.y>H+50){
+    die();return;
+  }
+
+  // Trail particles
+  if(Math.random()<.3){
+    particles.push({wx:px-10+Math.random()*5,y:player.y-5+Math.random()*10,
+      vx:-1-Math.random(),vy:-Math.random()*1.5,life:15,maxLife:15,
+      color:`hsl(${20+Math.random()*30},100%,${50+Math.random()*40}%)`});
+  }
+
+  // Update particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.wx+=p.vx;p.y+=p.vy;p.life--;
+    if(p.life<=0)particles.splice(i,1);
+  }
+
+  // Generate more chunks as needed
+  while(nextX<camX+W*2){
+    const c=genChunk(patIdx);
+    c.platforms.forEach(p=>platforms.push(p));
+    if(patIdx%20===0&&patIdx>0){
+      cycle++;speed=Math.min(8,4+cycle*.3);
+    }
+    showPattern(patIdx);
+    patIdx++;
+  }
+
+  // Clean old platforms
+  platforms=platforms.filter(p=>p.x+p.w>camX-200);
+
+  if(patternLabelTimer>0)patternLabelTimer--;
+}
+
+let lastScoredPattern=-1;
+function handleLanding(pl,distFromLeft){
+  if(pl.pattern<0)return; // breathing room
+  if(pl.pattern===lastScoredPattern)return;
+  lastScoredPattern=pl.pattern;
+  totalPatterns++;
+
+  const pat=PATTERNS[pl.pattern%20];
+  let pts=pat.points;
+  let clean=false;
+  if(distFromLeft<pl.w*.2){
+    clean=true;pts=Math.floor(pts*1.5);
+    chain++;
+  } else {
+    chain=0;
+  }
+  const mult=Math.min(10,chain>0?chain:1);
+  pts*=mult;
+  if(pl.bonus)pts*=2;
+  score+=pts;
+
+  // Floating text
+  const sx=150;const sy=player.y-30;
+  floatingTexts.push({x:sx,y:sy,text:clean?`CLEAN! +${pts}`:`+${pts}`,life:60,color:clean?'#ffff00':'#ffffff'});
+  if(pl.bonus)floatingTexts.push({x:sx,y:sy-20,text:'BONUS PATH!',life:60,color:'#ff44ff'});
+}
+let floatingTexts=[];
+
+function die(){
+  player.dead=true;player.vy=-8;deathTimer=0;
+  spawnParticles(camX+150,player.y,20,null,8,8,40);
+}
+function showGameOver(){
+  saveBest();state='gameover';
+  document.getElementById('goScore').textContent=`Score: ${score}`;
+  document.getElementById('goPatterns').textContent=`Patterns: ${totalPatterns} | Cycle: ${cycle}`;
+  document.getElementById('goBest').textContent=`Best: ${bestScore}`;
+  document.getElementById('gameover').classList.remove('hidden');
+}
+
+// ---- DRAW ----
+function draw(){
+  X.clearRect(0,0,W,H);
+
+  // Sky
+  const sky=X.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#1a0533');sky.addColorStop(.4,'#3b1578');sky.addColorStop(.7,'#ff6644');sky.addColorStop(1,'#ffaa33');
+  X.fillStyle=sky;X.fillRect(0,0,W,H);
+
+  // Mountains (parallax)
+  drawMountains(.1,'#2d1b4e',H*.45,H*.35);
+  drawMountains(.2,'#4a2d6e',H*.55,H*.25);
+
+  // Hills
+  drawHills(.3,'#2d6b1e',H*.65,H*.15);
+  drawHills(.4,'#3d8b2e',H*.7,H*.1);
+
+  // Trees
+  X.fillStyle='#1a5510';
+  bgTrees.forEach(t=>{
+    const tx=(t.x-camX*.35)%((W+200)*2);
+    const bx=tx<-100?tx+((W+200)*2):tx;
+    X.beginPath();X.moveTo(bx,GY);X.lineTo(bx+t.w/2,GY-t.h);X.lineTo(bx+t.w,GY);X.fill();
+  });
+
+  // Platforms & ground
+  const screenOff=camX;
+  for(const pl of platforms){
+    const sx=pl.x-screenOff;
+    const sy=GY-pl.y;
+    if(sx>W+50||sx+pl.w<-50)continue;
+
+    if(pl.y<=0&&!pl.bonus){
+      // Ground-level: draw earth
+      X.fillStyle='#5c3a1e';X.fillRect(sx,sy,pl.w,H-sy);
+      X.fillStyle='#4a8c2a';X.fillRect(sx,sy,pl.w,6);
+      // Grass blades
+      X.fillStyle='#5aad35';
+      for(let gx=sx;gx<sx+pl.w;gx+=8){
+        X.fillRect(gx,sy-4+Math.sin(gx*.3)*2,2,6);
+      }
+    } else {
+      // Elevated platform
+      const ph=16;
+      // Stone look
+      X.fillStyle=pl.bonus?'#8844cc':'#8b7355';
+      X.fillRect(sx,sy-ph,pl.w,ph+4);
+      X.fillStyle=pl.bonus?'#aa66ee':'#a08868';
+      X.fillRect(sx+2,sy-ph+2,pl.w-4,3);
+      // Edge marks
+      X.fillStyle='#00000033';
+      X.fillRect(sx,sy+4,pl.w,2);
+    }
+  }
+
+  // Void/pit darkness
+  X.fillStyle='rgba(0,0,0,0.6)';
+  // Draw void below gaps (simple: fill below GY where no platform exists)
+  // Simplified: just darken below ground line in gap areas
+  // Actually let's draw pits between platforms
+  const sorted=[...platforms].sort((a,b)=>a.x-b.x);
+  for(let i=0;i<sorted.length-1;i++){
+    const end=sorted[i].x+sorted[i].w;
+    const start=sorted[i+1].x;
+    if(start>end+5){
+      const sx1=end-screenOff;
+      const sx2=start-screenOff;
+      X.fillStyle='rgba(0,0,0,0.5)';
+      X.fillRect(sx1,GY+6,sx2-sx1,H-GY);
+    }
+  }
+
+  // Particles (world coords)
+  particles.forEach(p=>{
+    const alpha=p.life/p.maxLife;
+    X.globalAlpha=alpha;
+    X.fillStyle=p.color;
+    const sz=3*alpha+1;
+    const sx=p.wx-camX;
+    X.beginPath();X.arc(sx,p.y,sz,0,Math.PI*2);X.fill();
+  });
+  X.globalAlpha=1;
+
+  // Player (flame)
+  if(state==='play'||state==='dead'){
+    const px=150;const py=player.y;
+    drawFlame(px,py,player.w,player.h);
+  }
+
+  // Floating texts
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y-=1;ft.life--;
+    X.globalAlpha=ft.life/60;
+    X.fillStyle=ft.color;X.font='bold 16px sans-serif';X.textAlign='center';
+    X.fillText(ft.text,ft.x,ft.y);
+    if(ft.life<=0)floatingTexts.splice(i,1);
+  }
+  X.globalAlpha=1;
+
+  // HUD
+  if(state==='play'){
+    X.fillStyle='#fff';X.font='bold 20px sans-serif';X.textAlign='left';
+    X.fillText(`Score: ${score}`,15,35);
+    X.font='14px sans-serif';
+    X.fillText(`Best: ${bestScore}`,15,55);
+
+    // Chain
+    X.textAlign='center';
+    if(chain>1){
+      X.font='bold 28px sans-serif';
+      X.fillStyle=`hsl(${(Date.now()/10)%360},100%,70%)`;
+      X.fillText(`×${Math.min(10,chain)} CHAIN`,W/2,40);
+    }
+
+    // Pattern progress
+    X.textAlign='right';X.fillStyle='#fff';X.font='bold 18px sans-serif';
+    const curPat=((totalPatterns)%20)+1;
+    X.fillText(`Pattern ${curPat}/20`,W-15,35);
+    X.font='14px sans-serif';
+    X.fillText(`Cycle ${cycle}`,W-15,55);
+
+    // Pattern label
+    if(patternLabelTimer>0){
+      X.textAlign='center';
+      X.globalAlpha=Math.min(1,patternLabelTimer/30);
+      X.font='bold 24px sans-serif';X.fillStyle='#ffdd44';
+      X.fillText(patternLabel,W/2,H*.4);
+      X.globalAlpha=1;
+    }
+  }
+}
+
+function drawFlame(x,y,w,h){
+  // Teardrop flame
+  const cx=x,cy=y;
+  X.save();
+  // Body glow
+  X.shadowColor='#ff6600';X.shadowBlur=20;
+
+  // Main flame shape
+  const grad=X.createRadialGradient(cx,cy,2,cx,cy-5,h*.7);
+  grad.addColorStop(0,'#ffffff');
+  grad.addColorStop(.3,'#ffff00');
+  grad.addColorStop(.6,'#ff8800');
+  grad.addColorStop(1,'#ff2200');
+
+  X.fillStyle=grad;
+  X.beginPath();
+  X.moveTo(cx,cy-h*.6);
+  X.bezierCurveTo(cx+w*.6,cy-h*.3,cx+w*.5,cy+h*.4,cx,cy+h*.45);
+  X.bezierCurveTo(cx-w*.5,cy+h*.4,cx-w*.6,cy-h*.3,cx,cy-h*.6);
+  X.fill();
+
+  X.shadowBlur=0;
+  // Eyes
+  X.fillStyle='#000';
+  X.beginPath();X.arc(cx-5,cy-2,3,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(cx+5,cy-2,3,0,Math.PI*2);X.fill();
+  // Eye highlights
+  X.fillStyle='#fff';
+  X.beginPath();X.arc(cx-4,cy-3,1.2,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(cx+6,cy-3,1.2,0,Math.PI*2);X.fill();
+
+  X.restore();
+}
+
+function drawMountains(parallax,color,baseY,height){
+  X.fillStyle=color;X.beginPath();X.moveTo(0,H);
+  const off=camX*parallax;
+  for(let x=0;x<=W+100;x+=60){
+    const wx=x+off;
+    const my=baseY-Math.abs(Math.sin(wx*.003)*height+Math.sin(wx*.007)*height*.5);
+    X.lineTo(x,my);
+  }
+  X.lineTo(W,H);X.closePath();X.fill();
+}
+function drawHills(parallax,color,baseY,height){
+  X.fillStyle=color;X.beginPath();X.moveTo(0,H);
+  const off=camX*parallax;
+  for(let x=0;x<=W+50;x+=30){
+    const wx=x+off;
+    const my=baseY-Math.abs(Math.sin(wx*.005)*height+Math.sin(wx*.012)*height*.4);
+    X.lineTo(x,my);
+  }
+  X.lineTo(W,H);X.closePath();X.fill();
+}
+
+// ---- LOOP ----
+function loop(){
+  update();draw();
+  requestAnimationFrame(loop);
+}
+
+// ---- UI ----
+function showMenu(){
+  state='menu';
+  document.getElementById('gameover').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  loadBest();
+  document.getElementById('menuBest').textContent=bestScore?`Best Score: ${bestScore}`:'';
+}
+document.getElementById('btnPlay').addEventListener('click',()=>{
+  document.getElementById('menu').classList.add('hidden');
+  initGame();
+});
+document.getElementById('btnRetry').addEventListener('click',()=>{
+  document.getElementById('gameover').classList.add('hidden');
+  initGame();
+});
+document.getElementById('btnMenu').addEventListener('click',showMenu);
+
+showMenu();
+loop();
+</script>
+</body>
+</html>

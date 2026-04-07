@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Send It — BrainSmacks</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0e0e12;overflow:hidden;touch-action:none;font-family:'Segoe UI',system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+canvas{display:block;width:100vw;height:100vh}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H,DPR;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;C.width=W*DPR;C.height=H*DPR;X.setTransform(DPR,0,0,DPR,0,0)}
+resize();window.addEventListener('resize',resize);
+
+// ── STATE ──
+const STATE={MENU:0,PLAY:1,DEAD:2};
+let state=STATE.MENU, score=0, dist=0, bestScore=+(localStorage.getItem('sendit_best')||0);
+let scoreMult=+(localStorage.getItem('sendit_mult')||1);
+let trickCount=0, bestCombo=0, gapsCleared=0;
+
+// ── MISSIONS ──
+const MISSION_TEMPLATES=[
+{t:"Travel {n}m",k:"dist",vals:[200,400,600,1000,1500]},
+{t:"Do {n} backflips",k:"backflips",vals:[1,3,5,8]},
+{t:"Do {n} tricks in one air",k:"trickchain",vals:[2,3,4]},
+{t:"Land {n} wheelies",k:"wheelies",vals:[2,5,8]},
+{t:"Get {n} perfect landings",k:"perfects",vals:[1,3,5]},
+{t:"Score {n} points",k:"score",vals:[500,1000,2500,5000]},
+{t:"Clear {n} gaps",k:"gaps",vals:[3,5,8,12]},
+{t:"Do a Nothing trick",k:"nothings",vals:[1]},
+{t:"Do {n} Supermans",k:"supermans",vals:[1,3]},
+{t:"Get a {n}x chain",k:"maxchain",vals:[2,3,4]},
+{t:"Do {n} max-charge launches",k:"maxcharges",vals:[1,3,5]},
+{t:"Land a trick past {n}m",k:"trickdist",vals:[300,600]},
+{t:"Do {n} Whips",k:"whips",vals:[2,4]},
+{t:"Do {n} frontflips",k:"frontflips",vals:[1,3,5]},
+{t:"Do {n} No-Handers",k:"nohanders",vals:[2,4]}
+];
+let missions=JSON.parse(localStorage.getItem('sendit_missions')||'null');
+let missionStats={};
+function resetMissionStats(){missionStats={dist:0,backflips:0,trickchain:0,wheelies:0,perfects:0,score:0,gaps:0,nothings:0,supermans:0,maxchain:0,maxcharges:0,trickdist:0,whips:0,frontflips:0,nohanders:0}}
+function genMission(){
+  let m=MISSION_TEMPLATES[Math.random()*MISSION_TEMPLATES.length|0];
+  let v=m.vals[Math.random()*m.vals.length|0];
+  return{text:m.t.replace('{n}',v),key:m.k,target:v,progress:0,done:false};
+}
+function initMissions(){
+  if(!missions||missions.length!==3) missions=[genMission(),genMission(),genMission()];
+  missions.forEach(m=>{m.done=m.done||false;m.progress=m.progress||0});
+  saveMissions();
+}
+function saveMissions(){localStorage.setItem('sendit_missions',JSON.stringify(missions))}
+function updateMission(key,val){
+  if(!missions)return;
+  let allDone=true;
+  missions.forEach(m=>{
+    if(m.done)return;
+    if(m.key===key){
+      if(key==='trickchain'||key==='maxchain'||key==='trickdist') m.progress=Math.max(m.progress,val);
+      else m.progress+=val;
+      if(m.progress>=m.target) m.done=true;
+    }
+    if(!m.done) allDone=false;
+  });
+  if(allDone&&missions.every(m=>m.done)){
+    let mults=[1,2,3,5,8,10];
+    let idx=mults.indexOf(scoreMult);
+    if(idx<mults.length-1) scoreMult=mults[idx+1];
+    localStorage.setItem('sendit_mult',scoreMult);
+    missions=[genMission(),genMission(),genMission()];
+    addPopup("MULTIPLIER UP! ×"+scoreMult,W/2,H/2-50,'#7c3aed',40,90);
+  }
+  saveMissions();
+}
+initMissions();
+
+// ── TERRAIN ──
+const TW=18; // terrain point spacing
+let terrain=[], terrainGenX=0;
+const baseY=H*0.65;
+const GAP_Y=baseY+400; // Y value for gaps (well below screen)
+
+// ── PATTERN SYSTEM ──
+let patternOrder=[], patternIndex=0, cycleCount=0;
+let currentPatternId=0, currentPatternName='';
+let patternNameTimer=0; // frames remaining for name display
+let patternStartTerrainIdx=0; // terrain index where current pattern started
+let patternLanded=false; // has player landed after the pattern's last gap?
+let patternsCompleted=0;
+
+const PATTERN_NAMES=[
+  '','Clean Gap','Double Hop','Step Up','Step Down','Triple Quick',
+  'High Rise','Cliff Drop','Staircase Up','Staircase Down','Valley',
+  'Long Send','Stepping Stone','Double Decker','Quick-Stop','Hang Time',
+  'Zigzag','Gap Train','Leap of Faith','Island Hopping','The Gauntlet'
+];
+function patternBonus(id){
+  if(id<=5)return 100; if(id<=10)return 200; if(id<=15)return 300; return 500;
+}
+function gapScale(){return Math.min(1+cycleCount*0.1, 1.5)} // cap at cycle 5
+function speedForCycle(){return 4.5+cycleCount*0.3}
+
+function shuffleArray(a){for(let i=a.length-1;i>0;i--){let j=Math.random()*i+1|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function initPatterns(){
+  patternOrder=[];
+  for(let i=2;i<=20;i++)patternOrder.push(i);
+  shuffleArray(patternOrder);
+  patternOrder.unshift(1); // Clean Gap always first
+  patternIndex=0;cycleCount=0;patternsCompleted=0;
+}
+function nextPattern(){
+  if(patternIndex>=patternOrder.length){
+    cycleCount++;
+    patternOrder=[];for(let i=1;i<=20;i++)patternOrder.push(i);
+    shuffleArray(patternOrder);
+    patternIndex=0;
+  }
+  let id=patternOrder[patternIndex++];
+  currentPatternId=id;
+  currentPatternName=PATTERN_NAMES[id];
+  patternNameTimer=120; // 2 seconds at 60fps
+  patternLanded=false;
+  patternStartTerrainIdx=terrain.length;
+  return id;
+}
+
+// Helper: push N points of flat terrain at given Y
+function pushFlat(y,n){for(let i=0;i<n;i++)terrain.push(y)}
+// Helper: smooth ramp from current Y to target Y over n points (cosine interp)
+function pushRamp(fromY,toY,n){
+  for(let i=0;i<n;i++){
+    let t=(i+1)/n;
+    let smooth=0.5-0.5*Math.cos(t*Math.PI);
+    terrain.push(fromY+(toY-fromY)*smooth);
+  }
+}
+// Helper: push gap (below-screen terrain)
+function pushGap(n){for(let i=0;i<n;i++)terrain.push(GAP_Y)}
+// Helper: breathing room (flat at baseY)
+function pushBreather(){let n=Math.round((500+Math.random()*200)/TW);pushFlat(baseY,n)}
+
+// Scale gap point count by cycle difficulty
+function gs(n){return Math.round(n*gapScale())}
+
+// ── PATTERN GENERATORS ──
+// Real BMX scale: steep lips (80-150px rise), big gaps (300-600px), proper landings.
+// Ramps are SHORT and STEEP (like real dirt jump lips). Landings have downslopes to catch you.
+// pushRamp over 4-5 points = steep lip. Gaps are 16-35 points (288-630px).
+const PATTERNS={
+  1:function(){ // Clean Gap — steep lip, big air, land BELOW takeoff
+    pushFlat(baseY,10);
+    pushRamp(baseY,baseY-120,10); // takeoff lip
+    pushGap(gs(22));
+    pushRamp(baseY+60,baseY+30,10); // gentle landing slope below takeoff
+    pushRamp(baseY+30,baseY,8);
+    pushFlat(baseY,6);
+  },
+  2:function(){ // Double Hop — two big jumps, landings slope down
+    pushFlat(baseY,8);
+    pushRamp(baseY,baseY-100,8);
+    pushGap(gs(18));
+    pushRamp(baseY+50,baseY+20,10); // gentle catch
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,12); // good recovery
+    pushRamp(baseY,baseY-100,8);
+    pushGap(gs(18));
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,6);
+  },
+  3:function(){ // Step Up — launch to high plateau, ride across, massive drop off edge
+    pushFlat(baseY,8);
+    pushRamp(baseY,baseY-150,12);
+    pushFlat(baseY-150,14);
+    pushGap(gs(28));
+    pushRamp(baseY+80,baseY+40,12); // long gentle catch far below
+    pushRamp(baseY+40,baseY,10);
+    pushFlat(baseY,6);
+  },
+  4:function(){ // Step Down — start high, lip up, land WAY below
+    pushRamp(baseY,baseY-120,10);
+    pushFlat(baseY-120,12);
+    pushRamp(baseY-120,baseY-150,6); // lip up from plateau
+    pushGap(gs(20));
+    pushRamp(baseY+60,baseY+30,12); // gentle land deep below
+    pushRamp(baseY+30,baseY,10);
+    pushFlat(baseY,6);
+  },
+  5:function(){ // Triple Quick — three punchy jumps with drops
+    for(let i=0;i<3;i++){
+      pushFlat(baseY,5);
+      pushRamp(baseY,baseY-80,7);
+      pushGap(gs(14));
+      pushRamp(baseY+40,baseY+15,8); // gentle catch below
+      pushRamp(baseY+15,baseY,6);
+    }
+    pushFlat(baseY,6);
+  },
+  6:function(){ // High Rise — climb to massive height, insane vertical drop
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-220,16); // long gradual climb
+    pushFlat(baseY-220,10);
+    pushGap(gs(32));
+    pushRamp(baseY+100,baseY+50,14); // very long gentle catch far below
+    pushRamp(baseY+50,baseY,10);
+    pushFlat(baseY,6);
+  },
+  7:function(){ // Cliff Drop — long flat at height, edge just disappears. Free fall.
+    pushRamp(baseY,baseY-180,14);
+    pushFlat(baseY-180,18);
+    pushGap(gs(28));
+    pushRamp(baseY+60,baseY+20,14); // long gentle catch
+    pushRamp(baseY+20,baseY,10);
+    pushFlat(baseY,6);
+  },
+  8:function(){ // Staircase Up — ascending steps, huge final drop
+    let levels=[baseY, baseY-80, baseY-160, baseY-240];
+    for(let i=0;i<3;i++){
+      pushFlat(levels[i],6);
+      pushRamp(levels[i],levels[i]-50,7);
+      pushGap(gs(12));
+      pushRamp(levels[i+1]+20,levels[i+1],6); // gentle step landing
+    }
+    pushFlat(levels[3],8);
+    pushGap(gs(34));
+    pushRamp(baseY+100,baseY+40,14); // very long catch from height
+    pushRamp(baseY+40,baseY,10);
+    pushFlat(baseY,6);
+  },
+  9:function(){ // Staircase Down — start high, each drop gets bigger
+    pushRamp(baseY,baseY-180,14);
+    let levels=[baseY-180, baseY-110, baseY-40, baseY+40];
+    for(let i=0;i<3;i++){
+      pushFlat(levels[i],6);
+      pushRamp(levels[i],levels[i]-30,5);
+      pushGap(gs(12+i*4));
+      pushRamp(levels[i+1]+15,levels[i+1],6); // gentle step catch
+    }
+    pushRamp(baseY+40,baseY,8);
+    pushFlat(baseY,6);
+  },
+  10:function(){ // Valley — drop deep, build speed, massive launch out
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY+150,12); // gradual valley drop
+    pushFlat(baseY+150,10);
+    pushRamp(baseY+150,baseY-80,16); // long uphill — builds speed
+    pushGap(gs(22));
+    pushRamp(baseY+50,baseY+20,10); // gentle catch
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,6);
+  },
+  11:function(){ // Long Send — THE gap. Full charge or die.
+    pushFlat(baseY,8);
+    pushRamp(baseY,baseY-140,10); // big lip
+    pushGap(gs(36));
+    pushRamp(baseY+80,baseY+40,12); // long gentle catch below
+    pushRamp(baseY+40,baseY,10);
+    pushFlat(baseY,6);
+  },
+  12:function(){ // Stepping Stone — two gaps with tiny island between
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-100,8);
+    pushGap(gs(14));
+    pushFlat(baseY+20,5); // stepping stone below takeoff
+    pushRamp(baseY+20,baseY-40,7);
+    pushGap(gs(14));
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,6);
+  },
+  13:function(){ // Double Decker — high bonus path or low safe path
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-130,10);
+    pushGap(gs(12));
+    pushFlat(baseY-160,5); // HIGH platform (bonus)
+    pushGap(gs(8));
+    pushRamp(baseY+50,baseY+20,12); // LOW gentle landing
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,6);
+  },
+  14:function(){ // Quick-Stop — gap to tiny platform, instantly launch again
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-100,8);
+    pushGap(gs(16));
+    pushFlat(baseY+30,5); // tiny platform below takeoff
+    pushRamp(baseY+30,baseY-70,8);
+    pushGap(gs(16));
+    pushRamp(baseY+50,baseY+20,10);
+    pushRamp(baseY+20,baseY,8);
+    pushFlat(baseY,6);
+  },
+  15:function(){ // Hang Time — highest launch, maximum air, land way way down
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-200,12); // enormous lip
+    pushGap(gs(38));
+    pushRamp(baseY+100,baseY+50,14); // very long gentle catch way below
+    pushRamp(baseY+50,baseY,10);
+    pushFlat(baseY,6);
+  },
+  16:function(){ // Zigzag — up/down/up/down, 4 jumps
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY-90,8);
+    pushGap(gs(12));
+    pushRamp(baseY+40,baseY+20,8); // gentle land low
+    pushFlat(baseY+20,4);
+    pushRamp(baseY+20,baseY-70,10);
+    pushGap(gs(12));
+    pushRamp(baseY+40,baseY+15,8);
+    pushFlat(baseY+15,4);
+    pushRamp(baseY+15,baseY-90,10);
+    pushGap(gs(12));
+    pushRamp(baseY+40,baseY+20,8);
+    pushFlat(baseY+20,4);
+    pushRamp(baseY+20,baseY-70,10);
+    pushGap(gs(12));
+    pushRamp(baseY+30,baseY,10);
+    pushFlat(baseY,6);
+  },
+  17:function(){ // Gap Train — 4 identical big jumps, rhythm
+    for(let i=0;i<4;i++){
+      pushFlat(baseY,6);
+      pushRamp(baseY,baseY-100,8);
+      pushGap(gs(20));
+      pushRamp(baseY+50,baseY+20,10); // gentle catch below
+      pushRamp(baseY+20,baseY,8);
+    }
+    pushFlat(baseY,6);
+  },
+  18:function(){ // Leap of Faith — high platform, gap, tiny narrow landing far below
+    pushRamp(baseY,baseY-160,12);
+    pushFlat(baseY-160,14);
+    pushRamp(baseY-160,baseY-180,5);
+    pushGap(gs(30));
+    pushFlat(baseY+30,5); // narrow landing BELOW ground
+    pushRamp(baseY+30,baseY,8);
+    pushFlat(baseY,6);
+  },
+  19:function(){ // Island Hopping — 3 tiny islands over the void, descending
+    pushFlat(baseY,6);
+    pushRamp(baseY,baseY-100,8);
+    pushGap(gs(14));
+    pushFlat(baseY-30,4); // island 1
+    pushRamp(baseY-30,baseY-60,5);
+    pushGap(gs(14));
+    pushFlat(baseY+10,4); // island 2 — lower
+    pushRamp(baseY+10,baseY-30,5);
+    pushGap(gs(14));
+    pushRamp(baseY+40,baseY+10,6); // island 3
+    pushRamp(baseY+10,baseY,6);
+    pushFlat(baseY,6);
+  },
+  20:function(){ // The Gauntlet — the ultimate combo run
+    pushFlat(baseY,5);
+    pushRamp(baseY,baseY-120,10);
+    pushGap(gs(16));
+    pushFlat(baseY+40,5);
+    pushRamp(baseY+40,baseY-90,10);
+    pushGap(gs(14));
+    pushRamp(baseY-140,baseY-160,5);
+    pushFlat(baseY-160,8);
+    pushGap(gs(34));
+    pushRamp(baseY+100,baseY+40,14); // very long gentle catch
+    pushRamp(baseY+40,baseY,10);
+    pushFlat(baseY,6);
+  }
+};
+
+function difficulty(){return Math.min(cycleCount/5,1)}
+function terrainYAt(wx){
+  let i=Math.floor(wx/TW);
+  if(i<0)return baseY;
+  if(i>=terrain.length-1)return terrain[terrain.length-1]||baseY;
+  let f=(wx-i*TW)/TW;
+  let a=terrain[i]??baseY, b=terrain[i+1]??baseY;
+  return a+(b-a)*f;
+}
+function terrainAngleAt(wx){
+  let y1=terrainYAt(wx-5),y2=terrainYAt(wx+5);
+  return Math.atan2(y2-y1,10);
+}
+function genTerrain(){
+  while(terrainGenX<camX+W*2){
+    // Need more terrain - generate next pattern
+    let id=nextPattern();
+    pushBreather();
+    PATTERNS[id]();
+    pushBreather();
+    terrainGenX=terrain.length*TW;
+  }
+}
+
+// ── BIKE / PHYSICS ──
+let bike={x:200,y:0,vx:4,vy:0,angle:0,angVel:0,grounded:true,wheelRot:0};
+let charging=false, charge=0, nearRamp=false;
+let airborne=false, airTricks=[], trickInProgress=null, trickFrame=0, trickRecovery=0;
+let comboCount=0, chainMult=1;
+let camX=0, camY=0, camZoom=1;
+let ragdoll=null, ragdollTimer=0;
+let deadTimer=0;
+let popups=[], particles=[], arcTrail=[];
+
+// ── INPUT ──
+let keys={}, touchStart=null, touchId=null, twoFingerTap=false;
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space')e.preventDefault()});
+document.addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'&&state===STATE.PLAY&&charging){releaseCharge()}});
+document.addEventListener('mousedown',e=>{if(state===STATE.MENU){startGame();return}if(state===STATE.DEAD){if(deadTimer>60){startGame()}return}charging=true});
+document.addEventListener('mouseup',e=>{if(charging)releaseCharge()});
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(state===STATE.MENU){startGame();return}
+  if(state===STATE.DEAD){if(deadTimer>60)startGame();return}
+  if(e.touches.length>=2){twoFingerTap=true;return}
+  charging=true;
+  touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY,t:Date.now()};
+  touchId=e.touches[0].identifier;
+},{passive:false});
+C.addEventListener('touchend',e=>{
+  e.preventDefault();
+  if(charging)releaseCharge();
+  if(touchStart&&airborne){
+    let t=e.changedTouches[0];
+    if(t){
+      let dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+      let dist2=Math.sqrt(dx*dx+dy*dy);
+      if(dist2>30){
+        if(Math.abs(dx)>Math.abs(dy)){
+          if(dx<0) startTrick('backflip'); else startTrick('frontflip');
+        } else {
+          if(dy<0) startTrick('nohander'); else startTrick('superman');
+        }
+      }
+    }
+  }
+  if(twoFingerTap&&airborne){startTrick('whip');twoFingerTap=false}
+  touchStart=null;
+},{passive:false});
+C.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+function releaseCharge(){
+  if(!charging)return;
+  charging=false;
+  if(bike.grounded&&charge>0.05){
+    let spd=bike.vx+charge*10;
+    let ang=terrainAngleAt(bike.x);
+    bike.vx=Math.cos(ang)*spd;
+    bike.vy=Math.sin(ang)*spd;
+    bike.grounded=false;
+    airborne=true;
+    if(charge>0.85) addPopup("SEND IT!",bike.x,bike.y-60,'#e74c3c',28,50);
+    if(charge>0.9) updateMission('maxcharges',1);
+  }
+  charge=0;
+}
+
+// ── TRICKS ──
+const TRICKS={
+  backflip:{frames:40,pts:100,angVel:-Math.PI*2/40},
+  frontflip:{frames:40,pts:100,angVel:Math.PI*2/40},
+  nohander:{frames:25,pts:50,angVel:0},
+  superman:{frames:30,pts:75,angVel:0},
+  nothing:{frames:35,pts:150,angVel:0},
+  whip:{frames:20,pts:60,angVel:0}
+};
+function startTrick(name){
+  if(!airborne||trickInProgress||trickRecovery>0)return;
+  trickInProgress=name;trickFrame=0;
+  if(TRICKS[name].angVel) bike.angVel+=TRICKS[name].angVel;
+}
+function updateTricks(){
+  if(trickRecovery>0)trickRecovery--;
+  if(!trickInProgress)return;
+  trickFrame++;
+  let t=TRICKS[trickInProgress];
+  if(trickFrame>=t.frames){
+    let repeated=airTricks.includes(trickInProgress);
+    comboCount++;
+    let mult=[1,1.5,2,3][Math.min(comboCount-1,3)];
+    chainMult=mult;
+    let pts=Math.round(t.pts*mult*(repeated?0.5:1)*scoreMult);
+    score+=pts;
+    let label=trickInProgress.toUpperCase().replace('NOHANDER','NO-HANDER');
+    addPopup(label+" +"+pts,bike.x,bike.y-80,'#2980b9',22,45);
+    airTricks.push(trickInProgress);
+    trickCount++;
+    updateMission(trickInProgress==='backflip'?'backflips':trickInProgress==='frontflip'?'frontflips':trickInProgress==='nohander'?'nohanders':trickInProgress==='superman'?'supermans':trickInProgress==='nothing'?'nothings':trickInProgress==='whip'?'whips':'',1);
+    updateMission('trickchain',comboCount);
+    updateMission('maxchain',comboCount);
+    if(dist>300)updateMission('trickdist',dist);
+    trickInProgress=null;trickFrame=0;trickRecovery=8;
+    if(trickInProgress&&TRICKS[trickInProgress].angVel) bike.angVel=0;
+  }
+}
+
+// ── POPUPS & PARTICLES ──
+function addPopup(text,wx,wy,color,size,life){popups.push({text,wx,wy,color,size:size||20,life:life||40,maxLife:life||40})}
+function addDust(wx,wy,n){for(let i=0;i<n&&particles.length<150;i++)particles.push({x:wx,y:wy,vx:(Math.random()-0.5)*3,vy:-Math.random()*2-1,life:20+Math.random()*10|0,r:2+Math.random()*3,type:'dust'})}
+function addStars(wx,wy){for(let i=0;i<5&&particles.length<150;i++)particles.push({x:wx+Math.random()*30-15,y:wy+Math.random()*20-10,vx:(Math.random()-0.5)*2,vy:-Math.random()*2,life:30+Math.random()*20|0,r:4+Math.random()*4,type:'star'})}
+
+// ── RAGDOLL ──
+function createRagdoll(){
+  let parts=[];
+  let cx=bike.x,cy=bike.y;
+  let names=['head','torso','armL','armR','legL','legR','frame','wheelF','wheelR'];
+  names.forEach((n,i)=>{
+    parts.push({name:n,x:cx+(Math.random()-0.5)*10,y:cy+(Math.random()-0.5)*10,
+      vx:bike.vx*(0.7+Math.random()*0.6),vy:bike.vy*(0.7+Math.random()*0.6)+(Math.random()-0.5)*4,
+      angle:Math.random()*Math.PI*2,angVel:(Math.random()-0.5)*0.3,
+      r:n==='head'?6:n.startsWith('wheel')?12:8});
+  });
+  return parts;
+}
+function updateRagdoll(){
+  if(!ragdoll)return;
+  ragdollTimer++;
+  ragdoll.forEach(p=>{
+    p.vy+=0.12;p.x+=p.vx;p.y+=p.vy;p.angle+=p.angVel;
+    let gy=terrainYAt(p.x);
+    if(p.y+p.r>gy){p.y=gy-p.r;p.vy*=-0.3;p.vx*=0.85;p.angVel*=0.8;
+      if(Math.abs(p.vy)<0.5)p.vy=0;}
+  });
+  if(ragdollTimer>90){state=STATE.DEAD;deadTimer=0}
+}
+
+// ── GAME LOOP ──
+function startGame(){
+  state=STATE.PLAY;score=0;dist=0;trickCount=0;bestCombo=0;gapsCleared=0;
+  terrain=[];terrainGenX=0;
+  initPatterns();
+  bike={x:200,y:0,vx:4.5,vy:0,angle:0,angVel:0,grounded:true,wheelRot:0};
+  charging=false;charge=0;airborne=false;airTricks=[];trickInProgress=null;trickFrame=0;trickRecovery=0;
+  comboCount=0;chainMult=1;camX=0;camY=baseY-H/2;camZoom=1;
+  ragdoll=null;ragdollTimer=0;deadTimer=0;
+  popups=[];particles=[];arcTrail=[];
+  resetMissionStats();
+  // gen initial terrain
+  for(let i=0;i<200;i++){terrain.push(baseY);terrainGenX+=TW}
+  genTerrain();
+  bike.y=terrainYAt(bike.x)-12;
+}
+
+function handleInput(){
+  if(state!==STATE.PLAY||ragdoll)return;
+  // charging
+  if(keys['Space']||keys['mouse']){
+    if(bike.grounded){charging=true;charge=Math.min(charge+1/90,1)}
+  }
+  if(charging&&bike.grounded) charge=Math.min(charge+1/90,1);
+  // air tricks — number keys/dedicated keys ONLY (arrows/WASD = lean only)
+  if(airborne&&!bike.grounded){
+    if(keys['Digit1']||keys['Numpad1'])startTrick('backflip');
+    else if(keys['Digit2']||keys['Numpad2'])startTrick('frontflip');
+    else if(keys['Digit3']||keys['Numpad3'])startTrick('nohander');
+    else if(keys['Digit4']||keys['Numpad4'])startTrick('superman');
+    else if(keys['Digit5']||keys['Numpad5'])startTrick('nothing');
+    if(keys['ShiftLeft']||keys['ShiftRight']||keys['KeyE'])startTrick('whip');
+    // lean (arrows/WASD) — does NOT trigger tricks
+    if(keys['KeyA']||keys['ArrowLeft'])bike.angVel-=0.003;
+    if(keys['KeyD']||keys['ArrowRight'])bike.angVel+=0.003;
+  }
+}
+
+function updateBike(){
+  if(ragdoll)return;
+  let baseSpd=speedForCycle();
+  
+  if(bike.grounded){
+    bike.vx=Math.max(bike.vx,baseSpd);
+    let ang=terrainAngleAt(bike.x);
+    bike.angle=ang;bike.angVel=0;
+    bike.x+=bike.vx;
+    bike.y=terrainYAt(bike.x)-12;
+    bike.wheelRot+=bike.vx*0.08;
+    // check if we go off edge (terrain drops away)
+    let aheadY=terrainYAt(bike.x+30);
+    if(aheadY>bike.y+40){
+      // auto-launch
+      bike.grounded=false;airborne=true;
+      bike.vy=-6;
+    }
+    // near ramp detection
+    nearRamp=terrainAngleAt(bike.x+60)<-0.15;
+  } else {
+    // airborne
+    bike.vy+=0.12;
+    bike.vx*=0.998;
+    bike.x+=bike.vx;
+    bike.y+=bike.vy;
+    bike.angle+=bike.angVel;
+    bike.wheelRot+=bike.vx*0.08;
+    // arc trail
+    if(arcTrail.length===0||Math.abs(bike.x-arcTrail[arcTrail.length-1].x)>15)
+      arcTrail.push({x:bike.x,y:bike.y});
+    if(arcTrail.length>50)arcTrail.shift();
+    // speed lines
+    if(Math.random()<0.3&&particles.length<150)
+      particles.push({x:bike.x-20-Math.random()*30,y:bike.y+Math.random()*10-5,vx:-2,vy:0,life:8,r:1,type:'speed'});
+    // landing check
+    let gy=terrainYAt(bike.x);
+    if(bike.y+12>=gy){
+      bike.y=gy-12;
+      let surfAngle=terrainAngleAt(bike.x);
+      let angleDiff=Math.abs(bike.angle-surfAngle);
+      while(angleDiff>Math.PI)angleDiff=Math.abs(angleDiff-Math.PI*2);
+      // crash check
+      if(angleDiff>Math.PI/2.5||bike.vy>22||(trickInProgress!==null)){
+        // CRASH
+        addPopup("WIPEOUT!",bike.x,bike.y-60,'#e74c3c',30,60);
+        addStars(bike.x,bike.y-20);
+        ragdoll=createRagdoll();ragdollTimer=0;
+        return;
+      }
+      // successful landing
+      bike.grounded=true;airborne=false;bike.vy=0;
+      bike.angle=surfAngle;bike.angVel=0;
+      addDust(bike.x,gy,6);
+      gapsCleared++;
+      updateMission('gaps',1);
+      // Pattern completion bonus: check if we landed past the pattern's terrain
+      if(!patternLanded&&bike.x/TW>patternStartTerrainIdx){
+        patternLanded=true;
+        let bonus=patternBonus(currentPatternId)*scoreMult;
+        score+=bonus;
+        patternsCompleted++;
+        addPopup('Pattern Complete! +'+bonus,bike.x,bike.y-110,'#7c3aed',22,60);
+      }
+      // landing bonuses
+      let isWheelie=angleDiff>0.26&&bike.angle<surfAngle;
+      let isPerfect=angleDiff<0.09;
+      if(airTricks.length>0){
+        if(isPerfect){score+=200*scoreMult;addPopup("PERFECT! +"+200*scoreMult,bike.x,bike.y-90,'#f39c12',26,50);updateMission('perfects',1)}
+        else if(isWheelie){
+          let pts=100*airTricks.length*scoreMult;score+=pts;
+          addPopup("STYLE! +"+pts,bike.x,bike.y-90,'#e67e22',24,50);
+          updateMission('wheelies',1);
+        } else {
+          let pts=50*airTricks.length*scoreMult;score+=pts;
+          addPopup("STOMPED! +"+pts,bike.x,bike.y-90,'#27ae60',24,50);
+        }
+        bestCombo=Math.max(bestCombo,comboCount);
+      } else {
+        if(isPerfect){score+=200*scoreMult;addPopup("PERFECT! +"+200*scoreMult,bike.x,bike.y-90,'#f39c12',24,45);updateMission('perfects',1)}
+        else{score+=25*scoreMult;addPopup("CLEAN +"+25*scoreMult,bike.x,bike.y-70,'#27ae60',18,30)}
+      }
+      airTricks=[];comboCount=0;chainMult=1;trickInProgress=null;trickFrame=0;arcTrail=[];
+    }
+  }
+  dist=Math.max(dist,Math.round((bike.x-200)/10));
+  updateMission('dist',0); // check via missionStats
+  updateMission('score',0);
+  missionStats.dist=dist;
+  missionStats.score=score;
+  // update missions for cumulative stats
+  missions.forEach(m=>{
+    if(m.done)return;
+    if(m.key==='dist')m.progress=dist;
+    if(m.key==='score')m.progress=score;
+  });
+}
+
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.type==='dust')p.vy+=0.05;
+    p.life--;
+    if(p.life<=0)particles.splice(i,1);
+  }
+  popups.forEach(p=>{p.wy-=0.8;p.life--});
+  popups=popups.filter(p=>p.life>0);
+}
+
+function updateCamera(){
+  let targetX=bike.x-W*0.3;
+  let targetY=(ragdoll?ragdoll[0].y:bike.y)-H*0.4;
+  camX+=(targetX-camX)*0.08;
+  camY+=(targetY-camY)*0.06;
+  // zoom out in big air
+  if(!bike.grounded&&!ragdoll){
+    let h=terrainYAt(bike.x)-bike.y;
+    let tz=Math.max(0.55,1-h/500);
+    camZoom+=(tz-camZoom)*0.03;
+  } else camZoom+=(1-camZoom)*0.05;
+}
+
+// ── DRAWING ──
+function worldToScreen(wx,wy){return{x:(wx-camX)*camZoom+W*(1-camZoom)*0.3,y:(wy-camY)*camZoom+H*(1-camZoom)*0.4}}
+
+function drawTerrain(){
+  X.save();
+  // paper bg
+  X.fillStyle='#f5f0e8';X.fillRect(0,0,W,H);
+  // lined paper
+  X.strokeStyle='rgba(180,170,155,0.3)';X.lineWidth=1;
+  for(let ly=0;ly<H;ly+=24){X.beginPath();X.moveTo(0,ly);X.lineTo(W,ly);X.stroke()}
+  // sky gradient
+  let grad=X.createLinearGradient(0,0,0,H*0.4);
+  grad.addColorStop(0,'rgba(173,216,230,0.25)');grad.addColorStop(1,'rgba(245,240,232,0)');
+  X.fillStyle=grad;X.fillRect(0,0,W,H*0.5);
+  
+  // terrain surface
+  let startI=Math.max(0,Math.floor(camX/TW)-2);
+  let endI=Math.min(terrain.length-1,Math.floor((camX+W/camZoom)/TW)+2);
+  
+  // fill below terrain
+  X.fillStyle='rgba(200,195,185,0.3)';
+  X.beginPath();
+  let first=worldToScreen(startI*TW,terrain[startI]||baseY);
+  X.moveTo(first.x,first.y);
+  for(let i=startI;i<=endI;i++){
+    let p=worldToScreen(i*TW,terrain[i]||baseY);
+    X.lineTo(p.x,p.y);
+  }
+  let last=worldToScreen(endI*TW,H+200);
+  X.lineTo(last.x,H+50);
+  X.lineTo(first.x,H+50);
+  X.closePath();X.fill();
+  
+  // crosshatch
+  X.strokeStyle='rgba(180,175,165,0.2)';X.lineWidth=1;
+  for(let hx=startI*TW;hx<endI*TW;hx+=25){
+    let p1=worldToScreen(hx,terrainYAt(hx));
+    let p2=worldToScreen(hx+20,terrainYAt(hx)+40);
+    X.beginPath();X.moveTo(p1.x,p1.y);X.lineTo(p2.x,p2.y);X.stroke();
+    let p3=worldToScreen(hx+20,terrainYAt(hx+20));
+    let p4=worldToScreen(hx,terrainYAt(hx)+40);
+    X.beginPath();X.moveTo(p3.x,p3.y);X.lineTo(p4.x,p4.y);X.stroke();
+  }
+  
+  // surface line
+  X.strokeStyle='#222';X.lineWidth=3;
+  X.beginPath();
+  for(let i=startI;i<=endI;i++){
+    let p=worldToScreen(i*TW,terrain[i]||baseY);
+    if(i===startI)X.moveTo(p.x,p.y);else X.lineTo(p.x,p.y);
+  }
+  X.stroke();
+  X.restore();
+}
+
+function drawBike(bx,by,angle,wheelRot,trickName,trickProg){
+  X.save();
+  let p=worldToScreen(bx,by);
+  X.translate(p.x,p.y);
+  X.scale(camZoom,camZoom);
+  X.rotate(angle);
+  X.strokeStyle='#222';X.lineWidth=2.5;X.lineCap='round';
+  
+  let wr=12, wb=30; // wheel radius, wheelbase
+  // wheels
+  [-wb/2,wb/2].forEach((wx,wi)=>{
+    X.beginPath();X.arc(wx,wr*0.3,wr,0,Math.PI*2);X.stroke();
+    // spokes
+    for(let s=0;s<4;s++){
+      let a=wheelRot+s*Math.PI/2;
+      X.beginPath();X.moveTo(wx,wr*0.3);
+      X.lineTo(wx+Math.cos(a)*wr*0.8,wr*0.3+Math.sin(a)*wr*0.8);X.stroke();
+    }
+  });
+  // frame
+  X.beginPath();X.moveTo(-wb/2,wr*0.3);X.lineTo(-3,-10);X.lineTo(wb/2,wr*0.3);X.stroke(); // triangle
+  X.beginPath();X.moveTo(-3,-10);X.lineTo(8,-12);X.stroke(); // top tube
+  // handlebars
+  X.beginPath();X.moveTo(8,-12);X.lineTo(10,-18);X.moveTo(6,-18);X.lineTo(14,-18);X.stroke();
+  // seat
+  X.beginPath();X.moveTo(-6,-12);X.lineTo(0,-12);X.stroke();
+  
+  // stick figure
+  let headX=-3,headY=-28,torsoBot=-12;
+  let handX=10,handY=-18;
+  let tProg=trickName?trickProg:0;
+  
+  if(trickName==='nohander'||trickName==='nothing'){
+    // hands up
+    let hUp=Math.sin(tProg*Math.PI)*12;
+    X.beginPath();X.moveTo(headX,headY+8);X.lineTo(headX-8,headY-hUp);X.stroke();
+    X.beginPath();X.moveTo(headX,headY+8);X.lineTo(headX+8,headY-hUp);X.stroke();
+  } else {
+    // arms to handlebars
+    X.beginPath();X.moveTo(headX,headY+8);X.lineTo(headX+4,headY+14);X.lineTo(handX,handY);X.stroke();
+  }
+  if(trickName==='superman'||trickName==='nothing'){
+    // legs extend back
+    let ext=Math.sin(tProg*Math.PI)*20;
+    X.beginPath();X.moveTo(-3,torsoBot);X.lineTo(-3-ext,torsoBot+5);X.stroke();
+    X.beginPath();X.moveTo(-3,torsoBot);X.lineTo(-3-ext,torsoBot+10);X.stroke();
+  } else {
+    // legs to pedals
+    X.beginPath();X.moveTo(-3,torsoBot);X.lineTo(-5,torsoBot+6);X.lineTo(-wb/4,wr*0.3);X.stroke();
+    X.beginPath();X.moveTo(-3,torsoBot);X.lineTo(-1,torsoBot+6);X.lineTo(wb/8,wr*0.3);X.stroke();
+  }
+  // torso
+  X.beginPath();X.moveTo(headX,headY+6);X.lineTo(-3,torsoBot);X.stroke();
+  // head
+  X.beginPath();X.arc(headX,headY,6,0,Math.PI*2);X.stroke();
+  X.fillStyle='#222';
+  X.beginPath();X.arc(headX+2,headY-1,1.2,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(headX+5,headY-1,1.2,0,Math.PI*2);X.fill();
+  
+  // whip visual
+  if(trickName==='whip'){
+    let kick=Math.sin(tProg*Math.PI)*15;
+    X.strokeStyle='rgba(34,34,34,0.5)';
+    X.beginPath();X.moveTo(-wb/2+kick,wr*0.3);X.lineTo(wb/2-kick*0.5,wr*0.3);X.stroke();
+  }
+  
+  X.restore();
+}
+
+function drawRagdoll(){
+  if(!ragdoll)return;
+  X.strokeStyle='#222';X.lineWidth=2.5;X.lineCap='round';
+  ragdoll.forEach(p=>{
+    let s=worldToScreen(p.x,p.y);
+    X.save();X.translate(s.x,s.y);X.rotate(p.angle);
+    if(p.name==='head'){X.beginPath();X.arc(0,0,6*camZoom,0,Math.PI*2);X.stroke()}
+    else if(p.name.startsWith('wheel')){X.beginPath();X.arc(0,0,12*camZoom,0,Math.PI*2);X.stroke()}
+    else{X.beginPath();X.moveTo(-5*camZoom,0);X.lineTo(5*camZoom,0);X.stroke()}
+    X.restore();
+  });
+}
+
+function drawParticles(){
+  particles.forEach(p=>{
+    let s=worldToScreen(p.x,p.y);
+    let a=p.life/30;
+    if(p.type==='dust'){
+      X.fillStyle=`rgba(160,155,145,${a})`;
+      X.beginPath();X.arc(s.x,s.y,p.r*camZoom,0,Math.PI*2);X.fill();
+    } else if(p.type==='star'){
+      X.fillStyle=`rgba(255,220,50,${a})`;
+      drawStar(s.x,s.y,p.r*camZoom);
+    } else if(p.type==='speed'){
+      X.strokeStyle=`rgba(100,100,100,${a})`;X.lineWidth=1;
+      X.beginPath();X.moveTo(s.x,s.y);X.lineTo(s.x-15*camZoom,s.y);X.stroke();
+    }
+  });
+}
+function drawStar(cx,cy,r){
+  X.beginPath();
+  for(let i=0;i<4;i++){
+    let a=i*Math.PI/2;
+    X.moveTo(cx,cy);X.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+  }
+  X.fill();
+}
+
+function drawArcTrail(){
+  if(arcTrail.length<2)return;
+  X.strokeStyle='rgba(100,100,100,0.25)';X.lineWidth=1;X.setLineDash([4,6]);
+  X.beginPath();
+  arcTrail.forEach((p,i)=>{
+    let s=worldToScreen(p.x,p.y);
+    if(i===0)X.moveTo(s.x,s.y);else X.lineTo(s.x,s.y);
+  });
+  X.stroke();X.setLineDash([]);
+}
+
+function drawHUD(){
+  // score
+  X.fillStyle='rgba(0,0,0,0.7)';X.font='bold 28px system-ui';X.textAlign='left';
+  X.fillText(score.toLocaleString(),15,35);
+  if(scoreMult>1){
+    X.font='bold 16px system-ui';X.fillStyle='#7c3aed';
+    X.fillText('×'+scoreMult,15+X.measureText(score.toLocaleString()).width+8,35);
+  }
+  // distance
+  X.textAlign='right';X.fillStyle='rgba(0,0,0,0.7)';X.font='bold 22px system-ui';
+  X.fillText(dist+'m',W-15,35);
+  // pattern progress
+  X.font='bold 16px system-ui';X.fillStyle='rgba(0,0,0,0.5)';
+  X.fillText('Jump '+Math.min(patternIndex,20)+'/20',W-15,58);
+  if(cycleCount>0){X.font='12px system-ui';X.fillStyle='rgba(0,0,0,0.4)';X.fillText('Cycle '+(cycleCount+1),W-15,74)}
+  // pattern name display
+  if(patternNameTimer>0){
+    patternNameTimer--;
+    let a=Math.min(1,patternNameTimer/30);
+    X.globalAlpha=a;X.textAlign='center';X.fillStyle='#7c3aed';X.font='bold 32px system-ui';
+    X.fillText(currentPatternName,W/2,70);
+    X.globalAlpha=1;
+  }
+  // trick chain display
+  if(airborne&&airTricks.length>0){
+    X.textAlign='center';X.fillStyle='#2980b9';X.font='bold 20px system-ui';
+    let chainTxt=airTricks.map(t=>t.toUpperCase().replace('NOHANDER','NO-HANDER')).join(' → ');
+    if(comboCount>1)chainTxt+=' ×'+chainMult.toFixed(1);
+    X.fillText(chainTxt,W/2,30);
+  }
+  // charge meter
+  if((nearRamp||charging)&&bike.grounded&&!ragdoll){
+    let mx=35,my=H*0.3,mh=H*0.35,mw=16;
+    X.fillStyle='rgba(0,0,0,0.15)';X.fillRect(mx-mw/2,my,mw,mh);
+    // sweet spot
+    X.fillStyle='rgba(39,174,96,0.3)';X.fillRect(mx-mw/2,my+mh*(1-0.8),mw,mh*0.2);
+    // charge level
+    let ch=charge*mh;
+    let col=charge<0.6?'#27ae60':charge<0.9?'#f39c12':'#e74c3c';
+    X.fillStyle=col;X.fillRect(mx-mw/2,my+mh-ch,mw,ch);
+    X.strokeStyle='#222';X.lineWidth=2;X.strokeRect(mx-mw/2,my,mw,mh);
+    // sparks
+    if(charge>0.8){
+      for(let i=0;i<3;i++){
+        X.fillStyle='rgba(255,200,50,0.8)';
+        X.beginPath();X.arc(mx+Math.random()*20-10,my+mh-ch+Math.random()*10-5,2,0,Math.PI*2);X.fill();
+      }
+    }
+  }
+  // missions
+  if(missions){
+    let my2=H-90;
+    X.font='12px system-ui';X.textAlign='left';
+    missions.forEach((m,i)=>{
+      let bx=10,by=my2+i*26;
+      X.fillStyle=m.done?'rgba(39,174,96,0.8)':'rgba(0,0,0,0.5)';
+      X.fillRect(bx,by,220,22);
+      X.fillStyle='#fff';X.font='11px system-ui';
+      let prog=Math.min(m.progress,m.target);
+      X.fillText((m.done?'✓ ':'')+m.text+' ('+prog+'/'+m.target+')',bx+6,by+15);
+    });
+  }
+  // popups
+  popups.forEach(p=>{
+    let s=worldToScreen(p.wx,p.wy);
+    let a=p.life/p.maxLife;
+    X.globalAlpha=a;X.fillStyle=p.color;X.font='bold '+p.size+'px system-ui';X.textAlign='center';
+    X.fillText(p.text,s.x,s.y);X.globalAlpha=1;
+  });
+}
+
+function drawMenu(){
+  X.fillStyle='#0e0e12';X.fillRect(0,0,W,H);
+  // title
+  X.save();X.translate(W/2,H*0.22);
+  X.font='bold 64px system-ui';X.textAlign='center';X.fillStyle='#f5f0e8';
+  X.fillText('SEND IT',0,0);
+  // sketchy underline
+  X.strokeStyle='#7c3aed';X.lineWidth=3;
+  X.beginPath();X.moveTo(-120,10);
+  for(let i=-120;i<=120;i+=5)X.lineTo(i,10+Math.sin(i*0.1)*3);
+  X.stroke();
+  X.restore();
+  
+  // animated wheelie stick figure
+  let t=Date.now()*0.003;
+  X.save();X.translate(W/2,H*0.42);
+  X.strokeStyle='#f5f0e8';X.lineWidth=2.5;X.lineCap='round';
+  // simple bike wheelie
+  let tilt=Math.sin(t)*0.15-0.3;
+  X.rotate(tilt);
+  X.beginPath();X.arc(-12,8,10,0,Math.PI*2);X.stroke(); // rear wheel
+  X.beginPath();X.arc(12,8,10,0,Math.PI*2);X.stroke(); // front
+  X.beginPath();X.moveTo(-12,8);X.lineTo(0,-8);X.lineTo(12,8);X.stroke();
+  X.beginPath();X.arc(0,-22,5,0,Math.PI*2);X.stroke(); // head
+  X.beginPath();X.moveTo(0,-17);X.lineTo(0,-8);X.stroke();
+  X.beginPath();X.moveTo(0,-12);X.lineTo(6,-16);X.stroke();
+  X.restore();
+  
+  // play button
+  let bx=W/2-80,by=H*0.55,bw=160,bh=50;
+  let grad=X.createLinearGradient(bx,by,bx,by+bh);
+  grad.addColorStop(0,'#f97316');grad.addColorStop(1,'#ea580c');
+  X.fillStyle=grad;
+  X.beginPath();X.roundRect(bx,by,bw,bh,12);X.fill();
+  X.fillStyle='#fff';X.font='bold 24px system-ui';X.textAlign='center';
+  X.fillText('PLAY',W/2,by+33);
+  
+  // stats
+  X.fillStyle='#888';X.font='16px system-ui';
+  X.fillText('Best: '+bestScore.toLocaleString()+'  |  ×'+scoreMult,W/2,by+80);
+  
+  // missions
+  if(missions){
+    X.font='13px system-ui';X.fillStyle='#666';
+    missions.forEach((m,i)=>{
+      let prog=Math.min(m.progress,m.target);
+      X.fillText((m.done?'✓ ':'')+m.text+' ('+prog+'/'+m.target+')',W/2,by+105+i*20);
+    });
+  }
+  
+  // controls
+  X.fillStyle='#555';X.font='12px system-ui';
+  X.fillText('Space/Tap=Charge | A/D=Lean | 1-5=Tricks | Shift=Whip | Swipe on mobile',W/2,H-40);
+  
+  // home link
+  X.fillStyle='#7c3aed';X.font='14px system-ui';X.textAlign='left';
+  X.fillText('← BrainSmacks',15,30);
+}
+
+function drawGameOver(){
+  X.fillStyle='rgba(14,14,18,0.85)';X.fillRect(0,0,W,H);
+  X.textAlign='center';
+  X.fillStyle='#f5f0e8';X.font='bold 48px system-ui';
+  X.fillText(dist>500?'NICE RUN!':'WIPEOUT!',W/2,H*0.25);
+  
+  X.font='bold 36px system-ui';X.fillStyle='#f97316';
+  let displayScore=Math.min(score,Math.round(score*(deadTimer/60)));
+  X.fillText(displayScore.toLocaleString(),W/2,H*0.38);
+  
+  X.font='18px system-ui';X.fillStyle='#888';
+  X.fillText(dist+'m  |  '+trickCount+' tricks  |  best combo: '+bestCombo+'x',W/2,H*0.46);
+  
+  // missions
+  if(missions){
+    X.font='14px system-ui';
+    missions.forEach((m,i)=>{
+      X.fillStyle=m.done?'#27ae60':'#666';
+      let prog=Math.min(m.progress,m.target);
+      X.fillText((m.done?'✓ ':'')+m.text+' ('+prog+'/'+m.target+')',W/2,H*0.54+i*22);
+    });
+  }
+  
+  if(deadTimer>60){
+    let bx=W/2-80,by=H*0.7,bw=160,bh=50;
+    let grad=X.createLinearGradient(bx,by,bx,by+bh);
+    grad.addColorStop(0,'#f97316');grad.addColorStop(1,'#ea580c');
+    X.fillStyle=grad;X.beginPath();X.roundRect(bx,by,bw,bh,12);X.fill();
+    X.fillStyle='#fff';X.font='bold 22px system-ui';
+    X.fillText('PLAY AGAIN',W/2,by+33);
+  }
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(state===STATE.MENU){drawMenu();return}
+  if(state===STATE.DEAD){
+    drawTerrain();drawRagdoll();drawParticles();drawHUD();
+    deadTimer++;drawGameOver();
+    if(score>bestScore){bestScore=score;localStorage.setItem('sendit_best',bestScore)}
+    saveMissions();
+    return;
+  }
+  // PLAY
+  handleInput();
+  genTerrain();
+  updateBike();
+  updateTricks();
+  updateRagdoll();
+  updateParticles();
+  updateCamera();
+  
+  drawTerrain();
+  drawArcTrail();
+  drawParticles();
+  if(ragdoll)drawRagdoll();
+  else drawBike(bike.x,bike.y,bike.angle,bike.wheelRot,trickInProgress,trickInProgress?trickFrame/TRICKS[trickInProgress].frames:0);
+  drawHUD();
+}
+loop();
+</script>
+</body>
+</html>
