@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tenner — BrainSmacks</title>
+<meta name="description" content="Click the screen at exactly 10.000 seconds. Pure precision — the timer shows thousandths.">
+<link rel="canonical" href="https://brainsmacks.com/tenner/">
+<meta property="og:title" content="Tenner — BrainSmacks">
+<meta property="og:description" content="Click the screen at exactly 10.000 seconds. Pure precision.">
+<meta property="og:url" content="https://brainsmacks.com/tenner/">
+<meta property="og:type" content="website">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color:#e8f7fa;font-family:'Segoe UI',Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;cursor:pointer;text-align:center;padding:20px}
+#title{font-size:30px;font-weight:800;color:#22d3ee;letter-spacing:10px;text-transform:uppercase;text-shadow:0 0 24px rgba(34,211,238,.4);margin-bottom:8px}
+#target{font-size:13px;color:#475569;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px}
+#timer{font-family:'Courier New','Menlo',monospace;font-size:120px;font-weight:700;color:#475569;letter-spacing:6px;line-height:1;font-variant-numeric:tabular-nums;transition:color .15s,text-shadow .15s}
+#timer.running{color:#22d3ee;text-shadow:0 0 40px rgba(34,211,238,.4)}
+#timer.bullseye{color:#fbbf24;text-shadow:0 0 50px rgba(251,191,36,.7)}
+#timer.miss{color:#94a3b8;text-shadow:none}
+#hint{font-size:15px;color:#64748b;min-height:24px;margin-top:18px;letter-spacing:.5px}
+#startBtn{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#06141a;border:none;padding:14px 48px;border-radius:30px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 #155e75,0 0 30px rgba(34,211,238,.25);transition:transform .15s,box-shadow .15s;letter-spacing:2px;text-transform:uppercase;margin-top:20px}
+#startBtn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #155e75,0 0 40px rgba(34,211,238,.4)}
+#startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #155e75}
+#startBtn.hidden{display:none}
+#result{display:none;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
+#result.shown{display:flex}
+#verdict{font-size:38px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+#verdict.bullseye{color:#fbbf24;text-shadow:0 0 30px rgba(251,191,36,.7)}
+#verdict.razor{color:#22d3ee}
+#verdict.solid{color:#22d3ee;opacity:.85}
+#verdict.eh{color:#94a3b8}
+#verdict.miss{color:#64748b}
+#delta{font-family:'Courier New',monospace;font-size:22px;color:#cbd5e1;letter-spacing:1px}
+#best{font-size:13px;color:#64748b;letter-spacing:1.5px;margin-top:4px;text-transform:uppercase}
+#homeBtn{position:fixed;top:14px;left:14px;z-index:9999;background:rgba(0,0,0,.4);color:#22d3ee;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:13px;font-family:sans-serif;opacity:.7;transition:opacity .2s}
+#homeBtn:hover{opacity:1}
+@media (max-width:600px){
+  #timer{font-size:72px;letter-spacing:4px}
+  #title{font-size:22px;letter-spacing:6px}
+  #verdict{font-size:28px}
+  #target{font-size:11px}
+}
+</style>
+</head>
+<body>
+<a href="../" id="homeBtn"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+<div id="title">Tenner</div>
+<div id="target">Stop at exactly 10.000</div>
+<div id="timer">0.000</div>
+<div id="hint">Press Start. Then click anywhere the moment the clock hits 10.000.</div>
+<button id="startBtn">Start</button>
+<div id="result">
+  <div id="verdict"></div>
+  <div id="delta"></div>
+  <div id="best"></div>
+</div>
+<script>
+(function(){
+  var STATE={IDLE:0,RUNNING:1,DONE:2};
+  var state=STATE.IDLE;
+  var startTime=0,raf=0;
+  var timerEl=document.getElementById('timer');
+  var hintEl=document.getElementById('hint');
+  var startBtn=document.getElementById('startBtn');
+  var resultEl=document.getElementById('result');
+  var verdictEl=document.getElementById('verdict');
+  var deltaEl=document.getElementById('delta');
+  var bestEl=document.getElementById('best');
+  var bestMs=+(localStorage.getItem('tenner_best')||0);
+
+  function fmtBest(){ return bestMs?('Best: '+bestMs+'ms off'):'No record yet'; }
+  bestEl.textContent=fmtBest();
+
+  function tick(){
+    var elapsed=performance.now()-startTime;
+    timerEl.textContent=(elapsed/1000).toFixed(3);
+    if(state===STATE.RUNNING) raf=requestAnimationFrame(tick);
+  }
+
+  function start(){
+    state=STATE.RUNNING;
+    startTime=performance.now();
+    resultEl.classList.remove('shown');
+    startBtn.classList.add('hidden');
+    hintEl.textContent='Click anywhere the moment it hits 10.000';
+    timerEl.className='running';
+    tick();
+  }
+
+  function stop(){
+    if(state!==STATE.RUNNING) return;
+    cancelAnimationFrame(raf);
+    var elapsed=performance.now()-startTime;
+    state=STATE.DONE;
+    timerEl.textContent=(elapsed/1000).toFixed(3);
+    var deltaMs=Math.round(Math.abs(elapsed-10000));
+    var dir=elapsed<10000?'early':'late';
+    var verdict,vclass,tclass;
+    if(deltaMs<=10){verdict='Bullseye';vclass='bullseye';tclass='bullseye';}
+    else if(deltaMs<=50){verdict='Razor close';vclass='razor';tclass='running';}
+    else if(deltaMs<=200){verdict='Solid';vclass='solid';tclass='running';}
+    else if(deltaMs<=500){verdict='Eh';vclass='eh';tclass='miss';}
+    else{verdict='Way off';vclass='miss';tclass='miss';}
+    timerEl.className=tclass;
+    verdictEl.textContent=verdict;
+    verdictEl.className=vclass;
+    deltaEl.textContent=deltaMs+'ms '+dir;
+    if(!bestMs||deltaMs<bestMs){
+      bestMs=deltaMs;
+      localStorage.setItem('tenner_best',bestMs);
+      bestEl.textContent='🏆 New best: '+bestMs+'ms off';
+    }else{
+      bestEl.textContent=fmtBest();
+    }
+    resultEl.classList.add('shown');
+    hintEl.textContent='';
+    startBtn.classList.remove('hidden');
+    startBtn.textContent='Try Again';
+  }
+
+  startBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    if(state===STATE.IDLE||state===STATE.DONE) start();
+  });
+
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#homeBtn,#startBtn')) return;
+    if(state===STATE.RUNNING) stop();
+  });
+
+  document.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.code==='Enter'){
+      e.preventDefault();
+      if(state===STATE.IDLE||state===STATE.DONE) start();
+      else if(state===STATE.RUNNING) stop();
+    }
+  });
+})();
+</script>
+</body>
+</html>
