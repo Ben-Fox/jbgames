@@ -13,7 +13,6 @@
 - [ ] Heavy Eye Round 1 matchup fix (removing absurd ratios)
 
 ## 🔧 In Progress
-- [ ] Heavy Eye — Round 1 data rebalancing (sub-agent working)
 - [ ] Tree Fall — cutting mechanic still broken (back burner per Josh)
 
 ## 🎮 Games to Refine
@@ -52,4 +51,4 @@
 - [x] Landing page with game cards
 
 ---
-*Last updated: Feb 17, 2026*
+*Last updated: May 19, 2026*
