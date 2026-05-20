@@ -36,7 +36,7 @@
       thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><rect x="8" y="5" width="54" height="54" rx="3" fill="rgba(59,130,246,.08)" stroke="rgba(59,130,246,.15)" stroke-width=".5"/><rect x="10" y="22" width="18" height="8" rx="2.5" fill="rgba(229,57,53,.7)" stroke="#ef4444" stroke-width="1"/><text x="19" y="28" text-anchor="middle" font-size="5" fill="rgba(255,255,255,.7)" font-weight="bold">★</text><rect x="35" y="14" width="8" height="18" rx="2.5" fill="rgba(59,130,246,.6)" stroke="rgba(59,130,246,.8)" stroke-width=".8"/><rect x="44" y="32" width="16" height="8" rx="2.5" fill="rgba(142,36,170,.5)" stroke="rgba(142,36,170,.7)" stroke-width=".8"/><polygon points="66,24 74,27 66,30" fill="rgba(34,197,94,.5)"/></svg>'
     },
     {
-      name: 'Tenner', path: '/tenner/',
+      name: 'React', path: '/react/',
       gradient: 'linear-gradient(160deg,#06141a 0%,#0a2530 40%,#06141a 100%)',
       border: 'rgba(34,211,238,.25)',
       thumb: '<svg viewBox="0 0 80 60" fill="none" width="80" height="60"><circle cx="40" cy="32" r="22" fill="rgba(6,20,26,.7)" stroke="#22d3ee" stroke-width="1.5"/><rect x="37" y="6" width="6" height="4" rx="1" fill="#22d3ee"/><circle cx="40" cy="14" r="1.5" fill="#fbbf24"/><text x="40" y="36" text-anchor="middle" font-size="7" fill="#22d3ee" font-family="monospace" font-weight="700">10.000</text><line x1="40" y1="32" x2="40" y2="16" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round"/><circle cx="40" cy="32" r="2" fill="#fbbf24"/></svg>'

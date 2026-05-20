@@ -203,16 +203,16 @@ a{text-decoration:none;color:inherit}
 .card--likelihood .play-btn{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff}
 .card--likelihood .card-title{color:#c4b5fd}
 
-/* ===== Tenner ===== */
-.card--tenner{background:linear-gradient(160deg,#06141a 0%,#0a2530 50%,#06141a 100%);border:1px solid rgba(34,211,238,.25);box-shadow:0 0 20px rgba(34,211,238,.08)}
-.card--tenner:hover{box-shadow:0 8px 40px rgba(34,211,238,.35),0 0 60px rgba(251,191,36,.1)}
-.card--tenner .thumb{background:radial-gradient(ellipse at 50% 50%,rgba(34,211,238,.12),transparent 70%)}
-.card--tenner .play-btn{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#06141a}
-.card--tenner .card-title{color:#22d3ee}
-.tenner-hand{transform-origin:80px 70px;animation:tennerSweep 2.4s cubic-bezier(.5,0,.5,1) infinite}
-@keyframes tennerSweep{0%{transform:rotate(0deg)}80%{transform:rotate(330deg)}82%{transform:rotate(360deg);filter:drop-shadow(0 0 6px #fbbf24)}100%{transform:rotate(360deg)}}
-.tenner-tick{animation:tennerTick 2.4s steps(1) infinite}
-@keyframes tennerTick{0%,80%{opacity:.3}82%,100%{opacity:1}}
+/* ===== React ===== */
+.card--react{background:linear-gradient(160deg,#06141a 0%,#0a2530 50%,#06141a 100%);border:1px solid rgba(34,211,238,.25);box-shadow:0 0 20px rgba(34,211,238,.08)}
+.card--react:hover{box-shadow:0 8px 40px rgba(34,211,238,.35),0 0 60px rgba(251,191,36,.1)}
+.card--react .thumb{background:radial-gradient(ellipse at 50% 50%,rgba(34,211,238,.12),transparent 70%)}
+.card--react .play-btn{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#06141a}
+.card--react .card-title{color:#22d3ee}
+.react-hand{transform-origin:80px 70px;animation:reactSweep 2.4s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes reactSweep{0%{transform:rotate(0deg)}80%{transform:rotate(330deg)}82%{transform:rotate(360deg);filter:drop-shadow(0 0 6px #fbbf24)}100%{transform:rotate(360deg)}}
+.react-tick{animation:reactTick 2.4s steps(1) infinite}
+@keyframes reactTick{0%,80%{opacity:.3}82%,100%{opacity:1}}
 
 /* Percentage counter */
 .pct-counter{animation:pctPulse 2s ease-in-out infinite}
@@ -645,9 +645,9 @@ footer p+p{margin-top:.3rem}
     </div>
   </a>
 
-  <!-- Tenner -->
-  <a href="/tenner/" class="card card--tenner">
-    <span class="card-tag">Precision</span>
+  <!-- React -->
+  <a href="/react/" class="card card--react">
+    <span class="card-tag">Reflex</span>
     <div class="thumb">
       <svg viewBox="0 0 160 140" fill="none" width="160" height="140">
         <!-- Stopwatch body -->
@@ -656,7 +656,7 @@ footer p+p{margin-top:.3rem}
         <rect x="74" y="14" width="12" height="8" rx="2" fill="#22d3ee"/>
         <rect x="76" y="9" width="8" height="5" rx="1.5" fill="#0891b2"/>
         <!-- Tick marks at hour positions, with 12 (top) highlighted -->
-        <circle cx="80" cy="28" r="2.5" class="tenner-tick" fill="#fbbf24"/>
+        <circle cx="80" cy="28" r="2.5" class="react-tick" fill="#fbbf24"/>
         <circle cx="118" cy="70" r="1.5" fill="rgba(34,211,238,.5)"/>
         <circle cx="80" cy="112" r="1.5" fill="rgba(34,211,238,.5)"/>
         <circle cx="42" cy="70" r="1.5" fill="rgba(34,211,238,.5)"/>
@@ -672,15 +672,15 @@ footer p+p{margin-top:.3rem}
         <!-- Digital readout under the dial -->
         <text x="80" y="78" text-anchor="middle" font-size="11" fill="#22d3ee" font-family="'Courier New',monospace" font-weight="700">10.000</text>
         <!-- Sweeping hand -->
-        <g class="tenner-hand">
+        <g class="react-hand">
           <line x1="80" y1="70" x2="80" y2="32" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"/>
           <circle cx="80" cy="70" r="3.5" fill="#fbbf24"/>
         </g>
       </svg>
     </div>
     <div class="card-body">
-      <div class="card-title">Tenner</div>
-      <p class="card-desc">Stop the clock at exactly 10.000 seconds.</p>
+      <div class="card-title">React</div>
+      <p class="card-desc">Click at exactly 10.000 seconds. Earn a badge.</p>
       <span class="play-btn">▶ Play Now</span>
     </div>
   </a>
@@ -784,7 +784,7 @@ footer p+p{margin-top:.3rem}
 
 <section class="about-brainsmacks" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="false">
   <h2>About BrainSmacks</h2>
-  <p>BrainSmacks is a collection of free browser games you can play online instantly — no downloads or accounts required. From brain-teasing puzzle games like Heavy Eye and Gridlock, to skill challenges like Circle and Tenner, and strategy duels like BreakPoint, every game is built to run right in your browser. Whether you're looking for a quick casual game or a challenging strategy experience, BrainSmacks has something for everyone.</p>
+  <p>BrainSmacks is a collection of free browser games you can play online instantly — no downloads or accounts required. From brain-teasing puzzle games like Heavy Eye and Gridlock, to reflex tests like React and Circle, and strategy duels like BreakPoint, every game is built to run right in your browser. Whether you're looking for a quick casual game or a challenging strategy experience, BrainSmacks has something for everyone.</p>
 </section>
 
 <!-- AD PLACEHOLDER: Bottom banner (~90px, leaderboard 728x90) -->
