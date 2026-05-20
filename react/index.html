@@ -13,7 +13,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color:#e8f7fa;font-family:'Segoe UI',Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;cursor:pointer;text-align:center;padding:20px}
+body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color:#e8f7fa;font-family:'Segoe UI',Roboto,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;cursor:pointer;text-align:center;padding:20px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#catcher{position:fixed;inset:0;z-index:50;display:none;background:transparent;cursor:pointer}
+#catcher.active{display:block}
 #title{font-size:30px;font-weight:800;color:#22d3ee;letter-spacing:10px;text-transform:uppercase;text-shadow:0 0 24px rgba(34,211,238,.4);margin-bottom:8px}
 #target{font-size:13px;color:#475569;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px}
 #timer{font-family:'Courier New','Menlo',monospace;font-size:120px;font-weight:700;color:#475569;letter-spacing:6px;line-height:1;font-variant-numeric:tabular-nums;transition:color .15s,text-shadow .15s}
@@ -39,7 +41,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
 .badge.whiff{color:#475569;border-color:rgba(71,85,105,.45);background:rgba(71,85,105,.05)}
 #delta{font-family:'Courier New',monospace;font-size:22px;color:#cbd5e1;letter-spacing:1px;margin-top:6px}
 #best{font-size:13px;color:#64748b;letter-spacing:1.5px;margin-top:6px;text-transform:uppercase}
-#homeBtn{position:fixed;top:14px;left:14px;z-index:9999;background:rgba(0,0,0,.4);color:#22d3ee;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:13px;font-family:sans-serif;opacity:.7;transition:opacity .2s}
+#homeBtn{position:fixed;top:14px;left:14px;z-index:9999;background:rgba(0,0,0,.4);color:#22d3ee;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:13px;font-family:sans-serif;opacity:.7;transition:opacity .2s;pointer-events:auto}
 #homeBtn:hover{opacity:1}
 #tiers{font-size:11px;color:#475569;letter-spacing:2px;margin-top:14px;text-transform:uppercase;line-height:1.7}
 #tiers .t{display:inline-block;padding:0 8px;border-right:1px solid rgba(71,85,105,.5)}
@@ -54,6 +56,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
 </style>
 </head>
 <body>
+<div id="catcher"></div>
 <a href="../" id="homeBtn"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
 <div id="title">React</div>
 <div id="target">Stop at exactly 10.000</div>
@@ -80,6 +83,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
   var verdictEl=document.getElementById('verdict');
   var deltaEl=document.getElementById('delta');
   var bestEl=document.getElementById('best');
+  var catcherEl=document.getElementById('catcher');
   var bestMs=parseFloat(localStorage.getItem('react_best'));
   if(isNaN(bestMs)) bestMs=null;
 
@@ -97,7 +101,8 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
     startTime=performance.now();
     resultEl.classList.remove('shown');
     startBtn.classList.add('hidden');
-    hintEl.textContent='Click anywhere the moment it hits 10.000';
+    catcherEl.classList.add('active');
+    hintEl.textContent='Click / tap / press space — anywhere — to stop';
     timerEl.className='running';
     tick();
   }
@@ -117,6 +122,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
     cancelAnimationFrame(raf);
     var elapsed=performance.now()-startTime;
     state=STATE.DONE;
+    catcherEl.classList.remove('active');
     timerEl.textContent=(elapsed/1000).toFixed(3);
     var deltaRaw=Math.abs(elapsed-10000);
     var deltaDisp=deltaRaw<1?deltaRaw.toFixed(2):Math.round(deltaRaw);
@@ -145,12 +151,19 @@ body{background:radial-gradient(ellipse at 50% 30%,#0a2530 0%,#06141a 70%);color
     if(state===STATE.IDLE||state===STATE.DONE) start();
   });
 
-  document.addEventListener('click',function(e){
-    if(e.target.closest('#homeBtn,#startBtn')) return;
-    if(state===STATE.RUNNING) stop();
-  });
+  // First touch/click anywhere fires this; pointerdown beats click on every
+  // input device (mouse, touch, pen) so the stop registers as fast as possible.
+  function tryStop(e){
+    if(state!==STATE.RUNNING) return;
+    if(e.target&&e.target.closest&&e.target.closest('#homeBtn,#startBtn')) return;
+    e.preventDefault();
+    stop();
+  }
+  window.addEventListener('pointerdown',tryStop);
+  window.addEventListener('click',tryStop);
+  window.addEventListener('touchstart',tryStop,{passive:false});
 
-  document.addEventListener('keydown',function(e){
+  window.addEventListener('keydown',function(e){
     if(e.code==='Space'||e.code==='Enter'){
       e.preventDefault();
       if(state===STATE.IDLE||state===STATE.DONE) start();
