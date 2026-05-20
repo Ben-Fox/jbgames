@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GridLock — BrainSmacks</title>
+<title>Gridlock — BrainSmacks</title>
 <meta name="description" content="Slide cars and trucks to free the red car from a jammed parking lot. 8 BFS-verified puzzles with increasing difficulty.">
 <link rel="canonical" href="https://brainsmacks.com/gridlock/">
-<meta property="og:title" content="GridLock — BrainSmacks">
+<meta property="og:title" content="Gridlock — BrainSmacks">
 <meta property="og:description" content="Slide cars and trucks to free the red car from a jammed parking lot.">
 <meta property="og:url" content="https://brainsmacks.com/gridlock/">
 <meta property="og:type" content="website">
@@ -66,7 +66,7 @@ canvas:active{cursor:grabbing}
     <button class="btn sm" onclick="Game.showMenu()">Levels</button>
   </div>
   <div id="overlay">
-    <h1>GridLock</h1>
+    <h1>Gridlock</h1>
     <div class="sub">Slide the vehicles to clear a path for the red car to escape!</div>
     <div id="lvlSelect"></div>
   </div>
@@ -625,7 +625,7 @@ return{
   showMenu:function(){
     try{bestMoves=JSON.parse(localStorage.getItem('gridlock_best'))||{};}catch(e){bestMoves={};}
     var ov=document.getElementById('overlay');ov.className='';
-    var html='<h1>GridLock</h1><div class="sub">Slide vehicles to free the red car!<br>Drag cars and trucks along their lane.</div><div id="lvlSelect">';
+    var html='<h1>Gridlock</h1><div class="sub">Slide vehicles to free the red car!<br>Drag cars and trucks along their lane.</div><div id="lvlSelect">';
     for(var i=0;i<levels.length;i++){
       var done=bestMoves[i]!==undefined;
       var unlocked=i===0||bestMoves[i-1]!==undefined;
