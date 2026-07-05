@@ -18,7 +18,7 @@ const nodes = new Map();   // key -> {x,y,key,structure,planets:[],colonyInt:sys
 const edges = new Map();
 const planets = [];        // {id,sysId,cx,cy,res,chip:{n}|{hz,num}|null,faceUp,corners:[]}
 const systems = [];        // {id,home,planetIds:[],colonyInts:[]}
-const alienBases = [];     // {race,cx,cy,slots:[{node,num,owner}]}
+const alienBases = [null, null, null, null];  // filled at setup (random sites)
 
 function addHexNodes(cx, cy) {
   const keys = [];
@@ -38,67 +38,52 @@ function addHexEdges(keys) {
   }
 }
 
-SYSTEMS.forEach((sysDef, sid) => {
-  const [q, r] = sysDef.anchor;
-  const hexQR = [[q, r], [q + 1, r], [q, r + 1]];
-  const sys = { id: sid, home: sysDef.home ?? null, revealed: sysDef.home !== undefined, planetIds: [], colonyInts: [] };
-  const cornerCount = new Map();
-  hexQR.forEach(([hq, hr], pi) => {
-    const c = hexCenter(hq, hr);
-    const keys = addHexNodes(c.x, c.y);
-    addHexEdges(keys);
-    const pdef = sysDef.planets[pi];
-    const planet = { id: planets.length, sysId: sid, cx: c.x, cy: c.y,
-      res: pdef.res, chip: pdef.n !== undefined ? { n: pdef.n } : null,
-      faceUp: pdef.n !== undefined, corners: keys };
-    planets.push(planet);
-    sys.planetIds.push(planet.id);
-    keys.forEach(k => {
-      nodes.get(k).planets.push(planet.id);
-      cornerCount.set(k, (cornerCount.get(k) || 0) + 1);
-    });
-  });
-  for (const [k, cnt] of cornerCount) {
-    if (cnt === 3) nodes.get(k).dead = true;               // system core: impassable
-    else if (cnt === 2) { nodes.get(k).colonyInt = sid; sys.colonyInts.push(k); }
-  }
-  systems.push(sys);
-});
+const sites = [];   // {id, hexCenters, hexCorners:[keys x3], pairCorners, allKeys, content, revealed}
 
-ALIEN_ANCHORS.forEach(({ anchor, race }) => {
-  const [q, r] = anchor;
+function buildTriangle(q, r) {
   const hexQR = [[q, r], [q + 1, r], [q, r + 1]];
   const cornerCount = new Map();
-  const allKeys = new Set();
+  const hexCorners = [];
   const centers = [];
   hexQR.forEach(([hq, hr]) => {
     const c = hexCenter(hq, hr);
     centers.push(c);
     const keys = addHexNodes(c.x, c.y);
     addHexEdges(keys);
-    keys.forEach(k => {
-      allKeys.add(k);
-      cornerCount.set(k, (cornerCount.get(k) || 0) + 1);
-    });
+    hexCorners.push(keys);
+    keys.forEach(k => cornerCount.set(k, (cornerCount.get(k) || 0) + 1));
   });
-  const cx = centers.reduce((s2, c) => s2 + c.x, 0) / 3;
-  const cy = centers.reduce((s2, c) => s2 + c.y, 0) / 3;
+  const pairCorners = [], allKeys = new Set();
   for (const [k, cnt] of cornerCount) {
-    if (cnt === 3) nodes.get(k).dead = true;      // heart of the civ: impassable
-    nodes.get(k).baseRace = race;                 // touching any corner = contact
+    allKeys.add(k);
+    if (cnt === 3) nodes.get(k).dead = true;
+    else if (cnt === 2) pairCorners.push(k);
   }
-  // 5 outpost stations: perimeter corners, evenly spread by angle
-  const perim = [...allKeys].filter(k => !nodes.get(k).dead)
-    .map(k => ({ k, a: Math.atan2(nodes.get(k).y - cy, nodes.get(k).x - cx) }))
-    .sort((u, v) => u.a - v.a);
-  const step = perim.length / 5;
-  const slots = [];
-  for (let i = 0; i < 5; i++) {
-    const pick = perim[Math.round(i * step) % perim.length];
-    slots.push({ node: pick.k, num: i + 1, owner: null });
-  }
-  slots.forEach(sl => { nodes.get(sl.node).outpost = { race, num: sl.num }; });
-  alienBases.push({ race, cx, cy, slots, hexCenters: centers });
+  return { centers, hexCorners, pairCorners, allKeys };
+}
+
+SYSTEMS.forEach((sysDef, sid) => {
+  const [q, r] = sysDef.anchor;
+  const t = buildTriangle(q, r);
+  const sys = { id: sid, home: sysDef.home, revealed: true, planetIds: [], colonyInts: t.pairCorners };
+  t.hexCorners.forEach((keys, pi) => {
+    const pdef = sysDef.planets[pi];
+    const planet = { id: planets.length, sysId: sid, cx: t.centers[pi].x, cy: t.centers[pi].y,
+      res: pdef.res, chip: { n: pdef.n }, faceUp: true, corners: keys };
+    planets.push(planet);
+    sys.planetIds.push(planet.id);
+    keys.forEach(k => nodes.get(k).planets.push(planet.id));
+  });
+  t.pairCorners.forEach(k => { nodes.get(k).colonyInt = sid; });
+  systems.push(sys);
+});
+
+SITE_ANCHORS.forEach(([q, r], i) => {
+  const t = buildTriangle(q, r);
+  const site = { id: i, centers: t.centers, hexCorners: t.hexCorners,
+    pairCorners: t.pairCorners, allKeys: t.allKeys, content: null, revealed: false };
+  t.allKeys.forEach(k => { nodes.get(k).siteId = i; });
+  sites.push(site);
 });
 
 /* fill the rest of the field with open-space hexes: continuous lanes,
@@ -106,14 +91,10 @@ ALIEN_ANCHORS.forEach(({ anchor, race }) => {
 const spaceHexes = [];
 {
   const occupied = new Set();
-  SYSTEMS.forEach(sd => {
-    const [q, r] = sd.anchor;
+  for (const def of [...SYSTEMS.map(x => x.anchor), ...SITE_ANCHORS]) {
+    const [q, r] = def;
     [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
-  });
-  ALIEN_ANCHORS.forEach(({ anchor }) => {
-    const [q, r] = anchor;
-    [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
-  });
+  }
   for (let r = 0; r <= 18; r++) {
     for (let q = -16; q <= 16; q++) {
       if (occupied.has(q + ',' + r)) continue;
@@ -159,7 +140,7 @@ function newPlayer(i, name, kind) {
     ships: [], transporters: [1, 2, 3],
     thrusters: 0, railguns: 0, cargopods: 0, fame: 0,
     colonies: [], starports: [], outposts: [], favors: [],
-    capturedChips: 0, knowledge: new Set(), civKnown: new Set(), grounded: false,
+    capturedChips: 0, knowledge: new Set(), grounded: false,
     modulesColony: 9, modulesOutpost: 7,
   };
 }
@@ -216,8 +197,50 @@ function startGame(cfg) {
   S.chips = [null, null, null, null];
   S.eventDeck = shuffle(EVENTS.flatMap(e => Array(e.n).fill(e)));
 
+  // deal the 15 face-down sites: 7 planetary systems, 4 civs, 4 empties
+  const contents = shuffle([
+    ...FRONTIER_DEFS.map(d => ({ kind: 'system', def: d })),
+    { kind: 'civ', race: 0 }, { kind: 'civ', race: 1 },
+    { kind: 'civ', race: 2 }, { kind: 'civ', race: 3 },
+    { kind: 'empty' }, { kind: 'empty' }, { kind: 'empty' }, { kind: 'empty' },
+  ]);
   const pool = shuffle(CHIP_POOL.slice());
-  for (const pl of planets) if (!pl.chip) pl.chip = { ...pool.pop() };
+  for (const site of sites) {
+    const c = contents.pop();
+    site.content = c.kind;
+    if (c.kind === 'system') {
+      const sys = { id: systems.length, home: undefined, revealed: false,
+                    planetIds: [], colonyInts: site.pairCorners, siteId: site.id };
+      site.hexCorners.forEach((keys, pi) => {
+        const planet = { id: planets.length, sysId: sys.id,
+          cx: site.centers[pi].x, cy: site.centers[pi].y,
+          res: c.def[pi], chip: { ...pool.pop() }, faceUp: false, corners: keys };
+        planets.push(planet);
+        sys.planetIds.push(planet.id);
+        keys.forEach(k => nodes.get(k).planets.push(planet.id));
+      });
+      site.pairCorners.forEach(k => { nodes.get(k).colonyInt = sys.id; });
+      site.sysId = sys.id;
+      systems.push(sys);
+    } else if (c.kind === 'civ') {
+      const cx = site.centers.reduce((a, x) => a + x.x, 0) / 3;
+      const cy = site.centers.reduce((a, x) => a + x.y, 0) / 3;
+      const perim = [...site.allKeys].filter(k => !nodes.get(k).dead)
+        .map(k => ({ k, a: Math.atan2(nodes.get(k).y - cy, nodes.get(k).x - cx) }))
+        .sort((u, v) => u.a - v.a);
+      const step = perim.length / 5;
+      const slots = [];
+      for (let i = 0; i < 5; i++) {
+        const pick = perim[Math.round(i * step) % perim.length];
+        slots.push({ node: pick.k, num: i + 1, owner: null });
+      }
+      slots.forEach(sl => { nodes.get(sl.node).outpost = { race: c.race, num: sl.num }; });
+      site.allKeys.forEach(k => { nodes.get(k).baseRace = c.race; });
+      alienBases[c.race] = { race: c.race, cx, cy, slots,
+        hexCenters: site.centers, siteId: site.id };
+      site.race = c.race;
+    }
+  }
 
   for (const p of S.players) {
     const sys = systems.find(s => s.home === p.i);
@@ -524,7 +547,7 @@ function canFoundOutpost(p, n) {
   const open = base.slots.filter(s => s.owner === null);
   if (!open.length) return false;
   const lowest = open.reduce((m, s) => Math.min(m, s.num), 9);
-  return p.civKnown.has(n.outpost.race) &&
+  return sites[base.siteId].revealed &&
          n.outpost.num === lowest && p.cargopods >= n.outpost.num && p.modulesOutpost > 0;
 }
 
@@ -549,17 +572,17 @@ function tryMoveShip(ship, destKey, jump) {
   if (!legalEnd(ship, p, destKey)) { toast('Cannot end the flight there.'); return false; }
   const contact = (key) => {
     const nn = nodes.get(key);
-    if (!nn) return;
-    if (nn.baseRace !== undefined && !p.civKnown.has(nn.baseRace)) {
-      p.civKnown.add(nn.baseRace);
-      log(`${p.name} makes first contact with ${ALIENS[nn.baseRace].name}!`);
-    }
-    for (const plid of nn.planets) {
-      const sys = systems[planets[plid].sysId];
-      if (!sys.revealed) {
-        sys.revealed = true;   // the face-down tile flips for everyone
-        log(`${p.name} charts an unexplored system!`);
-      }
+    if (!nn || nn.siteId === undefined) return;
+    const site = sites[nn.siteId];
+    if (site.revealed) return;
+    site.revealed = true;      // the face-down tile flips for everyone
+    if (site.content === 'system') {
+      systems[site.sysId].revealed = true;
+      log(`${p.name} charts a new planetary system!`);
+    } else if (site.content === 'civ') {
+      log(`${p.name} makes first contact with ${ALIENS[site.race].name}!`);
+    } else {
+      log(`${p.name} finds only silent, empty space.`);
     }
   };
   if (!jump) {
@@ -821,12 +844,13 @@ function botJump(p, ship) {
 }
 function botGoals(p, ship) {
   const out = [];
+  // any unrevealed site is worth scouting for either ship type
+  for (const site of sites) {
+    if (!site.revealed) out.push(site.pairCorners[0]);
+  }
   if (ship.kind === 'settler') {
     for (const sys of systems) {
-      if (!sys.revealed) {
-        out.push(sys.colonyInts[0]);   // scout the face-down tile
-        continue;
-      }
+      if (!sys.revealed) continue;
       for (const k of sys.colonyInts) {
         const n = nodes.get(k);
         if (n.structure) continue;
@@ -840,23 +864,16 @@ function botGoals(p, ship) {
     }
   } else {
     for (const base of alienBases) {
-      if (p.civKnown.has(base.race)) {
-        const open = base.slots.filter(s => s.owner === null);
-        if (!open.length) continue;
-        const lowest = open.reduce((m, s) => s.num < m.num ? s : m, open[0]);
-        if (p.cargopods >= lowest.num) out.push(lowest.node);
-      } else {
-        // scout: any passable corner of the civ's space triggers contact
-        const c = base.slots.map(sl => sl.node)
-          .filter(k => legalEnd(ship, p, k) || (adj.get(k) || []).length);
-        for (const [k, n] of nodes) {
-          if (n.baseRace === base.race && !n.dead && !n.outpost) { out.push(k); break; }
-        }
-      }
+      if (!base || !sites[base.siteId].revealed) continue;
+      const open = base.slots.filter(sl => sl.owner === null);
+      if (!open.length) continue;
+      const lowest = open.reduce((m, sl) => sl.num < m.num ? sl : m, open[0]);
+      if (p.cargopods >= lowest.num) out.push(lowest.node);
     }
   }
   return out;
 }
+
 function botTurn() {
   const p = cur();
   if (S.over || p.kind !== 'bot') return;
@@ -1050,12 +1067,19 @@ function render() {
       t.textContent = '?';
     }
   }
+  for (const site of sites) {
+    if (!site.revealed || site.content !== 'empty') continue;
+    for (const c of site.centers) {
+      const g = el('g', { opacity: 0.5 });
+      for (let i = 0; i < 6; i++) {
+        const a = (site.id * 37 + i * 61) % 100;
+        el('circle', { cx: c.x - 14 + (a % 28) + i * 2, cy: c.y - 9 + ((a * 3) % 18),
+          r: 0.9 + (a % 3) * 0.7, fill: '#66738a' }, g);
+      }
+    }
+  }
   for (const base of alienBases) {
-    const anyOutpost = base.slots.some(sl => sl.owner !== null);
-    const civVisible = anyOutpost ||
-      (viewer >= 0 ? S.players[viewer].civKnown.has(base.race)
-                   : S.players.some(x => x.civKnown.has(base.race)));
-    if (!civVisible) continue;
+    if (!base || !sites[base.siteId].revealed) continue;
     const g = el('g', {});
     for (const hc of base.hexCenters)
       el('circle', { cx: hc.x, cy: hc.y, r: 10, fill: ALIENS[base.race].color, opacity: 0.14 }, g);
@@ -1482,10 +1506,10 @@ if (location.hash === '#autotest') {
   const stateDiv = document.createElement('div');
   stateDiv.id = 'autotest-state'; stateDiv.style.display = 'none';
   document.body.appendChild(stateDiv);
-  window.__state = () => JSON.stringify({ turn: S.turn, over: S.over, revealed: systems.filter(x => x.revealed).length,
+  window.__state = () => JSON.stringify({ turn: S.turn, over: S.over, revealed: sites.filter(x => x.revealed).length,
     players: S.players.map(p => ({ name: p.name, vp: vp(p), col: p.colonies.length,
       port: p.starports.length, out: p.outposts.length, fame: p.fame,
-      chips: S.chips.filter(c => c === p.i).length, cap: p.capturedChips, civs: p.civKnown.size,
+      chips: S.chips.filter(c => c === p.i).length, cap: p.capturedChips,
       ships: p.ships.length, cards: handSize(p) })) });
   setInterval(() => { stateDiv.textContent = window.__state(); }, 1500);
   document.getElementById('setup-screen').hidden = true;

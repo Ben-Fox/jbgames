@@ -66,57 +66,41 @@ const SYSTEMS = [
     { res: 'alloy', n: 5 }, { res: 'goods', n: 2 }, { res: 'carbon', n: 9 } ] },
   { anchor: [2, 17], home: 3, planets: [
     { res: 'carbon', n: 9 }, { res: 'biomass', n: 11 }, { res: 'alloy', n: 4 } ] },
-  // 15 frontier systems, face-down at start: 5 rows of 3
-  { anchor: [-5, 14], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
-  { anchor: [-1, 14], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
-  { anchor: [3, 14],  planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
-  { anchor: [-2, 11], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
-  { anchor: [2, 11],  planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
-  { anchor: [5, 11],  planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
-  { anchor: [-2, 8],  planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
-  { anchor: [2, 8],   planets: [ { res: 'goods' }, { res: 'fuel' }, { res: 'carbon' } ] },
-  { anchor: [6, 8],   planets: [ { res: 'alloy' }, { res: 'carbon' }, { res: 'biomass' } ] },
-  { anchor: [1, 5],   planets: [ { res: 'fuel' }, { res: 'biomass' }, { res: 'alloy' } ] },
-  { anchor: [5, 5],   planets: [ { res: 'carbon' }, { res: 'goods' }, { res: 'fuel' } ] },
-  { anchor: [8, 5],   planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'carbon' } ] },
-  { anchor: [1, 2],   planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'biomass' } ] },
-  { anchor: [5, 2],   planets: [ { res: 'alloy' }, { res: 'fuel' }, { res: 'goods' } ] },
-  { anchor: [9, 2],   planets: [ { res: 'fuel' }, { res: 'carbon' }, { res: 'alloy' } ] },
 ];
 
-/* frontier chip pool: 16 numbers + 3 raider dens (pirate lairs) + 2 frozen
-   worlds (ice planets) = 21, dealt face-down */
+/* 15 face-down SITES in 5 rows of 3 (never more than 3 across a line).
+   At setup their contents are shuffled: 7 planetary systems, the 4
+   civilizations, and 4 stretches of empty space. Nobody knows which is
+   which until a ship reaches them. */
+const SITE_ANCHORS = [
+  [-5, 13], [-1, 13], [3, 13],
+  [-3, 10], [1, 10], [4, 10],
+  [-2, 7],  [2, 7],  [6, 7],
+  [0, 4],   [4, 4],  [7, 4],
+  [1, 1],   [5, 1],  [9, 1],
+];
+
+/* resource triples for the 7 planetary systems among the sites */
+const FRONTIER_DEFS = [
+  [ 'fuel', 'alloy', 'goods' ],
+  [ 'carbon', 'biomass', 'fuel' ],
+  [ 'goods', 'carbon', 'alloy' ],
+  [ 'alloy', 'biomass', 'carbon' ],
+  [ 'fuel', 'goods', 'biomass' ],
+  [ 'carbon', 'fuel', 'alloy' ],
+  [ 'biomass', 'alloy', 'goods' ],
+];
+
+/* frontier chip pool: 16 numbers + 3 raider dens + 2 frozen worlds */
 const CHIP_POOL = [
-  { n: 2 }, { n: 2 },
-  { n: 3 }, { n: 3 }, { n: 3 },
-  { n: 4 }, { n: 4 }, { n: 4 }, { n: 4 },
-  { n: 5 }, { n: 5 }, { n: 5 }, { n: 5 }, { n: 5 },
-  { n: 6 }, { n: 6 }, { n: 6 }, { n: 6 },
-  { n: 8 }, { n: 8 }, { n: 8 }, { n: 8 },
-  { n: 9 }, { n: 9 }, { n: 9 }, { n: 9 },
-  { n: 10 }, { n: 10 }, { n: 10 }, { n: 10 },
-  { n: 11 }, { n: 11 }, { n: 11 },
-  { n: 12 }, { n: 12 },
-  { hz: 'raider', num: 3 }, { hz: 'raider', num: 4 }, { hz: 'raider', num: 5 },
-  { hz: 'raider', num: 5 }, { hz: 'raider', num: 6 }, { hz: 'raider', num: 7 },
-  { hz: 'frozen', num: 2 }, { hz: 'frozen', num: 2 },
-  { hz: 'frozen', num: 3 }, { hz: 'frozen', num: 3 },
+  { n: 3 }, { n: 3 }, { n: 4 }, { n: 4 }, { n: 5 }, { n: 5 },
+  { n: 6 }, { n: 6 }, { n: 8 }, { n: 8 }, { n: 9 }, { n: 9 },
+  { n: 10 }, { n: 10 }, { n: 11 }, { n: 11 },
+  { hz: 'raider', num: 3 }, { hz: 'raider', num: 5 }, { hz: 'raider', num: 7 },
+  { hz: 'frozen', num: 2 }, { hz: 'frozen', num: 3 },
 ];
 /* reserve chips replace captured hazard chips (drawn at random) */
-const RESERVE_CHIPS = [4, 5, 5, 6, 8, 9, 9, 10];
-
-/* alien home bases: single hexes; 5 outpost slots on their corners */
-/* alien home bases at varying depths, like the reference geography:
-   two deep in the far corners, two nearer the colonial edge */
-/* Civilizations occupy a 3-hex triangle like planetary systems, at
-   staggered depths. All start UNDISCOVERED: a ship must reach their
-   space before their stations become visible/usable. */
-const ALIEN_ANCHORS = [
-  { anchor: [0, 0], race: 0 },     // deep, far top-left
-  { anchor: [11, 0], race: 1 },    // deep, top-right
-  { anchor: [-4, 9], race: 2 },    // left edge, mid-depth
-  { anchor: [5, 15], race: 3 },    // right edge, nearest home space
-];
+const RESERVE_CHIPS = [4, 5, 6, 9, 10];
 
 const ALIENS = [
   { name: 'The Concord',  desc: 'Silver-tongued mediators of the spiral arm', color: '#7fd4e8' },
