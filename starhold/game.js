@@ -5,7 +5,7 @@
 /* ── hex math ────────────────────────────────────────────────── */
 const SQ3 = Math.sqrt(3);
 function hexCenter(q, r) {
-  return { x: HEX_R * SQ3 * (q + r / 2) + 20, y: HEX_R * 1.5 * r + 92 };
+  return { x: HEX_R * SQ3 * (q + r / 2) + 15, y: HEX_R * 1.5 * r + 104 };
 }
 function corner(c, i) {
   const a = Math.PI / 180 * (60 * i - 90);
@@ -86,11 +86,11 @@ const spaceHexes = [];
     [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
   });
   ALIEN_HEXES.forEach(h => occupied.add(h.q + ',' + h.r));
-  for (let r = 0; r <= 7; r++) {
-    for (let q = -4; q <= 9; q++) {
+  for (let r = 0; r <= 12; r++) {
+    for (let q = -11; q <= 12; q++) {
       if (occupied.has(q + ',' + r)) continue;
       const c = hexCenter(q, r);
-      if (c.x < 40 || c.x > 1080 || c.y < 50 || c.y > 850) continue;
+      if (c.x < 46 || c.x > 1074 || c.y < 62 || c.y > 940) continue;
       const keys = addHexNodes(c.x, c.y);
       addHexEdges(keys);
       spaceHexes.push({ q, r, cx: c.x, cy: c.y });
@@ -915,7 +915,7 @@ function render() {
       <stop offset="0%" stop-color="#e8c14a" stop-opacity=".5"/>
       <stop offset="100%" stop-color="#e8c14a" stop-opacity="0"/>
     </radialGradient>`;
-  el('rect', { x: 0, y: 0, width: 1120, height: 900, fill: 'url(#space)' });
+  el('rect', { x: 0, y: 0, width: 1120, height: 990, fill: 'url(#space)' });
   // drifting nebulas
   el('ellipse', { cx: 260, cy: 210, rx: 340, ry: 220, fill: 'url(#neb1)', class: 'neb n1' });
   el('ellipse', { cx: 880, cy: 620, rx: 380, ry: 260, fill: 'url(#neb2)', class: 'neb n2' });
@@ -930,7 +930,7 @@ function render() {
   for (let i = 0; i < 190; i++) {
     seed = (seed * 16807) % 2147483647;
     const x = seed % 1120; seed = (seed * 16807) % 2147483647;
-    const y = seed % 900; seed = (seed * 16807) % 2147483647;
+    const y = seed % 990; seed = (seed * 16807) % 2147483647;
     const rr = (seed % 10) / 8 + 0.3; seed = (seed * 16807) % 2147483647;
     const tw = seed % 5 === 0;
     const st = el('circle', { cx: x, cy: y, r: rr, fill: '#cdd6e8',
@@ -965,13 +965,13 @@ function render() {
   for (const pl of planets) {
     const g = el('g', {});
     const hot = pl.chip && !pl.chip.hz && (pl.chip.n === 6 || pl.chip.n === 8) && pl.faceUp;
-    if (hot) el('circle', { cx: pl.cx, cy: pl.cy, r: 42, fill: 'url(#glowHot)' }, g);
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 27.5, fill: '#04060d', opacity: 0.55 }, g);
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 26, fill: `url(#pl-${pl.res})` }, g);
-    el('ellipse', { cx: pl.cx - 8, cy: pl.cy - 10, rx: 12, ry: 7, fill: '#fff', opacity: 0.12,
+    if (hot) el('circle', { cx: pl.cx, cy: pl.cy, r: 34, fill: 'url(#glowHot)' }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 22.5, fill: '#04060d', opacity: 0.55 }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 21, fill: `url(#pl-${pl.res})` }, g);
+    el('ellipse', { cx: pl.cx - 6, cy: pl.cy - 8, rx: 9, ry: 5, fill: '#fff', opacity: 0.12,
       transform: `rotate(-24 ${pl.cx - 8} ${pl.cy - 10})` }, g);
     const known = pl.faceUp || (viewer >= 0 && S.players[viewer].knowledge.has(pl.id));
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 12, fill: '#0d1322', stroke: '#3c4c68' }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 10.5, fill: '#0d1322', stroke: '#3c4c68' }, g);
     if (known && pl.chip) {
       if (pl.chip.hz) {
         const t = el('text', { x: pl.cx, y: pl.cy + 4, class: 'chip-num hz' }, g);
@@ -982,7 +982,7 @@ function render() {
         t.textContent = pl.chip.n;
       }
       if (!pl.faceUp)
-        el('circle', { cx: pl.cx, cy: pl.cy, r: 12, fill: 'none', stroke: '#c9a227', 'stroke-dasharray': '3 3' }, g);
+        el('circle', { cx: pl.cx, cy: pl.cy, r: 10.5, fill: 'none', stroke: '#c9a227', 'stroke-dasharray': '3 3' }, g);
     } else {
       const t = el('text', { x: pl.cx, y: pl.cy + 4, class: 'chip-num dim' }, g);
       t.textContent = '?';
@@ -990,13 +990,13 @@ function render() {
   }
   for (const base of alienBases) {
     const g = el('g', {});
-    el('circle', { cx: base.cx, cy: base.cy, r: 24, fill: 'none', stroke: ALIENS[base.race].color, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, g);
-    el('circle', { cx: base.cx, cy: base.cy, r: 10, fill: ALIENS[base.race].color, opacity: 0.85 }, g);
-    const t = el('text', { x: base.cx, y: base.cy - 32, class: 'alien-name', fill: ALIENS[base.race].color }, g);
+    el('circle', { cx: base.cx, cy: base.cy, r: 19, fill: 'none', stroke: ALIENS[base.race].color, 'stroke-width': 2, 'stroke-dasharray': '5 4' }, g);
+    el('circle', { cx: base.cx, cy: base.cy, r: 8, fill: ALIENS[base.race].color, opacity: 0.85 }, g);
+    const t = el('text', { x: base.cx, y: base.cy - 27, class: 'alien-name', fill: ALIENS[base.race].color }, g);
     t.textContent = ALIENS[base.race].name;
     for (const s of base.slots) {
       const n = nodes.get(s.node);
-      el('rect', { x: n.x - 8, y: n.y - 8, width: 16, height: 16, rx: 4,
+      el('rect', { x: n.x - 7, y: n.y - 7, width: 14, height: 14, rx: 4,
         fill: s.owner === null ? '#131b2e' : PCOLOR[s.owner], stroke: ALIENS[base.race].color }, g);
       const st = el('text', { x: n.x, y: n.y + 4, class: 'stn-num' }, g);
       st.textContent = s.num;

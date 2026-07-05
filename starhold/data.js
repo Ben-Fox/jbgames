@@ -54,27 +54,28 @@ const RESERVE_REFILL = 6;
    three is removed (ships cannot cut through a system).
    Home systems carry fixed face-up numbers; frontier chips are dealt
    face-down from CHIP_POOL. */
-const HEX_R = 56;
+const HEX_R = 46;
 
 const SYSTEMS = [
-  // 4 home systems (bottom): fixed chips per planet, owner = player index
-  { anchor: [0, 6], home: 0, planets: [
+  // 4 home systems across the bottom, exactly 1 blank hex between groups
+  { anchor: [-4, 11], home: 0, planets: [
     { res: 'fuel', n: 8 }, { res: 'carbon', n: 10 }, { res: 'biomass', n: 5 } ] },
-  { anchor: [2, 6], home: 1, planets: [
+  { anchor: [-1, 11], home: 1, planets: [
     { res: 'biomass', n: 6 }, { res: 'goods', n: 12 }, { res: 'fuel', n: 9 } ] },
-  { anchor: [4, 6], home: 2, planets: [
+  { anchor: [2, 11], home: 2, planets: [
     { res: 'alloy', n: 5 }, { res: 'goods', n: 2 }, { res: 'carbon', n: 9 } ] },
-  { anchor: [6, 6], home: 3, planets: [
+  { anchor: [5, 11], home: 3, planets: [
     { res: 'carbon', n: 9 }, { res: 'biomass', n: 11 }, { res: 'alloy', n: 4 } ] },
-  // 7 frontier systems, echoing the real board's geography: staggered
-  // bands, denser mid-field, emptier toward the deep corners
-  { anchor: [0, 4], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
-  { anchor: [3, 4], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
-  { anchor: [6, 4], planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
-  { anchor: [1, 2], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
-  { anchor: [4, 2], planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
-  { anchor: [7, 2], planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
-  { anchor: [3, 0], planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
+  // frontier row A (2 blank rows above home), 3 systems, 2 blanks between
+  { anchor: [-2, 7], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
+  { anchor: [2, 7], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
+  { anchor: [6, 7], planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
+  // frontier row B (2 blank rows above A), 3 systems, staggered
+  { anchor: [1, 3], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
+  { anchor: [5, 3], planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
+  { anchor: [8, 3], planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
+  // one deep system at the top of the field
+  { anchor: [5, 0], planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
 ];
 
 /* frontier chip pool: 16 numbers + 3 raider dens (pirate lairs) + 2 frozen
@@ -93,10 +94,10 @@ const RESERVE_CHIPS = [4, 5, 6, 9, 10];
 /* alien home bases at varying depths, like the reference geography:
    two deep in the far corners, two nearer the colonial edge */
 const ALIEN_HEXES = [
-  { q: 0, r: 0, race: 0 },    // deep, far top-left
-  { q: 6, r: 0, race: 1 },    // deep, top-right
-  { q: -1, r: 3, race: 2 },   // left edge, mid-depth
-  { q: 8, r: 4, race: 3 },    // right edge, close to home space
+  { q: 1, r: 0, race: 0 },     // deep, far top-left
+  { q: 10, r: 0, race: 1 },    // deep, top-right
+  { q: -2, r: 5, race: 2 },    // left edge, in the mid void band
+  { q: 8, r: 8, race: 3 },     // right edge, nearest to home space
 ];
 
 const ALIENS = [
