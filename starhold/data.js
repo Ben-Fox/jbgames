@@ -93,11 +93,14 @@ const RESERVE_CHIPS = [4, 5, 6, 9, 10];
 /* alien home bases: single hexes; 5 outpost slots on their corners */
 /* alien home bases at varying depths, like the reference geography:
    two deep in the far corners, two nearer the colonial edge */
-const ALIEN_HEXES = [
-  { q: 1, r: 0, race: 0 },     // deep, far top-left
-  { q: 10, r: 0, race: 1 },    // deep, top-right
-  { q: -2, r: 5, race: 2 },    // left edge, in the mid void band
-  { q: 8, r: 8, race: 3 },     // right edge, nearest to home space
+/* Civilizations occupy a 3-hex triangle like planetary systems, at
+   staggered depths. All start UNDISCOVERED: a ship must reach their
+   space before their stations become visible/usable. */
+const ALIEN_ANCHORS = [
+  { anchor: [0, 0], race: 0 },    // deep, far top-left
+  { anchor: [9, 0], race: 1 },    // deep, top-right
+  { anchor: [-2, 5], race: 2 },   // left edge, mid-depth
+  { anchor: [7, 8], race: 3 },    // right edge, nearest home space
 ];
 
 const ALIENS = [

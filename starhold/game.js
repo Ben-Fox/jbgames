@@ -65,15 +65,40 @@ SYSTEMS.forEach((sysDef, sid) => {
   systems.push(sys);
 });
 
-ALIEN_HEXES.forEach(({ q, r, race }) => {
-  const c = hexCenter(q, r);
-  const keys = addHexNodes(c.x, c.y);
-  addHexEdges(keys);
-  // outpost slots: 5 corners that are not colony intersections / dead cores
-  const usable = keys.filter(k => !nodes.get(k).colonyInt && !nodes.get(k).dead);
-  const slots = usable.slice(0, 5).map((k, i) => ({ node: k, num: i + 1, owner: null }));
-  slots.forEach(s => { nodes.get(s.node).outpost = { race, num: s.num }; });
-  alienBases.push({ race, cx: c.x, cy: c.y, slots });
+ALIEN_ANCHORS.forEach(({ anchor, race }) => {
+  const [q, r] = anchor;
+  const hexQR = [[q, r], [q + 1, r], [q, r + 1]];
+  const cornerCount = new Map();
+  const allKeys = new Set();
+  const centers = [];
+  hexQR.forEach(([hq, hr]) => {
+    const c = hexCenter(hq, hr);
+    centers.push(c);
+    const keys = addHexNodes(c.x, c.y);
+    addHexEdges(keys);
+    keys.forEach(k => {
+      allKeys.add(k);
+      cornerCount.set(k, (cornerCount.get(k) || 0) + 1);
+    });
+  });
+  const cx = centers.reduce((s2, c) => s2 + c.x, 0) / 3;
+  const cy = centers.reduce((s2, c) => s2 + c.y, 0) / 3;
+  for (const [k, cnt] of cornerCount) {
+    if (cnt === 3) nodes.get(k).dead = true;      // heart of the civ: impassable
+    nodes.get(k).baseRace = race;                 // touching any corner = contact
+  }
+  // 5 outpost stations: perimeter corners, evenly spread by angle
+  const perim = [...allKeys].filter(k => !nodes.get(k).dead)
+    .map(k => ({ k, a: Math.atan2(nodes.get(k).y - cy, nodes.get(k).x - cx) }))
+    .sort((u, v) => u.a - v.a);
+  const step = perim.length / 5;
+  const slots = [];
+  for (let i = 0; i < 5; i++) {
+    const pick = perim[Math.round(i * step) % perim.length];
+    slots.push({ node: pick.k, num: i + 1, owner: null });
+  }
+  slots.forEach(sl => { nodes.get(sl.node).outpost = { race, num: sl.num }; });
+  alienBases.push({ race, cx, cy, slots, hexCenters: centers });
 });
 
 /* fill the rest of the field with open-space hexes: continuous lanes,
@@ -85,7 +110,10 @@ const spaceHexes = [];
     const [q, r] = sd.anchor;
     [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
   });
-  ALIEN_HEXES.forEach(h => occupied.add(h.q + ',' + h.r));
+  ALIEN_ANCHORS.forEach(({ anchor }) => {
+    const [q, r] = anchor;
+    [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
+  });
   for (let r = 0; r <= 12; r++) {
     for (let q = -11; q <= 12; q++) {
       if (occupied.has(q + ',' + r)) continue;
@@ -131,7 +159,7 @@ function newPlayer(i, name, kind) {
     ships: [], transporters: [1, 2, 3],
     thrusters: 0, railguns: 0, cargopods: 0, fame: 0,
     colonies: [], starports: [], outposts: [], favors: [],
-    capturedChips: 0, knowledge: new Set(), grounded: false,
+    capturedChips: 0, knowledge: new Set(), civKnown: new Set(), grounded: false,
     modulesColony: 9, modulesOutpost: 7,
   };
 }
@@ -496,7 +524,8 @@ function canFoundOutpost(p, n) {
   const open = base.slots.filter(s => s.owner === null);
   if (!open.length) return false;
   const lowest = open.reduce((m, s) => Math.min(m, s.num), 9);
-  return n.outpost.num === lowest && p.cargopods >= n.outpost.num && p.modulesOutpost > 0;
+  return p.civKnown.has(n.outpost.race) &&
+         n.outpost.num === lowest && p.cargopods >= n.outpost.num && p.modulesOutpost > 0;
 }
 
 function pathPlanets(parent, destKey, fromKey) {
@@ -518,12 +547,22 @@ function tryMoveShip(ship, destKey, jump) {
   const { dist, parent } = bfsPaths(ship.node, jump ? 999 : S.speed);
   if (!jump && !dist.has(destKey)) return false;
   if (!legalEnd(ship, p, destKey)) { toast('Cannot end the flight there.'); return false; }
+  const contact = (key) => {
+    const nn = nodes.get(key);
+    if (nn && nn.baseRace !== undefined && !p.civKnown.has(nn.baseRace)) {
+      p.civKnown.add(nn.baseRace);
+      log(`${p.name} makes first contact with ${ALIENS[nn.baseRace].name}!`);
+    }
+  };
   if (!jump) {
     for (const plid of pathPlanets(parent, destKey, ship.node)) {
       if (!chipKnown(planets[plid], p.i)) revealTo(p, plid);
     }
+    let k = destKey;
+    while (k && k !== ship.node) { contact(k); k = parent.get(k); }
   } else {
     for (const plid of nodes.get(destKey).planets) revealTo(p, plid);
+    contact(destKey);
   }
   ship.node = destKey; ship.moved = true; ship.mustVacate = null;
   afterLanding(ship, p);
@@ -788,10 +827,19 @@ function botGoals(p, ship) {
     }
   } else {
     for (const base of alienBases) {
-      const open = base.slots.filter(s => s.owner === null);
-      if (!open.length) continue;
-      const lowest = open.reduce((m, s) => s.num < m.num ? s : m, open[0]);
-      if (p.cargopods >= lowest.num) out.push(lowest.node);
+      if (p.civKnown.has(base.race)) {
+        const open = base.slots.filter(s => s.owner === null);
+        if (!open.length) continue;
+        const lowest = open.reduce((m, s) => s.num < m.num ? s : m, open[0]);
+        if (p.cargopods >= lowest.num) out.push(lowest.node);
+      } else {
+        // scout: any passable corner of the civ's space triggers contact
+        const c = base.slots.map(sl => sl.node)
+          .filter(k => legalEnd(ship, p, k) || (adj.get(k) || []).length);
+        for (const [k, n] of nodes) {
+          if (n.baseRace === base.race && !n.dead && !n.outpost) { out.push(k); break; }
+        }
+      }
     }
   }
   return out;
@@ -989,7 +1037,14 @@ function render() {
     }
   }
   for (const base of alienBases) {
+    const anyOutpost = base.slots.some(sl => sl.owner !== null);
+    const civVisible = anyOutpost ||
+      (viewer >= 0 ? S.players[viewer].civKnown.has(base.race)
+                   : S.players.some(x => x.civKnown.has(base.race)));
+    if (!civVisible) continue;
     const g = el('g', {});
+    for (const hc of base.hexCenters)
+      el('circle', { cx: hc.x, cy: hc.y, r: 13, fill: ALIENS[base.race].color, opacity: 0.14 }, g);
     el('circle', { cx: base.cx, cy: base.cy, r: 19, fill: 'none', stroke: ALIENS[base.race].color, 'stroke-width': 2, 'stroke-dasharray': '5 4' }, g);
     el('circle', { cx: base.cx, cy: base.cy, r: 8, fill: ALIENS[base.race].color, opacity: 0.85 }, g);
     const t = el('text', { x: base.cx, y: base.cy - 27, class: 'alien-name', fill: ALIENS[base.race].color }, g);
@@ -1416,7 +1471,7 @@ if (location.hash === '#autotest') {
   window.__state = () => JSON.stringify({ turn: S.turn, over: S.over,
     players: S.players.map(p => ({ name: p.name, vp: vp(p), col: p.colonies.length,
       port: p.starports.length, out: p.outposts.length, fame: p.fame,
-      chips: S.chips.filter(c => c === p.i).length, cap: p.capturedChips,
+      chips: S.chips.filter(c => c === p.i).length, cap: p.capturedChips, civs: p.civKnown.size,
       ships: p.ships.length, cards: handSize(p) })) });
   setInterval(() => { stateDiv.textContent = window.__state(); }, 1500);
   document.getElementById('setup-screen').hidden = true;
