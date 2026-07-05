@@ -40,13 +40,14 @@
       <details class="rules-details">
         <summary>How to play</summary>
         <div class="rules-body">
-          <p><b>Goal:</b> first to <b>15 victory points</b>. Colonies are worth 1, starports 2, alien friendship medallions 2, cleared hazards 1, and every 2 renown stars 1.</p>
-          <p><b>Each turn:</b> roll for production (planets matching the dice pay every adjacent colony), then trade and build, then roll your flagship. A <b>flare</b> on the flagship roll triggers a deep-space event. Then move your ships.</p>
-          <p><b>Ships:</b> build settler ships to found colonies on open planet docks, and envoy ships to dock at alien stations (you need cargo pods equal to the station number). First envoy at each alien race earns a friendship medallion and a diplomatic favor.</p>
-          <p><b>Flagship:</b> upgrade with thrusters (speed), railguns (fight off raiders), and cargo pods (alien trade). Renown stars come from events and bold deeds.</p>
-          <p><b>Hazards:</b> raider dens need railguns >= their number; frozen worlds need cargo pods >= their number. Clearing one earns 1 VP and opens the planet.</p>
-          <p><b>Rolling a 7:</b> no production; everyone holding more than 7 cards discards half, and you commandeer a random card from a rival.</p>
-          <p><b>Resupply:</b> while you have fewer than 9 VP, you draw 1 free resource each turn.</p>
+          <p><b>Goal:</b> first to <b>15 victory points</b> during your own turn. Colonies 1 VP, starports 2, alien friendship medallions 2, captured hazard chips 1, every 2 renown stars 1 (max 5 VP from renown).</p>
+          <p><b>Turn:</b> 1) Production: roll 2 dice; every planet with that number pays 1 card to each adjacent colony or starport. Under 9 VP you also draw 1 reserve card. 2) Trade and build, in any order, as often as you like. 3) Flight: roll your flagship, then move ships.</p>
+          <p><b>Flagship roll:</b> two of four orbs show. Sun = 3, ember/comet = 2 each. A <b>flare</b> means a deep-space event and base speed 3. Total speed = base + thrusters (+ favors). All your ships share it.</p>
+          <p><b>Ships:</b> you own exactly 3 transporters. Settler ships (1 Alloy, 1 Carbon, 1 Fuel, 1 Biomass) found colonies on the circled sites between two planets. Envoy ships (1 Alloy, 1 Fuel, 2 Goods) dock at alien stations: lowest open number first, and your cargo pods must be at least that number. New ships launch beside your starports. Founding returns the transporter for reuse.</p>
+          <p><b>Exploration:</b> frontier planets hide their numbers. Fly adjacent to peek privately; found a colony to flip them face up. Raider dens fall to railguns, frozen worlds to cargo pods; each captured chip is 1 VP and the planet gets a fresh number.</p>
+          <p><b>Aliens:</b> each outpost earns a diplomatic favor; whoever holds the MOST outposts at a base holds its medallion (ties: lowest-numbered outpost).</p>
+          <p><b>Trading:</b> bank 3:1, Goods always 2:1, favors improve rates. You may also trade 1:1 with other captains if they agree.</p>
+          <p><b>On a 7:</b> no production; more than 7 cards means you discard half; the roller takes a random card from one rival.</p>
         </div>
       </details>
     </div>
@@ -54,7 +55,7 @@
 
   <div id="game-screen" class="screen" hidden>
     <div id="board-wrap">
-      <svg id="board" viewBox="0 0 1060 950" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="board" viewBox="0 0 1120 900" preserveAspectRatio="xMidYMid meet"></svg>
       <div id="board-hint"></div>
     </div>
     <div id="sidebar">
