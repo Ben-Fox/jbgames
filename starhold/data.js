@@ -66,14 +66,15 @@ const SYSTEMS = [
     { res: 'alloy', n: 5 }, { res: 'goods', n: 2 }, { res: 'carbon', n: 9 } ] },
   { anchor: [6, 6], home: 3, planets: [
     { res: 'carbon', n: 9 }, { res: 'biomass', n: 11 }, { res: 'alloy', n: 4 } ] },
-  // 7 frontier systems: three different planet types each, chips dealt
-  { anchor: [1, 4], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
+  // 7 frontier systems, echoing the real board's geography: staggered
+  // bands, denser mid-field, emptier toward the deep corners
+  { anchor: [0, 4], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
   { anchor: [3, 4], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
-  { anchor: [5, 4], planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
-  { anchor: [0, 2], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
-  { anchor: [2, 2], planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
-  { anchor: [4, 2], planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
-  { anchor: [6, 2], planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
+  { anchor: [6, 4], planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
+  { anchor: [1, 2], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
+  { anchor: [4, 2], planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
+  { anchor: [7, 2], planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
+  { anchor: [3, 0], planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
 ];
 
 /* frontier chip pool: 16 numbers + 3 raider dens (pirate lairs) + 2 frozen
@@ -89,11 +90,13 @@ const CHIP_POOL = [
 const RESERVE_CHIPS = [4, 5, 6, 9, 10];
 
 /* alien home bases: single hexes; 5 outpost slots on their corners */
+/* alien home bases at varying depths, like the reference geography:
+   two deep in the far corners, two nearer the colonial edge */
 const ALIEN_HEXES = [
-  { q: 0, r: 1, race: 0 },
-  { q: 3, r: 1, race: 1 },
-  { q: 5, r: 1, race: 2 },
-  { q: 7, r: 1, race: 3 },
+  { q: 0, r: 0, race: 0 },    // deep, far top-left
+  { q: 6, r: 0, race: 1 },    // deep, top-right
+  { q: -1, r: 3, race: 2 },   // left edge, mid-depth
+  { q: 8, r: 4, race: 3 },    // right edge, close to home space
 ];
 
 const ALIENS = [

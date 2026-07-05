@@ -5,7 +5,7 @@
 /* ── hex math ────────────────────────────────────────────────── */
 const SQ3 = Math.sqrt(3);
 function hexCenter(q, r) {
-  return { x: HEX_R * SQ3 * (q + r / 2) + 20, y: HEX_R * 1.5 * r + 70 };
+  return { x: HEX_R * SQ3 * (q + r / 2) + 20, y: HEX_R * 1.5 * r + 92 };
 }
 function corner(c, i) {
   const a = Math.PI / 180 * (60 * i - 90);
