@@ -76,6 +76,28 @@ ALIEN_HEXES.forEach(({ q, r, race }) => {
   alienBases.push({ race, cx: c.x, cy: c.y, slots });
 });
 
+/* fill the rest of the field with open-space hexes: continuous lanes,
+   no dead pockets, and a canvas for nebulas/decor */
+const spaceHexes = [];
+{
+  const occupied = new Set();
+  SYSTEMS.forEach(sd => {
+    const [q, r] = sd.anchor;
+    [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
+  });
+  ALIEN_HEXES.forEach(h => occupied.add(h.q + ',' + h.r));
+  for (let r = 0; r <= 7; r++) {
+    for (let q = -4; q <= 9; q++) {
+      if (occupied.has(q + ',' + r)) continue;
+      const c = hexCenter(q, r);
+      if (c.x < 40 || c.x > 1080 || c.y < 50 || c.y > 850) continue;
+      const keys = addHexNodes(c.x, c.y);
+      addHexEdges(keys);
+      spaceHexes.push({ q, r, cx: c.x, cy: c.y });
+    }
+  }
+}
+
 const adj = new Map();
 for (const { a, b } of edges.values()) {
   if (nodes.get(a).dead || nodes.get(b).dead) continue;
@@ -853,19 +875,86 @@ function diamondPts(cx, cy, r) {
   return `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`;
 }
 
+function hexPath(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i - 90);
+    pts.push((cx + r * Math.cos(a)) + ',' + (cy + r * Math.sin(a)));
+  }
+  return pts.join(' ');
+}
+
 function render() {
   svg.innerHTML = '';
   const defs = el('defs', {});
-  defs.innerHTML = `<radialGradient id="space" cx="50%" cy="35%">
-    <stop offset="0%" stop-color="#101a33"/><stop offset="100%" stop-color="#05070f"/>
-  </radialGradient>`;
+  defs.innerHTML = `
+    <radialGradient id="space" cx="50%" cy="32%">
+      <stop offset="0%" stop-color="#0e1830"/><stop offset="55%" stop-color="#081020"/>
+      <stop offset="100%" stop-color="#04060d"/>
+    </radialGradient>
+    <radialGradient id="neb1" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#6b3fa0" stop-opacity=".28"/>
+      <stop offset="60%" stop-color="#3c2a68" stop-opacity=".12"/>
+      <stop offset="100%" stop-color="#3c2a68" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="neb2" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#1d6f7d" stop-opacity=".24"/>
+      <stop offset="100%" stop-color="#1d6f7d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="neb3" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#a05c2a" stop-opacity=".16"/>
+      <stop offset="100%" stop-color="#a05c2a" stop-opacity="0"/>
+    </radialGradient>
+    ${RES.map(r => `
+    <radialGradient id="pl-${r}" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="${RES_META[r].color}" stop-opacity="1"/>
+      <stop offset="70%" stop-color="${RES_META[r].color}" stop-opacity=".85"/>
+      <stop offset="100%" stop-color="#04060d" stop-opacity=".9"/>
+    </radialGradient>`).join('')}
+    <radialGradient id="glowHot" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#e8c14a" stop-opacity=".5"/>
+      <stop offset="100%" stop-color="#e8c14a" stop-opacity="0"/>
+    </radialGradient>`;
   el('rect', { x: 0, y: 0, width: 1120, height: 900, fill: 'url(#space)' });
+  // drifting nebulas
+  el('ellipse', { cx: 260, cy: 210, rx: 340, ry: 220, fill: 'url(#neb1)', class: 'neb n1' });
+  el('ellipse', { cx: 880, cy: 620, rx: 380, ry: 260, fill: 'url(#neb2)', class: 'neb n2' });
+  el('ellipse', { cx: 640, cy: 160, rx: 260, ry: 160, fill: 'url(#neb3)', class: 'neb n3' });
+  // distant galaxy
+  const gal = el('g', { transform: 'translate(1020,90) rotate(-24)', opacity: 0.5 });
+  el('ellipse', { cx: 0, cy: 0, rx: 44, ry: 13, fill: 'none', stroke: '#9fb4d8', 'stroke-width': 1, opacity: 0.5 }, gal);
+  el('ellipse', { cx: 0, cy: 0, rx: 26, ry: 7, fill: 'none', stroke: '#c9d6ec', 'stroke-width': 1, opacity: 0.6 }, gal);
+  el('circle', { cx: 0, cy: 0, r: 4, fill: '#e8eefc', opacity: 0.9 }, gal);
+  // starfield with twinkle
   let seed = 7;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 190; i++) {
     seed = (seed * 16807) % 2147483647;
     const x = seed % 1120; seed = (seed * 16807) % 2147483647;
     const y = seed % 900; seed = (seed * 16807) % 2147483647;
-    el('circle', { cx: x, cy: y, r: (seed % 10) / 9 + 0.3, fill: '#cdd6e8', opacity: 0.5 });
+    const rr = (seed % 10) / 8 + 0.3; seed = (seed * 16807) % 2147483647;
+    const tw = seed % 5 === 0;
+    const st = el('circle', { cx: x, cy: y, r: rr, fill: '#cdd6e8',
+      opacity: 0.25 + (seed % 40) / 100, class: tw ? 'twinkle' : '' });
+    if (tw) st.style.animationDelay = (seed % 4000) + 'ms';
+  }
+  // space hex tiles: faint cells + occasional decor
+  for (const h of spaceHexes) {
+    el('polygon', { points: hexPath(h.cx, h.cy, HEX_R - 1.5), class: 'space-hex' });
+    const dseed = (h.q * 73856093) ^ (h.r * 19349663);
+    const m = Math.abs(dseed) % 11;
+    if (m === 0) {           // asteroid cluster
+      const g = el('g', { opacity: 0.55 });
+      for (let i = 0; i < 5; i++) {
+        const a = Math.abs((dseed >> (i + 2))) % 100;
+        el('circle', { cx: h.cx - 18 + (a % 36) + i * 3, cy: h.cy - 10 + ((a * 7) % 22),
+          r: 1.4 + (a % 3), fill: '#5d6a80' }, g);
+      }
+    } else if (m === 1) {    // wisp
+      el('ellipse', { cx: h.cx, cy: h.cy, rx: 26, ry: 9, fill: 'url(#neb2)',
+        transform: `rotate(${(dseed % 90)} ${h.cx} ${h.cy})`, opacity: 0.7 });
+    } else if (m === 2) {    // bright far star
+      el('circle', { cx: h.cx + (dseed % 17), cy: h.cy - (dseed % 13), r: 1.8, fill: '#fdf3d0', class: 'twinkle' });
+    }
   }
   for (const { a, b } of edges.values()) {
     if (nodes.get(a).dead || nodes.get(b).dead) continue;
@@ -875,8 +964,12 @@ function render() {
   const viewer = cur() && cur().kind === 'human' ? cur().i : -1;
   for (const pl of planets) {
     const g = el('g', {});
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 26, fill: RES_META[pl.res].color, opacity: 0.92 }, g);
-    el('circle', { cx: pl.cx - 7, cy: pl.cy - 8, r: 26, fill: '#fff', opacity: 0.07 }, g);
+    const hot = pl.chip && !pl.chip.hz && (pl.chip.n === 6 || pl.chip.n === 8) && pl.faceUp;
+    if (hot) el('circle', { cx: pl.cx, cy: pl.cy, r: 42, fill: 'url(#glowHot)' }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 27.5, fill: '#04060d', opacity: 0.55 }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 26, fill: `url(#pl-${pl.res})` }, g);
+    el('ellipse', { cx: pl.cx - 8, cy: pl.cy - 10, rx: 12, ry: 7, fill: '#fff', opacity: 0.12,
+      transform: `rotate(-24 ${pl.cx - 8} ${pl.cy - 10})` }, g);
     const known = pl.faceUp || (viewer >= 0 && S.players[viewer].knowledge.has(pl.id));
     el('circle', { cx: pl.cx, cy: pl.cy, r: 12, fill: '#0d1322', stroke: '#3c4c68' }, g);
     if (known && pl.chip) {
@@ -1010,14 +1103,21 @@ function renderSidebar() {
     </div>`; }).join('');
 
   const hand = document.getElementById('hand');
+  const fstats = document.getElementById('flagship-stats');
   if (p.kind === 'human') {
     hand.innerHTML = RES.map(r =>
       `<div class="res-chip" style="border-color:${RES_META[r].color}">
         <span class="res-ico" style="background:${RES_META[r].color}">${RES_META[r].icon}</span>
-        ${p.res[r]}
+        <b>${p.res[r]}</b>
       </div>`).join('');
+    fstats.innerHTML = [
+      ['THR', p.thrusters, 'thrusters (speed)'], ['GUN', p.railguns, 'railguns (combat)'],
+      ['POD', p.cargopods, 'cargo pods (alien docking)'], ['REN', p.fame, 'renown stars'],
+      ['SHIP', p.ships.length + '/' + (p.ships.length + p.transporters.length), 'ships deployed'],
+    ].map(([k, v, t]) => `<div class="fstat" title="${t}"><span>${k}</span><b>${v}</b></div>`).join('');
   } else {
     hand.innerHTML = `<div class="botnote">${p.name} is thinking...</div>`;
+    fstats.innerHTML = '';
   }
   document.getElementById('btn-flagship').disabled = S.rolledFlag || p.kind !== 'human';
   document.getElementById('btn-end').disabled = !S.rolledFlag || p.kind !== 'human';

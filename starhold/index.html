@@ -54,20 +54,27 @@
   </div>
 
   <div id="game-screen" class="screen" hidden>
-    <div id="board-wrap">
-      <svg id="board" viewBox="0 0 1120 900" preserveAspectRatio="xMidYMid meet"></svg>
-      <div id="board-hint"></div>
+    <div id="table">
+      <div id="board-wrap">
+        <div id="turn-banner"></div>
+        <svg id="board" viewBox="0 0 1120 900" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div id="bottombar">
+        <div id="hand" title="Your resource cards"></div>
+        <div id="action-center">
+          <div id="board-hint"></div>
+          <div id="actions">
+            <button class="btn" id="btn-build">Build</button>
+            <button class="btn" id="btn-trade">Trade</button>
+            <button class="btn" id="btn-flagship" disabled>Roll Flagship</button>
+            <button class="btn btn-accent" id="btn-end" disabled>End Turn</button>
+          </div>
+        </div>
+        <div id="flagship-stats" title="Your flagship"></div>
+      </div>
     </div>
     <div id="sidebar">
-      <div id="turn-banner"></div>
       <div id="players"></div>
-      <div id="actions">
-        <button class="btn" id="btn-build">Build</button>
-        <button class="btn" id="btn-trade">Trade</button>
-        <button class="btn" id="btn-flagship" disabled>Roll Flagship</button>
-        <button class="btn btn-accent" id="btn-end" disabled>End Turn</button>
-      </div>
-      <div id="hand"></div>
       <div id="log"></div>
     </div>
   </div>
