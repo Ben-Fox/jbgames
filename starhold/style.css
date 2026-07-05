@@ -16,6 +16,7 @@ body {
   height: 100vh; overflow: hidden;
 }
 .screen { height: 100vh; }
+.screen[hidden], [hidden] { display: none !important; }
 button { font-family: inherit; }
 
 /* setup */
