@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starhold | Brainsmacks</title>
+  <meta name="description" content="Starhold: settle the deep-space frontier. A space colonization strategy game of resource trading, ship building, and alien diplomacy for 2-4 players.">
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="setup-screen" class="screen">
+    <div class="setup-box">
+      <h1 class="logo">STAR<span>HOLD</span></h1>
+      <p class="tagline">Settle the frontier. Court the aliens. Outbuild your rivals.</p>
+      <div class="setup-row" id="player-setup">
+        <div class="player-slot" data-i="0">
+          <div class="swatch p0"></div>
+          <input type="text" value="Player 1" maxlength="12">
+          <select><option value="human">Human</option><option value="bot">Bot</option></select>
+        </div>
+        <div class="player-slot" data-i="1">
+          <div class="swatch p1"></div>
+          <input type="text" value="Player 2" maxlength="12">
+          <select><option value="human">Human</option><option value="bot" selected>Bot</option></select>
+        </div>
+        <div class="player-slot" data-i="2">
+          <div class="swatch p2"></div>
+          <input type="text" value="Player 3" maxlength="12">
+          <select><option value="human">Human</option><option value="bot" selected>Bot</option><option value="off">Off</option></select>
+        </div>
+        <div class="player-slot" data-i="3">
+          <div class="swatch p3"></div>
+          <input type="text" value="Player 4" maxlength="12">
+          <select><option value="off" selected>Off</option><option value="human">Human</option><option value="bot">Bot</option></select>
+        </div>
+      </div>
+      <button id="start-btn" class="btn btn-big">Launch Game</button>
+      <details class="rules-details">
+        <summary>How to play</summary>
+        <div class="rules-body">
+          <p><b>Goal:</b> first to <b>15 victory points</b>. Colonies are worth 1, starports 2, alien friendship medallions 2, cleared hazards 1, and every 2 renown stars 1.</p>
+          <p><b>Each turn:</b> roll for production (planets matching the dice pay every adjacent colony), then trade and build, then roll your flagship. A <b>flare</b> on the flagship roll triggers a deep-space event. Then move your ships.</p>
+          <p><b>Ships:</b> build settler ships to found colonies on open planet docks, and envoy ships to dock at alien stations (you need cargo pods equal to the station number). First envoy at each alien race earns a friendship medallion and a diplomatic favor.</p>
+          <p><b>Flagship:</b> upgrade with thrusters (speed), railguns (fight off raiders), and cargo pods (alien trade). Renown stars come from events and bold deeds.</p>
+          <p><b>Hazards:</b> raider dens need railguns >= their number; frozen worlds need cargo pods >= their number. Clearing one earns 1 VP and opens the planet.</p>
+          <p><b>Rolling a 7:</b> no production; everyone holding more than 7 cards discards half, and you commandeer a random card from a rival.</p>
+          <p><b>Resupply:</b> while you have fewer than 9 VP, you draw 1 free resource each turn.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div id="game-screen" class="screen" hidden>
+    <div id="board-wrap">
+      <svg id="board" viewBox="0 0 1060 950" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="board-hint"></div>
+    </div>
+    <div id="sidebar">
+      <div id="turn-banner"></div>
+      <div id="players"></div>
+      <div id="actions">
+        <button class="btn" id="btn-build">Build</button>
+        <button class="btn" id="btn-trade">Trade</button>
+        <button class="btn" id="btn-flagship" disabled>Roll Flagship</button>
+        <button class="btn btn-accent" id="btn-end" disabled>End Turn</button>
+      </div>
+      <div id="hand"></div>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
