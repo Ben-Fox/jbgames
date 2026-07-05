@@ -54,41 +54,56 @@ const RESERVE_REFILL = 6;
    three is removed (ships cannot cut through a system).
    Home systems carry fixed face-up numbers; frontier chips are dealt
    face-down from CHIP_POOL. */
-const HEX_R = 46;
+const HEX_R = 36;
 
 const SYSTEMS = [
-  // 4 home systems across the bottom, exactly 1 blank hex between groups
-  { anchor: [-4, 11], home: 0, planets: [
+  // 4 home systems across the bottom, 1 blank hex between groups
+  { anchor: [-7, 17], home: 0, planets: [
     { res: 'fuel', n: 8 }, { res: 'carbon', n: 10 }, { res: 'biomass', n: 5 } ] },
-  { anchor: [-1, 11], home: 1, planets: [
+  { anchor: [-4, 17], home: 1, planets: [
     { res: 'biomass', n: 6 }, { res: 'goods', n: 12 }, { res: 'fuel', n: 9 } ] },
-  { anchor: [2, 11], home: 2, planets: [
+  { anchor: [-1, 17], home: 2, planets: [
     { res: 'alloy', n: 5 }, { res: 'goods', n: 2 }, { res: 'carbon', n: 9 } ] },
-  { anchor: [5, 11], home: 3, planets: [
+  { anchor: [2, 17], home: 3, planets: [
     { res: 'carbon', n: 9 }, { res: 'biomass', n: 11 }, { res: 'alloy', n: 4 } ] },
-  // frontier row A (2 blank rows above home), 3 systems, 2 blanks between
-  { anchor: [-2, 7], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
-  { anchor: [2, 7], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
-  { anchor: [6, 7], planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
-  // frontier row B (2 blank rows above A), 3 systems, staggered
-  { anchor: [1, 3], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
-  { anchor: [5, 3], planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
-  { anchor: [8, 3], planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
-  // one deep system at the top of the field
-  { anchor: [5, 0], planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
+  // 15 frontier systems, face-down at start: 5 rows of 3
+  { anchor: [-5, 14], planets: [ { res: 'fuel' }, { res: 'alloy' }, { res: 'goods' } ] },
+  { anchor: [-1, 14], planets: [ { res: 'carbon' }, { res: 'biomass' }, { res: 'fuel' } ] },
+  { anchor: [3, 14],  planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'alloy' } ] },
+  { anchor: [-2, 11], planets: [ { res: 'alloy' }, { res: 'biomass' }, { res: 'carbon' } ] },
+  { anchor: [2, 11],  planets: [ { res: 'fuel' }, { res: 'goods' }, { res: 'biomass' } ] },
+  { anchor: [5, 11],  planets: [ { res: 'carbon' }, { res: 'fuel' }, { res: 'alloy' } ] },
+  { anchor: [-2, 8],  planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'goods' } ] },
+  { anchor: [2, 8],   planets: [ { res: 'goods' }, { res: 'fuel' }, { res: 'carbon' } ] },
+  { anchor: [6, 8],   planets: [ { res: 'alloy' }, { res: 'carbon' }, { res: 'biomass' } ] },
+  { anchor: [1, 5],   planets: [ { res: 'fuel' }, { res: 'biomass' }, { res: 'alloy' } ] },
+  { anchor: [5, 5],   planets: [ { res: 'carbon' }, { res: 'goods' }, { res: 'fuel' } ] },
+  { anchor: [8, 5],   planets: [ { res: 'biomass' }, { res: 'alloy' }, { res: 'carbon' } ] },
+  { anchor: [1, 2],   planets: [ { res: 'goods' }, { res: 'carbon' }, { res: 'biomass' } ] },
+  { anchor: [5, 2],   planets: [ { res: 'alloy' }, { res: 'fuel' }, { res: 'goods' } ] },
+  { anchor: [9, 2],   planets: [ { res: 'fuel' }, { res: 'carbon' }, { res: 'alloy' } ] },
 ];
 
 /* frontier chip pool: 16 numbers + 3 raider dens (pirate lairs) + 2 frozen
    worlds (ice planets) = 21, dealt face-down */
 const CHIP_POOL = [
-  { n: 3 }, { n: 3 }, { n: 4 }, { n: 4 }, { n: 5 }, { n: 5 },
-  { n: 6 }, { n: 6 }, { n: 8 }, { n: 8 }, { n: 9 }, { n: 9 },
-  { n: 10 }, { n: 10 }, { n: 11 }, { n: 11 },
-  { hz: 'raider', num: 3 }, { hz: 'raider', num: 5 }, { hz: 'raider', num: 7 },
-  { hz: 'frozen', num: 2 }, { hz: 'frozen', num: 3 },
+  { n: 2 }, { n: 2 },
+  { n: 3 }, { n: 3 }, { n: 3 },
+  { n: 4 }, { n: 4 }, { n: 4 }, { n: 4 },
+  { n: 5 }, { n: 5 }, { n: 5 }, { n: 5 }, { n: 5 },
+  { n: 6 }, { n: 6 }, { n: 6 }, { n: 6 },
+  { n: 8 }, { n: 8 }, { n: 8 }, { n: 8 },
+  { n: 9 }, { n: 9 }, { n: 9 }, { n: 9 },
+  { n: 10 }, { n: 10 }, { n: 10 }, { n: 10 },
+  { n: 11 }, { n: 11 }, { n: 11 },
+  { n: 12 }, { n: 12 },
+  { hz: 'raider', num: 3 }, { hz: 'raider', num: 4 }, { hz: 'raider', num: 5 },
+  { hz: 'raider', num: 5 }, { hz: 'raider', num: 6 }, { hz: 'raider', num: 7 },
+  { hz: 'frozen', num: 2 }, { hz: 'frozen', num: 2 },
+  { hz: 'frozen', num: 3 }, { hz: 'frozen', num: 3 },
 ];
 /* reserve chips replace captured hazard chips (drawn at random) */
-const RESERVE_CHIPS = [4, 5, 6, 9, 10];
+const RESERVE_CHIPS = [4, 5, 5, 6, 8, 9, 9, 10];
 
 /* alien home bases: single hexes; 5 outpost slots on their corners */
 /* alien home bases at varying depths, like the reference geography:
@@ -97,10 +112,10 @@ const RESERVE_CHIPS = [4, 5, 6, 9, 10];
    staggered depths. All start UNDISCOVERED: a ship must reach their
    space before their stations become visible/usable. */
 const ALIEN_ANCHORS = [
-  { anchor: [0, 0], race: 0 },    // deep, far top-left
-  { anchor: [9, 0], race: 1 },    // deep, top-right
-  { anchor: [-2, 5], race: 2 },   // left edge, mid-depth
-  { anchor: [7, 8], race: 3 },    // right edge, nearest home space
+  { anchor: [0, 0], race: 0 },     // deep, far top-left
+  { anchor: [11, 0], race: 1 },    // deep, top-right
+  { anchor: [-4, 9], race: 2 },    // left edge, mid-depth
+  { anchor: [5, 15], race: 3 },    // right edge, nearest home space
 ];
 
 const ALIENS = [

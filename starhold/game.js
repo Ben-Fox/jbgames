@@ -5,7 +5,7 @@
 /* ── hex math ────────────────────────────────────────────────── */
 const SQ3 = Math.sqrt(3);
 function hexCenter(q, r) {
-  return { x: HEX_R * SQ3 * (q + r / 2) + 15, y: HEX_R * 1.5 * r + 104 };
+  return { x: HEX_R * SQ3 * (q + r / 2) + 100, y: HEX_R * 1.5 * r + 70 };
 }
 function corner(c, i) {
   const a = Math.PI / 180 * (60 * i - 90);
@@ -41,7 +41,7 @@ function addHexEdges(keys) {
 SYSTEMS.forEach((sysDef, sid) => {
   const [q, r] = sysDef.anchor;
   const hexQR = [[q, r], [q + 1, r], [q, r + 1]];
-  const sys = { id: sid, home: sysDef.home ?? null, planetIds: [], colonyInts: [] };
+  const sys = { id: sid, home: sysDef.home ?? null, revealed: sysDef.home !== undefined, planetIds: [], colonyInts: [] };
   const cornerCount = new Map();
   hexQR.forEach(([hq, hr], pi) => {
     const c = hexCenter(hq, hr);
@@ -114,11 +114,11 @@ const spaceHexes = [];
     const [q, r] = anchor;
     [[q, r], [q + 1, r], [q, r + 1]].forEach(([a, b]) => occupied.add(a + ',' + b));
   });
-  for (let r = 0; r <= 12; r++) {
-    for (let q = -11; q <= 12; q++) {
+  for (let r = 0; r <= 18; r++) {
+    for (let q = -16; q <= 16; q++) {
       if (occupied.has(q + ',' + r)) continue;
       const c = hexCenter(q, r);
-      if (c.x < 46 || c.x > 1074 || c.y < 62 || c.y > 940) continue;
+      if (c.x < 50 || c.x > 1020 || c.y < 50 || c.y > 1010) continue;
       const keys = addHexNodes(c.x, c.y);
       addHexEdges(keys);
       spaceHexes.push({ q, r, cx: c.x, cy: c.y });
@@ -549,20 +549,29 @@ function tryMoveShip(ship, destKey, jump) {
   if (!legalEnd(ship, p, destKey)) { toast('Cannot end the flight there.'); return false; }
   const contact = (key) => {
     const nn = nodes.get(key);
-    if (nn && nn.baseRace !== undefined && !p.civKnown.has(nn.baseRace)) {
+    if (!nn) return;
+    if (nn.baseRace !== undefined && !p.civKnown.has(nn.baseRace)) {
       p.civKnown.add(nn.baseRace);
       log(`${p.name} makes first contact with ${ALIENS[nn.baseRace].name}!`);
     }
+    for (const plid of nn.planets) {
+      const sys = systems[planets[plid].sysId];
+      if (!sys.revealed) {
+        sys.revealed = true;   // the face-down tile flips for everyone
+        log(`${p.name} charts an unexplored system!`);
+      }
+    }
   };
   if (!jump) {
-    for (const plid of pathPlanets(parent, destKey, ship.node)) {
-      if (!chipKnown(planets[plid], p.i)) revealTo(p, plid);
-    }
     let k = destKey;
     while (k && k !== ship.node) { contact(k); k = parent.get(k); }
+    for (const plid of pathPlanets(parent, destKey, ship.node)) {
+      if (systems[planets[plid].sysId].revealed && !chipKnown(planets[plid], p.i))
+        revealTo(p, plid);
+    }
   } else {
-    for (const plid of nodes.get(destKey).planets) revealTo(p, plid);
     contact(destKey);
+    for (const plid of nodes.get(destKey).planets) revealTo(p, plid);
   }
   ship.node = destKey; ship.moved = true; ship.mustVacate = null;
   afterLanding(ship, p);
@@ -814,6 +823,10 @@ function botGoals(p, ship) {
   const out = [];
   if (ship.kind === 'settler') {
     for (const sys of systems) {
+      if (!sys.revealed) {
+        out.push(sys.colonyInts[0]);   // scout the face-down tile
+        continue;
+      }
       for (const k of sys.colonyInts) {
         const n = nodes.get(k);
         if (n.structure) continue;
@@ -963,7 +976,7 @@ function render() {
       <stop offset="0%" stop-color="#e8c14a" stop-opacity=".5"/>
       <stop offset="100%" stop-color="#e8c14a" stop-opacity="0"/>
     </radialGradient>`;
-  el('rect', { x: 0, y: 0, width: 1120, height: 990, fill: 'url(#space)' });
+  el('rect', { x: 0, y: 0, width: 1120, height: 1060, fill: 'url(#space)' });
   // drifting nebulas
   el('ellipse', { cx: 260, cy: 210, rx: 340, ry: 220, fill: 'url(#neb1)', class: 'neb n1' });
   el('ellipse', { cx: 880, cy: 620, rx: 380, ry: 260, fill: 'url(#neb2)', class: 'neb n2' });
@@ -978,7 +991,7 @@ function render() {
   for (let i = 0; i < 190; i++) {
     seed = (seed * 16807) % 2147483647;
     const x = seed % 1120; seed = (seed * 16807) % 2147483647;
-    const y = seed % 990; seed = (seed * 16807) % 2147483647;
+    const y = seed % 1060; seed = (seed * 16807) % 2147483647;
     const rr = (seed % 10) / 8 + 0.3; seed = (seed * 16807) % 2147483647;
     const tw = seed % 5 === 0;
     const st = el('circle', { cx: x, cy: y, r: rr, fill: '#cdd6e8',
@@ -1011,15 +1024,16 @@ function render() {
   }
   const viewer = cur() && cur().kind === 'human' ? cur().i : -1;
   for (const pl of planets) {
+    if (!systems[pl.sysId].revealed) continue;
     const g = el('g', {});
     const hot = pl.chip && !pl.chip.hz && (pl.chip.n === 6 || pl.chip.n === 8) && pl.faceUp;
-    if (hot) el('circle', { cx: pl.cx, cy: pl.cy, r: 34, fill: 'url(#glowHot)' }, g);
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 22.5, fill: '#04060d', opacity: 0.55 }, g);
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 21, fill: `url(#pl-${pl.res})` }, g);
+    if (hot) el('circle', { cx: pl.cx, cy: pl.cy, r: 27, fill: 'url(#glowHot)' }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 18, fill: '#04060d', opacity: 0.55 }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 16.5, fill: `url(#pl-${pl.res})` }, g);
     el('ellipse', { cx: pl.cx - 6, cy: pl.cy - 8, rx: 9, ry: 5, fill: '#fff', opacity: 0.12,
       transform: `rotate(-24 ${pl.cx - 8} ${pl.cy - 10})` }, g);
     const known = pl.faceUp || (viewer >= 0 && S.players[viewer].knowledge.has(pl.id));
-    el('circle', { cx: pl.cx, cy: pl.cy, r: 10.5, fill: '#0d1322', stroke: '#3c4c68' }, g);
+    el('circle', { cx: pl.cx, cy: pl.cy, r: 8.5, fill: '#0d1322', stroke: '#3c4c68' }, g);
     if (known && pl.chip) {
       if (pl.chip.hz) {
         const t = el('text', { x: pl.cx, y: pl.cy + 4, class: 'chip-num hz' }, g);
@@ -1030,7 +1044,7 @@ function render() {
         t.textContent = pl.chip.n;
       }
       if (!pl.faceUp)
-        el('circle', { cx: pl.cx, cy: pl.cy, r: 10.5, fill: 'none', stroke: '#c9a227', 'stroke-dasharray': '3 3' }, g);
+        el('circle', { cx: pl.cx, cy: pl.cy, r: 8.5, fill: 'none', stroke: '#c9a227', 'stroke-dasharray': '3 3' }, g);
     } else {
       const t = el('text', { x: pl.cx, y: pl.cy + 4, class: 'chip-num dim' }, g);
       t.textContent = '?';
@@ -1044,14 +1058,14 @@ function render() {
     if (!civVisible) continue;
     const g = el('g', {});
     for (const hc of base.hexCenters)
-      el('circle', { cx: hc.x, cy: hc.y, r: 13, fill: ALIENS[base.race].color, opacity: 0.14 }, g);
-    el('circle', { cx: base.cx, cy: base.cy, r: 19, fill: 'none', stroke: ALIENS[base.race].color, 'stroke-width': 2, 'stroke-dasharray': '5 4' }, g);
-    el('circle', { cx: base.cx, cy: base.cy, r: 8, fill: ALIENS[base.race].color, opacity: 0.85 }, g);
-    const t = el('text', { x: base.cx, y: base.cy - 27, class: 'alien-name', fill: ALIENS[base.race].color }, g);
+      el('circle', { cx: hc.x, cy: hc.y, r: 10, fill: ALIENS[base.race].color, opacity: 0.14 }, g);
+    el('circle', { cx: base.cx, cy: base.cy, r: 15, fill: 'none', stroke: ALIENS[base.race].color, 'stroke-width': 1.6, 'stroke-dasharray': '5 4' }, g);
+    el('circle', { cx: base.cx, cy: base.cy, r: 6.5, fill: ALIENS[base.race].color, opacity: 0.85 }, g);
+    const t = el('text', { x: base.cx, y: base.cy - 21, class: 'alien-name', fill: ALIENS[base.race].color }, g);
     t.textContent = ALIENS[base.race].name;
     for (const s of base.slots) {
       const n = nodes.get(s.node);
-      el('rect', { x: n.x - 7, y: n.y - 7, width: 14, height: 14, rx: 4,
+      el('rect', { x: n.x - 6, y: n.y - 6, width: 12, height: 12, rx: 3,
         fill: s.owner === null ? '#131b2e' : PCOLOR[s.owner], stroke: ALIENS[base.race].color }, g);
       const st = el('text', { x: n.x, y: n.y + 4, class: 'stn-num' }, g);
       st.textContent = s.num;
@@ -1059,16 +1073,16 @@ function render() {
   }
   for (const n of nodes.values()) {
     if (n.dead) continue;
-    if (n.colonyInt !== null && !n.structure)
-      el('circle', { cx: n.x, cy: n.y, r: 6, class: 'dock' });
+    if (n.colonyInt !== null && !n.structure && systems[n.colonyInt].revealed)
+      el('circle', { cx: n.x, cy: n.y, r: 4.5, class: 'dock' });
     if (n.structure) {
       const c = PCOLOR[n.structure.owner];
       if (n.structure.kind === 'colony')
-        el('rect', { x: n.x - 7, y: n.y - 7, width: 14, height: 14, rx: 3, fill: c, stroke: '#05070f', class: 'structure' });
+        el('rect', { x: n.x - 6, y: n.y - 6, width: 12, height: 12, rx: 3, fill: c, stroke: '#05070f', class: 'structure' });
       else if (n.structure.kind === 'starport')
-        el('polygon', { points: starPts(n.x, n.y, 12, 6), fill: c, stroke: '#05070f', class: 'structure' });
+        el('polygon', { points: starPts(n.x, n.y, 10, 6), fill: c, stroke: '#05070f', class: 'structure' });
       else
-        el('circle', { cx: n.x, cy: n.y, r: 7, fill: c, stroke: '#05070f', class: 'structure' });
+        el('circle', { cx: n.x, cy: n.y, r: 6, fill: c, stroke: '#05070f', class: 'structure' });
     }
   }
   const p = cur();
@@ -1109,11 +1123,11 @@ function render() {
       const sel = ship === selectedShip;
       const g = el('g', { class: 'ship' + (ship.moved ? ' done' : '') });
       if (ship.kind === 'settler')
-        el('polygon', { points: triPts(n.x, n.y - 13, 10), fill: PCOLOR[pl.i], stroke: '#fff', 'stroke-width': sel ? 2 : 0.8 }, g);
+        el('polygon', { points: triPts(n.x, n.y - 11, 8.5), fill: PCOLOR[pl.i], stroke: '#fff', 'stroke-width': sel ? 2 : 0.8 }, g);
       else
-        el('polygon', { points: diamondPts(n.x, n.y - 13, 9), fill: PCOLOR[pl.i], stroke: '#fff', 'stroke-width': sel ? 2 : 0.8 }, g);
+        el('polygon', { points: diamondPts(n.x, n.y - 11, 7.5), fill: PCOLOR[pl.i], stroke: '#fff', 'stroke-width': sel ? 2 : 0.8 }, g);
       for (let i = 0; i < ship.rings; i++)
-        el('circle', { cx: n.x - 8 + i * 8, cy: n.y - 26, r: 2.2, fill: '#fff' }, g);
+        el('circle', { cx: n.x - 6 + i * 6, cy: n.y - 21, r: 1.8, fill: '#fff' }, g);
       g.addEventListener('click', (e) => {
         e.stopPropagation();
         if (cur().i !== pl.i || cur().kind !== 'human') return;
@@ -1468,7 +1482,7 @@ if (location.hash === '#autotest') {
   const stateDiv = document.createElement('div');
   stateDiv.id = 'autotest-state'; stateDiv.style.display = 'none';
   document.body.appendChild(stateDiv);
-  window.__state = () => JSON.stringify({ turn: S.turn, over: S.over,
+  window.__state = () => JSON.stringify({ turn: S.turn, over: S.over, revealed: systems.filter(x => x.revealed).length,
     players: S.players.map(p => ({ name: p.name, vp: vp(p), col: p.colonies.length,
       port: p.starports.length, out: p.outposts.length, fame: p.fame,
       chips: S.chips.filter(c => c === p.i).length, cap: p.capturedChips, civs: p.civKnown.size,
