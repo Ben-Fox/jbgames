@@ -109,6 +109,14 @@ button { font-family: inherit; }
 
 /* board elements */
 .space-hex { fill: rgba(28,40,66,.14); stroke: rgba(64,86,128,.22); stroke-width: 1; }
+.space-hex.sp1 { fill: rgba(34,44,78,.18); }
+.space-hex.sp2 { fill: rgba(22,36,60,.10); }
+.site-back { fill: rgba(52,64,102,.42); stroke: rgba(136,160,210,.4); stroke-width: 1.2; }
+.site-emblem { fill: none; stroke: rgba(232,193,74,.55); stroke-width: 1.4; }
+.site-emblem-core { fill: rgba(232,193,74,.75); }
+.site-back-g { animation: sitePulse 4.5s ease-in-out infinite; }
+@keyframes sitePulse { 0%,100% { opacity: .75; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .site-back-g { animation: none; } }
 .lane { stroke: rgba(70,95,140,.34); stroke-width: 1.1; }
 .twinkle { animation: twinkle 3.2s ease-in-out infinite; }
 @keyframes twinkle { 0%,100% { opacity: .15; } 50% { opacity: .9; } }

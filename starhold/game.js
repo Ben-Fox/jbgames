@@ -1021,7 +1021,8 @@ function render() {
   // uniform hex tiling across the whole field: face-down sites and content
   // hexes look identical to open space (no tells, no rogue blanks)
   for (const c of allHexCenters) {
-    el('polygon', { points: hexPath(c.x, c.y, HEX_R - 1.5), class: 'space-hex' });
+    const t = Math.abs((Math.round(c.x) * 31 + Math.round(c.y) * 17)) % 3;
+    el('polygon', { points: hexPath(c.x, c.y, HEX_R - 1.5), class: 'space-hex sp' + t });
   }
   // decor only on true open-space hexes
   for (const h of spaceHexes) {
@@ -1073,6 +1074,16 @@ function render() {
       const t = el('text', { x: pl.cx, y: pl.cy + 4, class: 'chip-num dim' }, g);
       t.textContent = '?';
     }
+  }
+  for (const site of sites) {
+    if (site.revealed) continue;
+    const g = el('g', { class: 'site-back-g' });
+    for (const c of site.centers)
+      el('polygon', { points: hexPath(c.x, c.y, HEX_R - 2.5), class: 'site-back' }, g);
+    const cx = site.centers.reduce((a, x) => a + x.x, 0) / 3;
+    const cy = site.centers.reduce((a, x) => a + x.y, 0) / 3;
+    el('polygon', { points: diamondPts(cx, cy, 9), class: 'site-emblem' }, g);
+    el('polygon', { points: diamondPts(cx, cy, 4), class: 'site-emblem-core' }, g);
   }
   for (const site of sites) {
     if (!site.revealed || site.content !== 'empty') continue;
