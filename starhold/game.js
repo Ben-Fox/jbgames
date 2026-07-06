@@ -39,6 +39,7 @@ function addHexEdges(keys) {
 }
 
 const sites = [];   // {id, hexCenters, hexCorners:[keys x3], pairCorners, allKeys, content, revealed}
+const allHexCenters = [];
 
 function buildTriangle(q, r) {
   const hexQR = [[q, r], [q + 1, r], [q, r + 1]];
@@ -48,6 +49,7 @@ function buildTriangle(q, r) {
   hexQR.forEach(([hq, hr]) => {
     const c = hexCenter(hq, hr);
     centers.push(c);
+    allHexCenters.push(c);
     const keys = addHexNodes(c.x, c.y);
     addHexEdges(keys);
     hexCorners.push(keys);
@@ -103,6 +105,7 @@ const spaceHexes = [];
       const keys = addHexNodes(c.x, c.y);
       addHexEdges(keys);
       spaceHexes.push({ q, r, cx: c.x, cy: c.y });
+      allHexCenters.push(c);
     }
   }
 }
@@ -1015,9 +1018,13 @@ function render() {
       opacity: 0.25 + (seed % 40) / 100, class: tw ? 'twinkle' : '' });
     if (tw) st.style.animationDelay = (seed % 4000) + 'ms';
   }
-  // space hex tiles: faint cells + occasional decor
+  // uniform hex tiling across the whole field: face-down sites and content
+  // hexes look identical to open space (no tells, no rogue blanks)
+  for (const c of allHexCenters) {
+    el('polygon', { points: hexPath(c.x, c.y, HEX_R - 1.5), class: 'space-hex' });
+  }
+  // decor only on true open-space hexes
   for (const h of spaceHexes) {
-    el('polygon', { points: hexPath(h.cx, h.cy, HEX_R - 1.5), class: 'space-hex' });
     const dseed = (h.q * 73856093) ^ (h.r * 19349663);
     const m = Math.abs(dseed) % 11;
     if (m === 0) {           // asteroid cluster
